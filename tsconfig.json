@@ -10,7 +10,8 @@
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "types": ["node"]
   },
   "include": ["web/**/*.ts", "tests/web/**/*.ts"]
 }
