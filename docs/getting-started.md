@@ -1,41 +1,49 @@
 # Getting started
 
-## Supported hardware
+This is the happy path from unboxed panel to a working tile deck.
 
-Tilehaus targets ESP32-P4 touchscreen panels, such as the Guition
-JC1060P470. The firmware is built with [ESPHome](https://esphome.io/).
+## 1. Get the hardware
 
-## Flash the firmware
+Tilehaus targets ESP32-P4 touchscreen panels, primarily the Guition
+JC1060P470 (1024×600). See [Hardware](hardware.md) for details on the board,
+its Wi-Fi setup, and power/USB-C requirements.
 
-Compile and flash `firmware/tilehaus.yaml` with the ESPHome CLI:
+## 2. Flash the firmware
+
+Build and flash `firmware/tilehaus.yaml` with the ESPHome CLI over USB for
+the first flash, then over-the-air (OTA) afterward. Full steps, including the
+one-time toolchain setup, are in [Flashing](flashing.md).
 
 ```bash
-esphome run firmware/tilehaus.yaml
+.venv-esphome/bin/esphome compile firmware/tilehaus.yaml
+.venv-esphome/bin/esphome upload firmware/tilehaus.yaml --device /dev/serial/by-id/...
 ```
 
-(Use `esphome compile firmware/tilehaus.yaml` if you only want to build.)
-This installs the firmware and connects the panel to your Wi-Fi network as
-configured in `firmware/secrets.yaml`.
+## 3. Open the configurator
 
-## Open the configurator
+Once the panel boots and joins Wi-Fi, it shows an "Awaiting Configuration"
+screen with its own IP address. Open that address in a browser — the device
+serves the tile configurator at its web root (`/`).
 
-Once the panel boots and joins your network, find its IP address (check your
-router, or the ESPHome logs) and open it in a browser. The device serves the
-tile configurator at its web root.
+## 4. Connect Home Assistant
 
-## Add your first tile
+In the configurator, open the Home Assistant bar and enter your HA base URL
+(e.g. `http://homeassistant.local:8123`) and a long-lived access token. Once
+connected, entity fields on tiles offer live autocomplete against your HA
+entities. See [Configurator](configurator.md#home-assistant-connection) for
+details, including the CORS setup HA needs.
 
-In the configurator:
+## 5. Add tiles
 
-1. Add a tile to a page.
-2. Pick a tile type (light, cover, climate, sensor, scene, and so on).
-3. Assign it a Home Assistant entity.
-4. Arrange it on the page grid alongside your other tiles.
+Pick a card type, add it to the deck, and assign it a Home Assistant entity.
+Arrange tiles on the page grid, add more pages if you want, and set titles,
+icons, and colors as needed. See [Configurator](configurator.md) for the full
+editing workflow and [Card reference](cards.md) for what each card type does.
 
-## Save and apply
+## 6. Save
 
-Click **Save**. The device writes the new configuration to storage and
+Click **Save**. The device validates and writes the new configuration, then
 reboots to apply it — the panel comes back up showing your updated deck.
 
-A full reference of card types and device layouts is planned as a follow-up
-to this page.
+That's the core loop: edit in the browser, Save, the panel reboots into the
+new layout. Repeat as your dashboard evolves.
