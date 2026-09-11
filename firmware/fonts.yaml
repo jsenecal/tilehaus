@@ -1,0 +1,42 @@
+# =============================================================================
+# FONTS - reused from the espcontrol asset set (committed MDI TTF + Roboto),
+# sized to match devices/guition-esp32-p4-jc1060p470/device/fonts.yaml. Paths
+# are POC-relative (build dir is poc/.esphome). This block is standalone: it
+# only !includes the shared glyph lists and references the shared TTF.
+# =============================================================================
+font:
+  # Tile icons (top-left)
+  - file: '${mdi_font_file}'
+    id: font_icon_main
+    size: 46
+    bpp: 4
+    glyphs: !include assets/icon_glyphs.yaml
+
+  # Tile names, units, brightness %
+  - file: "gfonts://Roboto"
+    id: font_text_body
+    size: 22
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml
+
+  # Sensor values (also covers ° and the invalid-state em-dash via text_glyphs)
+  - file: "gfonts://Roboto@Light"
+    id: font_number_value
+    size: 55
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml
+
+  # Medium number — compact values (weather current temp) that need to read
+  # bigger than body but not as large as the sensor value font.
+  - file: "gfonts://Roboto"
+    id: font_number_medium
+    size: 34
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml
+
+  # Small secondary text — e.g. the header's high/low beneath the temperature.
+  - file: "gfonts://Roboto"
+    id: font_text_small
+    size: 15
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml

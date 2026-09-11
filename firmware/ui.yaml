@@ -1,0 +1,24 @@
+lvgl:
+  id: main_lvgl
+  displays: my_display
+  # espcontrol pairs a static 180 base with a runtime 180 rotation that nets to
+  # upright; this POC has only the static value, so 0 is the correct upright.
+  rotation: 0
+  byte_order: little_endian
+  default_font: font_text_body
+  touchscreens:
+    - touchscreen_id: my_touchscreen
+  pages:
+    - id: poc_page
+      bg_color: 0x000000
+      widgets:
+        # Empty container — C++ (poc_build_cards) applies the grid and creates
+        # every cell/widget at boot. LVGL features are forced on via build_flags
+        # so no seed widgets are needed here.
+        - obj:
+            id: grid_root
+            width: 100%
+            height: 100%
+            bg_opa: TRANSP
+            border_width: 0
+            scrollable: false

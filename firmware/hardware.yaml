@@ -1,0 +1,122 @@
+# P4 hardware bring-up for the JC1060P470, distilled from
+# devices/guition-esp32-p4-jc1060p470/device/device.yaml with all espcontrol
+# component / script references removed. Hardware only.
+esp32:
+  variant: esp32p4
+  flash_size: 16MB
+  cpu_frequency: 360MHZ
+  engineering_sample: true
+  framework:
+    type: esp-idf
+    advanced:
+      enable_idf_experimental_features: true
+      execute_from_psram: true
+    sdkconfig_options:
+      CONFIG_ESP_MAIN_TASK_STACK_SIZE: "8192"
+      # Native OTA can block loopTask while ESP-IDF erases the alternate app
+      # partition on this panel, tripping the task watchdog mid-upload
+      # ("connection reset by peer"). Raise the timeout so the erase/prep step
+      # can finish. Mirrors devices/guition-esp32-p4-jc1060p470/device/device.yaml.
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "60"
+
+psram:
+  mode: hex
+  speed: 200MHz
+
+# The JC1060P470 has no native WiFi on the P4; WiFi/BLE is hosted over SDIO
+# by an on-board ESP32-C6 co-processor. Required for the `wifi:` component
+# to validate on esp32p4. Mirrors
+# devices/guition-esp32-p4-jc1060p470/device/network_coprocessor.yaml.
+esp32_hosted:
+  variant: esp32c6
+  reset_pin: GPIO54
+  cmd_pin: GPIO19
+  clk_pin: GPIO18
+  d0_pin: GPIO14
+  d1_pin: GPIO15
+  d2_pin: GPIO16
+  d3_pin: GPIO17
+  active_high: true
+  sdio_frequency: 20MHz
+
+esp_ldo:
+  - channel: 3
+    id: dsi_phy_enable
+    voltage: 2.5V
+    adjustable: True
+  - channel: 4
+    id: sd_card_power
+    voltage: 2.7V
+    adjustable: True
+
+output:
+  - platform: ledc
+    pin: GPIO23
+    id: gpio_backlight_pwm
+    frequency: 1000Hz
+
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: Display Backlight
+    id: display_backlight
+    # ALWAYS_ON: this POC has no screensaver/display-lifecycle logic, and OTA
+    # preserves NVS — RESTORE_DEFAULT_ON would restore a stale OFF state from
+    # whatever firmware ran before. Force the backlight on every boot.
+    restore_mode: ALWAYS_ON
+    default_transition_length: 0s
+
+i2c:
+  - id: bus_a
+    sda: GPIO07
+    scl: GPIO08
+    frequency: 400kHz
+    sda_pullup_enabled: False
+    scl_pullup_enabled: False
+
+touchscreen:
+  - platform: gt911
+    id: my_touchscreen
+    display: my_display
+    i2c_id: bus_a
+    reset_pin: GPIO22
+    interrupt_pin: GPIO21
+    # Wake the panel: when the backlight is off / at zero brightness, the first
+    # touch just turns it back on (LVGL still sees the touch, but there's nothing
+    # visible to hit). Restores full brightness.
+    on_touch:
+      - if:
+          condition:
+            lambda: |-
+              auto &v = id(display_backlight).current_values;
+              return !v.is_on() || v.get_brightness() <= 0.0f;
+          then:
+            - light.turn_on:
+                id: display_backlight
+                brightness: 100%
+
+# While the backlight is off / at zero brightness, disable LVGL's touch input so
+# a wake touch (which on_touch above turns the screen back on) can't also toggle
+# a tile. Re-enabled as soon as the screen is bright. Polled so it covers both
+# "light off" and "on at brightness 0".
+interval:
+  - interval: 250ms
+    then:
+      - lambda: |-
+          auto &v = id(display_backlight).current_values;
+          bool bright = v.is_on() && v.get_brightness() > 0.0f;
+          for (lv_indev_t *d = lv_indev_get_next(nullptr); d != nullptr;
+               d = lv_indev_get_next(d)) {
+            if (lv_indev_get_type(d) == LV_INDEV_TYPE_POINTER)
+              lv_indev_enable(d, bright);
+          }
+
+display:
+  - platform: mipi_dsi
+    id: my_display
+    model: JC1060P470
+    color_order: RGB
+    reset_pin:
+      number: GPIO05
+    update_interval: never
+    auto_clear_enabled: false

@@ -1,0 +1,35 @@
+esphome:
+  on_boot:
+    - priority: -100
+      then:
+        - lambda: |-
+            tilehaus::app_clock() = id(poc_time);
+            static tilehaus::CardFonts poc_fonts{
+                id(font_icon_main)->get_lv_font(),
+                id(font_number_value)->get_lv_font(),
+                id(font_text_body)->get_lv_font(),
+                id(font_number_medium)->get_lv_font(),
+                id(font_text_small)->get_lv_font(),
+            };
+            // Boot splash on top of everything; fades out on the first HA state.
+            tilehaus::splash_build(poc_fonts);
+            tilehaus::splash_set("\U000F05A9", "Connecting",
+                            "Connecting to Wi-Fi");  // mdi-wifi
+            tilehaus::ha_first_state_hook() = []() { tilehaus::splash_hide(); };
+            // Load any persisted deck config before the first build so the
+            // panel boots straight into the saved deck (else default_deck()).
+            tilehaus::deck_store().setup();
+            tilehaus::poc_build_cards(id(grid_root),
+                ${grid_unit}, ${grid_pad}, ${grid_gap}, ${grid_subdivisions},
+                ${grid_cols}, ${grid_rows}, ${tile_radius}, poc_fonts);
+
+# Deck-config HTTP API + reboot-to-apply. start_deck_server() is idempotent and
+# retries until networking is ready. A successful PUT persists the doc and flags
+# a reboot on the httpd task; apply_pending_reboot() performs it here on the main
+# loop, so the new deck is rebuilt cleanly on the next boot.
+interval:
+  - interval: 200ms
+    then:
+      - lambda: |-
+          tilehaus::start_deck_server();
+          tilehaus::apply_pending_reboot();
