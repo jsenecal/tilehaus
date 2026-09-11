@@ -1,0 +1,8 @@
+[tools]
+node = "24"
+python = "3.13"
+
+[env]
+# Match CI (UTC). Some web checks derive expected month/date strings from the
+# local timezone and only agree with fixed-timezone fixtures under UTC.
+TZ = "UTC"

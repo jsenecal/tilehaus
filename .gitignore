@@ -1,0 +1,9 @@
+node_modules/
+firmware/.esphome/
+firmware/native/deck_ui_asset.h
+firmware/secrets.yaml
+tests/firmware/build/
+.venv/
+docs/site/
+docs/.zensical/
+*.log

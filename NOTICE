@@ -1,0 +1,10 @@
+Required Notice: Copyright (c) 2026 Jonathan Senecal
+
+Tilehaus is licensed under the PolyForm Noncommercial License 1.0.0
+(see LICENSE).
+
+Tilehaus is an independent project inspired by EspControl
+(https://github.com/jtenniswood/espcontrol). It reuses EspControl's product
+concepts and visual language; it shares no firmware code with EspControl's
+button-grid implementation. The bundled Material Design Icons font and Roboto
+are under their respective licenses (see firmware/assets/).

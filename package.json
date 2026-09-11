@@ -1,0 +1,20 @@
+{
+  "name": "tilehaus",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node scripts/build_deck_ui.js",
+    "gen:icons": "node scripts/build_icon_catalog.js",
+    "gen:fixtures": "node scripts/gen_deck_fixture.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:web": "node --test tests/web/unit/*.test.js",
+    "test:firmware": "cmake -S tests/firmware -B tests/firmware/build && cmake --build tests/firmware/build && ctest --test-dir tests/firmware/build --output-on-failure"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "typescript": "^7.0.0",
+    "@types/node": "^24.0.0"
+  }
+}
