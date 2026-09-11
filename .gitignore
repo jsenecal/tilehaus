@@ -7,3 +7,4 @@ tests/firmware/build/
 site/
 .cache/
 *.log
+.venv-esphome/
