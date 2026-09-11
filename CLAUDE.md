@@ -89,6 +89,25 @@ first so tiles bind to entities that actually exist. Follow the ha-mcp server's 
 best-practices skill when it applies (e.g. entity_id over device_id, native helpers
 over templates).
 
+## Documentation (Zensical)
+
+The public docs site is [Zensical](https://zensical.org) (Material for MkDocs team's
+SSG; Markdown + `mkdocs.yml`). Content lives in `docs/` (the `docs_dir`); the nav is
+in `mkdocs.yml`; the build output is `site/` (git-ignored). Internal planning docs
+live in `planning/` — outside `docs_dir`, so they are not published.
+
+Zensical installs in a Python venv (not pinned by mise):
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install zensical
+.venv/bin/zensical build      # or: npm run docs:build  (zensical on PATH)
+.venv/bin/zensical serve      # or: npm run docs:serve   (live preview)
+```
+
+CI builds the site and deploys it to GitHub Pages on push to `main`
+(`.github/workflows/docs.yml`). When you change firmware/web behaviour, update the
+matching docs page (`docs/*.md`) in the same change.
+
 ## Workflow conventions
 
 - Treat `main` as stable; branch for changes (short descriptive names).

@@ -10,7 +10,9 @@
     "gen:fixtures": "node scripts/gen_deck_fixture.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:web": "node --test tests/web/unit/*.test.js",
-    "test:firmware": "cmake -S tests/firmware -B tests/firmware/build && cmake --build tests/firmware/build && ctest --test-dir tests/firmware/build --output-on-failure"
+    "test:firmware": "cmake -S tests/firmware -B tests/firmware/build && cmake --build tests/firmware/build && ctest --test-dir tests/firmware/build --output-on-failure",
+    "docs:build": "zensical build",
+    "docs:serve": "zensical serve"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",
