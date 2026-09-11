@@ -46,6 +46,8 @@ reboots into it.
 - Looking up what a card type does? See [Card reference](cards.md).
 - Scripting layouts or integrating with the device API? See
   [Config API](config-api.md).
+- Coming from EspControl, or weighing the two? See
+  [vs EspControl](comparison.md) for a feature-parity comparison.
 
 ## Credits
 

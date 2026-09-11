@@ -9,3 +9,4 @@ nav:
   - Configurator: configurator.md
   - Card reference: cards.md
   - Config API: config-api.md
+  - vs EspControl: comparison.md

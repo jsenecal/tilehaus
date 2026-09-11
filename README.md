@@ -5,6 +5,10 @@ touchscreens.
 
 Inspired by [EspControl](https://github.com/jtenniswood/espcontrol).
 
+📖 **Documentation: <https://jsenecal.github.io/tilehaus/>** — getting started,
+hardware, flashing, the configurator, the card reference, the config API, and a
+[feature comparison with EspControl](https://jsenecal.github.io/tilehaus/comparison/).
+
 ## What it is
 
 Tilehaus turns a cheap touchscreen panel into a wall-mounted Home Assistant
