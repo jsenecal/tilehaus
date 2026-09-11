@@ -69,7 +69,7 @@ wifi:
 sensor:
   # Measure link quality so we can tell power-save lag apart from weak coverage.
   - platform: wifi_signal
-    name: "POC Wi-Fi RSSI"
+    name: "Tilehaus Wi-Fi RSSI"
     update_interval: 15s
 
 logger:
