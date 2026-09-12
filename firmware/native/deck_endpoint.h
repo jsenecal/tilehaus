@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <functional>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -13,6 +14,7 @@
 #include "deck_document.h"
 #include "deck_store.h"
 #include "deck_ui_endpoint.h"
+#include "splash.h"
 
 namespace tilehaus {
 
@@ -22,6 +24,13 @@ inline constexpr char kDeckMediaType[] = "application/vnd.tilehaus.deck";
 // by apply_pending_reboot(). Reboot-to-apply: the saved deck is rebuilt cleanly
 // on the next boot, avoiding a live teardown of HA state subscriptions that
 // ESPHome's API server cannot unsubscribe.
+// Set by bindings.yaml: runs shortly before the reset, to darken the panel.
+// Native code cannot reach an ESPHome light directly, so the YAML supplies it.
+inline std::function<void()> &pre_reboot_hook() {
+  static std::function<void()> hook;
+  return hook;
+}
+
 inline std::atomic<bool> &deck_reboot_pending() {
   static std::atomic<bool> pending{false};
   return pending;
@@ -237,10 +246,23 @@ inline void start_deck_server(uint16_t port = 80) {
 // boot. Rebooting on the same tick the flag is set races the httpd response
 // flush, so the client sees a dropped connection instead of its 204.
 inline void apply_pending_reboot() {
-  static int reboot_countdown = -1;  // -1 = idle; otherwise ticks until reboot
-  if (deck_reboot_pending().exchange(false)) reboot_countdown = 8;  // ~1.6s grace
-  if (reboot_countdown > 0 && --reboot_countdown == 0) {
-    esphome::App.safe_reboot();
+  // Ticks are 200ms (see bindings.yaml). The full grace stays 8 ticks so the
+  // HTTP response still flushes; the screen just goes dark partway through.
+  static constexpr int kGraceTicks = 8;      // 1.6s total
+  static constexpr int kDarkAtTick = 5;      // 600ms in: splash seen, then dark
+  static int reboot_countdown = -1;          // -1 = idle; else ticks until reboot
+  if (deck_reboot_pending().exchange(false)) {
+    reboot_countdown = kGraceTicks;
+    splash_set("\U000F06B0", "Rebooting", "Applying the new configuration");
+    splash_show();
+  }
+  if (reboot_countdown > 0) {
+    --reboot_countdown;
+    // Kill the backlight before the reset so the boot's garbage frames are
+    // never shown. hardware.yaml forces it back on at boot (restore_mode
+    // ALWAYS_ON), so this cannot leave the panel dark.
+    if (reboot_countdown == kDarkAtTick && pre_reboot_hook()) pre_reboot_hook()();
+    if (reboot_countdown == 0) esphome::App.safe_reboot();
   }
 }
 

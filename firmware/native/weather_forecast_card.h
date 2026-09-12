@@ -75,14 +75,22 @@ struct WeatherForecastCard : Card {
                             LV_FLEX_ALIGN_CENTER);
       lv_obj_set_style_pad_row(col, 4, 0);
 
-      add_label(col, fonts_.body, 0xC8C8C8, f[0].c_str());   // weekday
+      // Compact columns also drop to the small rung: five columns share ~322px,
+      // so ~58px each, and "22° 20°" at 22px is ~80px — putting the pair on one
+      // line fixes the height but overruns the width without this.
+      const lv_font_t *tf = stack_hilo_ ? fonts_.body
+                                        : (fonts_.small ? fonts_.small : fonts_.body);
+      add_label(col, tf, 0xC8C8C8, f[0].c_str());   // weekday
       add_label(col, fonts_.icon, 0xFFFFFF, weather_glyph(f[1]));  // condition
       char hi[16], lo[16];
       std::snprintf(hi, sizeof(hi), "%s\xC2\xB0", f[2].c_str());
-      std::snprintf(lo, sizeof(lo), "%s\xC2\xB0", f[3].c_str());
+      // On one line the low carries the separator so the pair reads "22°/20°"
+      // with no gap; stacked, it is just the temperature on its own row.
+      std::snprintf(lo, sizeof(lo), "%s%s\xC2\xB0", stack_hilo_ ? "" : "/",
+                    f[3].c_str());
       if (stack_hilo_) {
-        add_label(col, fonts_.body, 0xFFFFFF, hi);  // high
-        add_label(col, fonts_.body, 0x909090, lo);  // low
+        add_label(col, tf, 0xFFFFFF, hi);  // high
+        add_label(col, tf, 0x909090, lo);  // low
       } else {
         // Short tile: the pair shares a line, saving a whole row. Kept as two
         // labels rather than one string so the high stays white and the low
@@ -95,9 +103,9 @@ struct WeatherForecastCard : Card {
         lv_obj_set_flex_flow(hl, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(hl, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_column(hl, 6, 0);
-        add_label(hl, fonts_.body, 0xFFFFFF, hi);
-        add_label(hl, fonts_.body, 0x909090, lo);
+        lv_obj_set_style_pad_column(hl, 0, 0);
+        add_label(hl, tf, 0xFFFFFF, hi);   // "22°"
+        add_label(hl, tf, 0x909090, lo);   // "/20°" — slash carried by the low
       }
     }
   }
