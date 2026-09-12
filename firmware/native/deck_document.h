@@ -12,7 +12,11 @@ inline constexpr uint16_t kDeckDocumentVersion = 6;
 inline constexpr size_t kDeckHeaderSize = 16;     // v1/v2 header
 inline constexpr size_t kDeckHeaderSizeV3 = 20;   // v3 appends a 4-byte accent; also v5
 inline constexpr size_t kDeckHeaderSizeV6 = 22;   // v6 appends gridCols/gridRows
-inline constexpr size_t kDeckMaxCardCount = 64;
+inline constexpr size_t kDeckMaxCardCount = 128;
+// Capacity of the persisted deck blob (see DeckStore). Lives here so the codec
+// and its host tests can assert a max-size deck still fits without dragging in
+// the esphome preferences header.
+inline constexpr size_t kDeckMaxDocumentBytes = 16384;
 inline constexpr uint8_t kDeckMaxType = 22;
 inline constexpr int32_t kDeckAccentDefault = -1;  // -1 = use built-in card colours
 inline constexpr int kDeckGridColsDefault = 10;

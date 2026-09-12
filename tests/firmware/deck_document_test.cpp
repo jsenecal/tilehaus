@@ -96,6 +96,45 @@ int main() {
     assert(gc == 8 && gr == 4);
   }
 
+  { // a full kDeckMaxCardCount deck parses; one card over the cap is rejected.
+    // Hand-built so the test pins the ceiling rather than a fixture's card count.
+    auto build = [](size_t card_count) {
+      std::vector<uint8_t> b(tilehaus::kDeckHeaderSizeV6);
+      b[0] = 'D'; b[1] = 'E'; b[2] = 'C'; b[3] = 'K';
+      b[4] = 6; b[5] = 0;                                  // version
+      b[6] = tilehaus::kDeckHeaderSizeV6; b[7] = 0;        // header size
+      b[12] = static_cast<uint8_t>(card_count & 0xff);     // card count (u16)
+      b[13] = static_cast<uint8_t>(card_count >> 8);
+      b[14] = 1;                                           // one page
+      b[20] = 12; b[21] = 7;                               // grid
+      for (int i = 16; i < 20; ++i) b[i] = 0xff;           // accent -1
+      b.push_back(4); for (char c : std::string("Home")) b.push_back(c);
+      for (size_t i = 0; i < card_count; ++i) {
+        std::vector<uint8_t> card(16, 0);
+        card[0] = static_cast<uint8_t>(CardType::Toggle);
+        card[1] = 2; card[2] = 2;                          // w/h
+        for (int k = 4; k < 12; ++k) card[k] = 0xff;       // both colours -1
+        b.insert(b.end(), card.begin(), card.end());
+        for (int k = 0; k < 5; ++k) b.push_back(0);        // five empty strings
+      }
+      const uint32_t payload = static_cast<uint32_t>(b.size() - tilehaus::kDeckHeaderSizeV6);
+      b[8] = payload & 0xff; b[9] = (payload >> 8) & 0xff;
+      b[10] = (payload >> 16) & 0xff; b[11] = (payload >> 24) & 0xff;
+      return b;
+    };
+
+    std::vector<uint8_t> full = build(tilehaus::kDeckMaxCardCount);
+    std::vector<CardConfig> c;
+    assert(tilehaus::decode_deck(full.data(), full.size(), c));
+    assert(c.size() == tilehaus::kDeckMaxCardCount);
+    // A full deck must still fit the persisted blob.
+    assert(full.size() <= tilehaus::kDeckMaxDocumentBytes);
+
+    std::vector<uint8_t> over = build(tilehaus::kDeckMaxCardCount + 1);
+    std::vector<CardConfig> c2;
+    assert(!tilehaus::decode_deck(over.data(), over.size(), c2));
+  }
+
   { // a v4 buffer is rejected
     std::vector<uint8_t> b = read_fixture(); b[4] = 0x04;
     std::vector<CardConfig> c;

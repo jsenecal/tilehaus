@@ -1,4 +1,4 @@
-import { decodeDeck, decodeDeckDocument, encodeDeck, DeckConfigError, type DeckCard } from "../../web/model/deck";
+import { decodeDeck, decodeDeckDocument, encodeDeck, DeckConfigError, DECK_MAX_CARD_COUNT, DECK_MAX_DOCUMENT_BYTES, type DeckCard } from "../../web/model/deck";
 import { readFileSync } from "node:fs";
 
 function deepEqual(actual: unknown, expected: unknown, message: string): void {
@@ -51,7 +51,25 @@ export function runDeckCodecTests(): void {
   // Field bounds
   throws(() => encodeDeck([{ ...BASIC[0]!, type: 99 }]), "unknown type rejected");
   throws(() => encodeDeck([{ ...BASIC[0]!, entity: "x".repeat(64) }]), "oversize string rejected");
-  throws(() => encodeDeck(new Array(65).fill(BASIC[0]!)), "too many cards rejected");
+  throws(() => encodeDeck(new Array(DECK_MAX_CARD_COUNT + 1).fill(BASIC[0]!)), "too many cards rejected");
+
+  // A full-size deck round-trips and still fits the device's persisted blob.
+  {
+    const full = new Array(DECK_MAX_CARD_COUNT).fill(null).map((_, i): DeckCard => ({
+      ...BASIC[0]!, col: (i * 2) % 12, row: 0, page: Math.floor(i / 6),
+    }));
+    const bytes = encodeDeck(full, -1, ["Home"], 12, 7);
+    assert(bytes.length <= DECK_MAX_DOCUMENT_BYTES, "max-card deck fits the blob");
+    deepEqual(decodeDeck(bytes), full, "max-card deck round-trips");
+  }
+  // ...and a deck that overflows the blob is rejected at encode.
+  {
+    const fat: DeckCard = {
+      ...BASIC[0]!, entity: "x".repeat(63), title: "y".repeat(63), entity2: "z".repeat(63),
+      icon: "i".repeat(63), iconAlt: "a".repeat(63),
+    };
+    throws(() => encodeDeck(new Array(DECK_MAX_CARD_COUNT).fill(fat)), "oversize deck rejected");
+  }
 
   // Golden fixture: the committed bytes both codecs are pinned to.
   const fixture = new Uint8Array(readFileSync("tests/firmware/fixtures/deck_basic.bin"));

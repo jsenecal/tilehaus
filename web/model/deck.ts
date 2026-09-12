@@ -8,7 +8,11 @@ export const DECK_ACCENT_DEFAULT = -1;      // -1 = use the built-in card colour
 export const DECK_ALIGN_DEFAULT = 5;        // v4 align byte: halign|(valign<<2); 5 = centre/centre
 export const DECK_GRID_COLS_DEFAULT = 10;
 export const DECK_GRID_ROWS_DEFAULT = 6;
-export const DECK_MAX_CARD_COUNT = 64;
+export const DECK_MAX_CARD_COUNT = 128;
+// Capacity of the panel's persisted deck blob (tilehaus::kDeckMaxDocumentBytes).
+// Enforced here so an oversize deck fails at encode with a useful message rather
+// than as a bare 400 from the device's PUT handler.
+export const DECK_MAX_DOCUMENT_BYTES = 16384;
 export const DECK_MAX_STRING_BYTES = 63;
 export const DECK_MAX_ICON_BYTES = 63;
 export const DECK_MAX_TYPE = 22;
@@ -160,6 +164,8 @@ export function encodeDeck(
   let offset = DECK_HEADER_SIZE_V6;
   for (const s of pageBodies) { out[offset++] = s.length; out.set(s, offset); offset += s.length; }
   for (const b of bodies) { out.set(b, offset); offset += b.length; }
+  if (out.length > DECK_MAX_DOCUMENT_BYTES)
+    fail(`deck is ${out.length} bytes, over the ${DECK_MAX_DOCUMENT_BYTES}-byte device limit`);
   return out;
 }
 

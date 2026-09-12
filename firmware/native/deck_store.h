@@ -6,6 +6,8 @@
 
 #include "esphome/core/preferences.h"
 
+#include "deck_document.h"
+
 namespace tilehaus {
 
 // Durable opaque store for the DECK document. Persists the document bytes plus a
@@ -14,12 +16,19 @@ namespace tilehaus {
 class DeckStore {
  public:
   // Fixed capacity persisted blob: 4-byte length + 4-byte generation + payload.
-  static constexpr size_t kMaxDocumentBytes = 4096;
+  // Sized for a full kDeckMaxCardCount deck with long entity ids — a card costs
+  // 16 bytes plus five length-prefixed strings, so ~60 bytes typical and 336 in
+  // the pathological case. The nvs partition is 0x70000, so this is cheap.
+  //
+  // NOTE: this size *is* the preference's blob length, so changing it makes the
+  // next pref_.load() length-mismatch and the stored deck is dropped — the panel
+  // boots to the awaiting-config screen and the deck must be pushed again.
+  static constexpr size_t kMaxDocumentBytes = kDeckMaxDocumentBytes;
 
   void setup() {
     // Stable hashed key for this panel's deck document.
     pref_ = esphome::global_preferences->make_preference<Blob>(0x6465636bUL /* 'deck' */);
-    // Blob is ~4 KB — keep it off the stack (heap) even on the main task.
+    // Blob is ~16 KB — keep it off the stack (heap) even on the main task.
     auto blob = std::unique_ptr<Blob>(new Blob());
     if (pref_.load(blob.get()) && blob->length <= kMaxDocumentBytes) {
       length_ = blob->length;
@@ -37,8 +46,8 @@ class DeckStore {
   // (0 = write failed).
   uint32_t save(const uint8_t *data, size_t len) {
     if (data == nullptr || len == 0 || len > kMaxDocumentBytes) return 0;
-    // Blob is ~4 KB; heap-allocate it — this runs on the HTTP server task whose
-    // stack is far too small for a 4 KB stack frame (would overflow → crash).
+    // Blob is ~16 KB; heap-allocate it — this runs on the HTTP server task whose
+    // stack is far too small for a 16 KB stack frame (would overflow → crash).
     auto blob = std::unique_ptr<Blob>(new Blob());
     blob->length = static_cast<uint32_t>(len);
     blob->generation = generation_ + 1;
