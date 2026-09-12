@@ -215,7 +215,8 @@ inline void style_action_feedback(lv_obj_t *obj, uint32_t rest_color,
 // at full width, so the bottom-right corner is exactly where a long name lands.
 // Reserving width in the label can't fix that — on a 2-col tile a single-word
 // title has nowhere to wrap to — so the chevron gets the one corner nothing else
-// claims. Matches the intent documented on CardConfig::detail.
+// claims. Matches the intent documented on CardConfig::detail. It sits on the
+// icon's centre line, reading as a pair with it across the top of the tile.
 inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
                                     int inset, lv_event_cb_t cb,
                                     void *user_data) {
@@ -237,10 +238,14 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
     lv_obj_set_style_text_color(l, lv_color_hex(color), 0);
     lv_obj_set_style_text_opa(l, opa, 0);
     lv_label_set_text(l, "\U000F0142");  // mdi-chevron-right
-    // Shrink the 46px glyph toward its top-right so it reads near the
-    // name-label size and sits tight to the corner.
+    // Shrink the 46px glyph so it reads near the name-label size. Pivot right
+    // keeps it flush to the corner; pivot mid keeps its vertical centre put
+    // while it shrinks. The glyph reuses the icon font and is aligned to the
+    // same top edge as the tile's icon, so identical box heights put both
+    // centres on one line — no offset arithmetic, and it survives a font
+    // size change.
     lv_obj_set_style_transform_pivot_x(l, lv_pct(100), 0);
-    lv_obj_set_style_transform_pivot_y(l, 0, 0);
+    lv_obj_set_style_transform_pivot_y(l, lv_pct(50), 0);
     lv_obj_set_style_transform_scale(l, 165, 0);
     lv_obj_align(l, LV_ALIGN_TOP_RIGHT, -inset + nudge, inset + nudge);
     return l;
