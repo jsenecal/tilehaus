@@ -19,10 +19,19 @@ inline int compute_columns(int width_px, int unit_px, int pad_px, int gap_px) {
   return c < 1 ? 1 : c;
 }
 
-// Pixel geometry of the final tile grid. Mirrors what poc_build_grid hands
-// LVGL, so a caller can size a tile *before* any layout pass: columns are
-// LV_GRID_FR(1) tracks that divide the remaining width evenly, and row tracks
-// are set to an explicit height.
+// Pixel geometry of the final tile grid, so a caller can size a tile *before*
+// any layout pass.
+//
+// Row height is exact: poc_build_grid sets an explicit pixel row track.
+// Column width is a LOWER BOUND, not an exact reproduction — columns are
+// LV_GRID_FR(1) tracks, and LVGL distributes the leftover remainder across
+// them rather than truncating each one, so when the available width does not
+// divide evenly some rendered columns are 1px wider than cell_w reports
+// (882/12 = 73.5 on a 1024px 12-column panel: cell_w is 73, some columns
+// render 74). That is safe for the callers this exists for, which compare the
+// width against a minimum threshold — under-reporting can only pick a more
+// conservative result, never an overconfident one. Do not rely on cell_w to
+// match a rendered column exactly.
 struct GridMetrics { int cell_w; int cell_h; int gap; };
 
 // The final sub-unit column count. `base_cols` (0 = derive from unit_px) sets

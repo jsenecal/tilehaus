@@ -24,25 +24,19 @@ inline void poc_build_grid(lv_obj_t *root, const std::vector<GridTile>& tiles,
                            int override_cols = 0, int override_rows = 0) {
   if (subdivisions < 1) subdivisions = 1;
   lv_display_t *disp = lv_obj_get_display(root);
-  int width = lv_display_get_horizontal_resolution(disp);
-  int normal_cols = base_cols > 0 ? base_cols
-                                  : compute_columns(width, unit_px, pad_px, gap_px);
-  int columns = override_cols > 0 ? override_cols : normal_cols * subdivisions;
+  const int width = lv_display_get_horizontal_resolution(disp);
+  const int height = lv_display_get_vertical_resolution(disp);
 
-  // Row tracks are sized so the rows that fit the display fill its height
-  // exactly (symmetric with columns filling the width) — accounting for the
-  // outer padding and inter-row gaps — so a full screen of rows doesn't spill
-  // into a scroll. Rows beyond what fits keep the same height and overflow,
-  // giving vertical scroll only when there is genuinely more than one screen.
-  // compute_columns is dimension-agnostic track math, reused here for height.
-  int height = lv_display_get_vertical_resolution(disp);
-  int normal_rows = base_rows > 0 ? base_rows
-                                  : compute_columns(height, unit_px, pad_px, gap_px);
-  int visible_rows = override_rows > 0 ? override_rows : normal_rows * subdivisions;
-  if (visible_rows < 1) visible_rows = 1;
-  int avail_h = height - 2 * pad_px - (visible_rows - 1) * gap_px;
-  int row_h = avail_h / visible_rows;
-  if (row_h < 1) row_h = 1;
+  // Geometry comes from grid_layout.h so build_page can compute the identical
+  // numbers ahead of this call. Row tracks are sized so the rows that fit the
+  // display fill its height exactly (symmetric with columns filling the width);
+  // rows beyond that keep the same height and overflow into a vertical scroll.
+  const int columns = grid_final_columns(width, unit_px, pad_px, gap_px,
+                                         subdivisions, base_cols, override_cols);
+  const GridMetrics gm = compute_grid_metrics(width, height, unit_px, pad_px,
+                                              gap_px, subdivisions, base_cols,
+                                              base_rows, override_cols, override_rows);
+  const int row_h = gm.cell_h;
 
   int rows = 0;
   for (const auto& t : tiles) { int bottom = t.row + (t.h > 0 ? t.h : 1); if (bottom > rows) rows = bottom; }
