@@ -17,10 +17,11 @@ esphome:
   platformio_options:
     build_flags:
       - "-DLV_USE_OBSERVER=1"
-      # Live FPS / CPU overlay (bottom-right) to measure framerate while tuning.
-      # The perf monitor lives inside sysmon in LVGL 9, so both are required.
-      - "-DLV_USE_SYSMON=1"
-      - "-DLV_USE_PERF_MONITOR=1"
+      # Live FPS / CPU overlay (bottom-right), for measuring framerate while
+      # tuning. The perf monitor lives inside sysmon in LVGL 9, so both must be
+      # on together — flip this pair to 1 to bring the overlay back.
+      - "-DLV_USE_SYSMON=0"
+      - "-DLV_USE_PERF_MONITOR=0"
       # Cards build widgets in C++, so ESPHome's "only compile LVGL features
       # used in YAML" heuristic would strip these. Force them on (same flag
       # mechanism as the observer) so grid_root can stay empty — no seed widgets.
