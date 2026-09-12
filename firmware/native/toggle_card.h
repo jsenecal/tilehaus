@@ -42,7 +42,8 @@ struct ToggleCard : Card {
     icon_off_ = cfg.icon_alt;
     on_color_ = resolve_color(cfg.active_color, 0xFF8C00);
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts.body, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT, 0, 0,
+             (cfg.detail && has_detail_modal(cfg.entity)) ? kDetailChevronReserve : 0);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);
     lv_subject_init_int(&on_, 0);

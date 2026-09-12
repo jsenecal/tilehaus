@@ -26,6 +26,11 @@ inline bool &tile_compact() {
 // One place so all tiles line up.
 inline constexpr int kTileInset = 16;
 
+// Horizontal room the bottom-right detail chevron takes up. Name labels on
+// tiles that show one reserve this much so a long title wraps before it runs
+// underneath the glyph.
+inline constexpr int kDetailChevronReserve = 44;
+
 // Ease duration for value glides (fill sliders, cover shade). Applied to
 // externally-pushed state changes (HA) and tap-to-position; a live drag stays
 // 1:1 with the finger and is never animated.
@@ -103,9 +108,9 @@ inline void set_icon_glyph(lv_obj_t *icon, const std::string &glyph) {
 inline lv_obj_t *add_name(lv_obj_t *cell, const lv_font_t *font,
                           const std::string &title, bool hidden = false,
                           lv_align_t align = LV_ALIGN_BOTTOM_LEFT,
-                          int dx = 0, int dy = 0) {
+                          int dx = 0, int dy = 0, int reserve_right = 0) {
   if (hidden || tile_compact()) return nullptr;  // no room for a label on a 1x1
-  add_text_shadow(cell, font, title, true, align, dx, dy);
+  lv_obj_t *sh = add_text_shadow(cell, font, title, true, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
   lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
@@ -113,6 +118,13 @@ inline lv_obj_t *add_name(lv_obj_t *cell, const lv_font_t *font,
   lv_obj_set_width(lbl, LV_PCT(100));
   lv_label_set_text(lbl, title.c_str());
   lv_obj_align(lbl, align, dx, dy);
+  if (reserve_right > 0) {
+    // Narrow the text area with padding rather than a pixel width: the cell's
+    // real width isn't known until the grid lays out, but padding is applied
+    // against whatever LV_PCT(100) resolves to.
+    lv_obj_set_style_pad_right(lbl, reserve_right, 0);
+    if (sh) lv_obj_set_style_pad_right(sh, reserve_right, 0);
+  }
   return lbl;
 }
 
@@ -222,16 +234,25 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
   style_press_dip(b);  // soft dim of the whole corner (and its glyph) on press
   lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, user_data);
 
-  lv_obj_t *g = lv_label_create(b);
-  if (icon_font) lv_obj_set_style_text_font(g, icon_font, 0);
-  lv_obj_set_style_text_color(g, lv_color_hex(0xC8C8C8), 0);
-  lv_label_set_text(g, "\U000F0142");  // mdi-chevron-right
-  // Shrink the 46px glyph toward its bottom-right so it reads near the name-label
-  // size and lines up with the name's baseline.
-  lv_obj_set_style_transform_pivot_x(g, lv_pct(100), 0);
-  lv_obj_set_style_transform_pivot_y(g, lv_pct(100), 0);
-  lv_obj_set_style_transform_scale(g, 165, 0);
-  lv_obj_align(g, LV_ALIGN_BOTTOM_RIGHT, -inset, -inset);
+  // The glyph, plus the same dark twin behind it that add_icon/add_name use:
+  // the chevron sits on follow-colour tiles that can go light, where a bare grey
+  // glyph washes out. Twin is created first so it renders underneath.
+  auto chevron_glyph = [&](uint32_t color, lv_opa_t opa, int nudge) {
+    lv_obj_t *l = lv_label_create(b);
+    if (icon_font) lv_obj_set_style_text_font(l, icon_font, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(color), 0);
+    lv_obj_set_style_text_opa(l, opa, 0);
+    lv_label_set_text(l, "\U000F0142");  // mdi-chevron-right
+    // Shrink the 46px glyph toward its bottom-right so it reads near the
+    // name-label size and lines up with the name's baseline.
+    lv_obj_set_style_transform_pivot_x(l, lv_pct(100), 0);
+    lv_obj_set_style_transform_pivot_y(l, lv_pct(100), 0);
+    lv_obj_set_style_transform_scale(l, 165, 0);
+    lv_obj_align(l, LV_ALIGN_BOTTOM_RIGHT, -inset + nudge, -inset + nudge);
+    return l;
+  };
+  chevron_glyph(0x000000, LV_OPA_60, 1);            // shadow twin
+  chevron_glyph(0xC8C8C8, LV_OPA_COVER, 0);         // the chevron itself
   return b;
 }
 

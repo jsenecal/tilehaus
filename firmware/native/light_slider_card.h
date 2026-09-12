@@ -161,7 +161,8 @@ struct LightSliderCard : Card {
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt;
     add_name(cell, fonts.body, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT,
-             kTileInset, -kTileInset);
+             kTileInset, -kTileInset,
+             (cfg.detail && has_detail_modal(cfg.entity)) ? kDetailChevronReserve : 0);
 
     // Centered transient readout: large, transparent until a change flashes it
     // visible; auto-fades out via hide_timer_.

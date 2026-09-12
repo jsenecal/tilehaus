@@ -134,7 +134,8 @@ struct CoverCard : Card {
     icon_closed_ = cfg.icon;
     icon_open_ = cfg.icon_alt;
     add_name(cell, fonts.body, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT,
-             kTileInset, -kTileInset);
+             kTileInset, -kTileInset,
+             (cfg.detail && has_detail_modal(cfg.entity)) ? kDetailChevronReserve : 0);
 
     pct_lbl_ = lv_label_create(cell);
     lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(0xFFFFFF), 0);
