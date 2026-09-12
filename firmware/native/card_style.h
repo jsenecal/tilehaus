@@ -65,13 +65,22 @@ inline void style_cell(lv_obj_t *cell, int radius) {
 // them into full-screen overlays, which have none of a tile's width problem.
 // add_name and the sensor value are called only from tile bodies, so choosing
 // here keeps the scaling where it belongs by construction.
+// build_page resets tile_metrics() to {0,0} between tiles, and text_scale_for(0)
+// is Tight — so read the width defensively: a call from outside the build window
+// must fail toward the FULL-SIZE font. Every modal header already includes this
+// file, and add_name is the only labelled-text helper in it, so a future modal
+// reaching for it is plausible; when that happens it should look like a wide
+// tile, never silently shrink the way the bug this replaced did.
+inline bool tile_is_tight() {
+  const int px_w = tile_metrics().px_w;
+  return px_w > 0 && text_scale_for(px_w) == TextScale::Tight;
+}
+
 inline const lv_font_t *tile_body_font(const CardFonts &fonts) {
-  const bool tight = text_scale_for(tile_metrics().px_w) == TextScale::Tight;
-  return (tight && fonts.body_tight) ? fonts.body_tight : fonts.body;
+  return (tile_is_tight() && fonts.body_tight) ? fonts.body_tight : fonts.body;
 }
 inline const lv_font_t *tile_value_font(const CardFonts &fonts) {
-  const bool tight = text_scale_for(tile_metrics().px_w) == TextScale::Tight;
-  return (tight && fonts.medium) ? fonts.medium : fonts.value;
+  return (tile_is_tight() && fonts.medium) ? fonts.medium : fonts.value;
 }
 
 // Icon label anchored top-left. Skipped when the glyph is empty.
