@@ -116,21 +116,19 @@ struct HeaderCard : Card {
     }
 
     if (cfg.show_clock) {
-      // This card's default size is 10x2. Dropped into a one-row slot it gets
-      // ~40px of content, but the 55px clock alone has a ~64px line height, so
-      // the stacked date was sliced in half. Shrinking to fit would need ~17px,
-      // which is unreadable across a room — so the pair goes side by side
-      // instead, which the header's ~986px of width easily absorbs.
-      const bool stacked =
-          header_clock_stacks(tile_metrics().px_h - 2 * kTileInset);
-      lv_obj_t *tx =
-          flex_box(right, stacked ? LV_FLEX_FLOW_COLUMN : LV_FLEX_FLOW_ROW);
-      lv_obj_set_flex_align(tx, LV_FLEX_ALIGN_END,
-                            stacked ? LV_FLEX_ALIGN_END : LV_FLEX_ALIGN_CENTER,
-                            LV_FLEX_ALIGN_CENTER);
-      if (!stacked) lv_obj_set_style_pad_column(tx, 12, 0);
-      clock_ = text(tx, stacked ? fonts.value : fonts.medium, "--:--");
-      date_ = text(tx, fonts.body, "");
+      // This card's default size is 10x2; dropped into a one-row slot the 55px
+      // clock's ~64px line height plus a 22px date overran the 72px tile and
+      // sliced the date in half. The clock stays stacked over the date either
+      // way — that is what a clock should look like — and both drop a rung when
+      // the slot is short: 34px over 15px is ~58px, comfortably inside 72px.
+      const bool full =
+          header_clock_full_size(tile_metrics().px_h - 2 * kTileInset);
+      lv_obj_t *tx = flex_box(right, LV_FLEX_FLOW_COLUMN);
+      lv_obj_set_flex_align(tx, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END,
+                            LV_FLEX_ALIGN_END);
+      clock_ = text(tx, full ? fonts.value : fonts.medium, "--:--");
+      date_ = text(tx, full ? fonts.body
+                            : (fonts.small ? fonts.small : fonts.body), "");
       lv_obj_set_style_text_color(date_, lv_color_hex(0xB0B0B0), 0);
       update_clock();
       lv_timer_create(tick_cb, 1000, this);

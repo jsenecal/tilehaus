@@ -12,12 +12,14 @@ namespace tilehaus {
 // tune it against a real panel.
 inline constexpr int kTileTightWidth = 200;
 
-// Minimum content height (tile height less both insets) for the header to stack
-// its clock over its date. The stacked pair needs ~90px (a 55px clock's line
-// height is ~64px, plus ~26px for the 22px date); a one-row slot offers 40px,
-// which clipped the date. Rounded up to 96 for a little slack — the 6px is
-// deliberate margin against font-metric drift, not a stray number.
-inline constexpr int kHeaderStackMinContentHeight = 96;
+// Minimum content height (tile height less both insets) for the header's clock
+// to use the FULL-SIZE fonts. The 55px clock over the 22px date needs ~90px
+// (~64px line height plus ~26px); a one-row slot offers 40px, which overran the
+// tile and sliced the date in half. Rounded up to 96 for a little slack — the
+// 6px is deliberate margin against font-metric drift, not a stray number.
+// Below this the pair stays stacked but drops a rung each (34px over 15px,
+// ~58px), which is what a clock should look like at any size.
+inline constexpr int kHeaderClockFullSizeMinHeight = 96;
 
 // --- Tile text scale (every card, via build_page) ---
 
@@ -29,10 +31,10 @@ inline TextScale text_scale_for(int tile_px_w) {
   return tile_px_w < kTileTightWidth ? TextScale::Tight : TextScale::Default;
 }
 
-// --- Header clock orientation (HeaderCard only) ---
+// --- Header clock sizing (HeaderCard only) ---
 
-inline bool header_clock_stacks(int content_px_h) {
-  return content_px_h >= kHeaderStackMinContentHeight;
+inline bool header_clock_full_size(int content_px_h) {
+  return content_px_h >= kHeaderClockFullSizeMinHeight;
 }
 
 }  // namespace tilehaus
