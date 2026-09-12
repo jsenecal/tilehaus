@@ -133,7 +133,7 @@ struct CoverCard : Card {
                          kTileInset, kTileInset);
     icon_closed_ = cfg.icon;
     icon_open_ = cfg.icon_alt;
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT,
+    add_name(cell, fonts, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT,
              kTileInset, -kTileInset);
 
     pct_lbl_ = lv_label_create(cell);

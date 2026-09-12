@@ -40,7 +40,7 @@ struct WledCard : Card {
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt.empty() ? cfg.icon : cfg.icon_alt;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     active_color_ = resolve_color(cfg.active_color, 0x5A3E8A);
     idle_color_ = resolve_color(cfg.inactive_color, 0x313131);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);

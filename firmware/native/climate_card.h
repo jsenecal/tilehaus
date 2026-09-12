@@ -38,7 +38,7 @@ struct ClimateCard : Card {
     fonts_ = fonts;
     title_ = cfg.title;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     warm_color_ = resolve_color(cfg.active_color, 0xC24E1E);
     idle_color_ = resolve_color(cfg.inactive_color, 0x313131);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);

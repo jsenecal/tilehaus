@@ -37,7 +37,7 @@ struct PresenceCard : Card {
     icon_off_ = cfg.icon_alt;
     on_color_ = resolve_color(cfg.active_color, 0xFF8C00);
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_subject_init_int(&on_, 0);
     lv_subject_add_observer(&on_, recolor_cb, this);
   }

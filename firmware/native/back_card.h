@@ -16,7 +16,7 @@ struct BackCard : Card {
     const std::string glyph = cfg.icon.empty() ? std::string("\U000F0141") : cfg.icon;  // mdi-chevron-left
     // 1x1 centring + label-drop is handled centrally (tile_compact in build_page).
     add_icon(cell, fonts.icon, glyph);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     if (cfg.active_color >= 0)
       lv_obj_set_style_bg_color(cell, lv_color_hex(static_cast<uint32_t>(cfg.active_color)), 0);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);

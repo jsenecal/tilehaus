@@ -22,9 +22,12 @@ struct SensorCard : Card {
     // Value takes the icon slot (top-left); name sits bottom-left.
     label_ = lv_label_create(cell);
     lv_obj_set_style_text_color(label_, lv_color_hex(0xFFFFFF), 0);
-    if (fonts.value) lv_obj_set_style_text_font(label_, fonts.value, 0);
+    // Tight tiles drop to the medium rung: 55px overflows a 124px content
+    // area, which clipped "23.4°C" to "23.4°(".
+    if (const lv_font_t *vf = tile_value_font(fonts))
+      lv_obj_set_style_text_font(label_, vf, 0);
     lv_obj_align(label_, LV_ALIGN_TOP_LEFT, 0, 0);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     buf_[0] = prev_[0] = '\0';
     lv_subject_init_string(&text_, buf_, prev_, sizeof(buf_), "-");
     lv_label_bind_text(label_, &text_, nullptr);

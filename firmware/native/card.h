@@ -14,9 +14,10 @@ struct CardFonts {
   const lv_font_t *body = nullptr;    // font_text_body
   const lv_font_t *medium = nullptr;  // font_number_medium (compact values)
   const lv_font_t *small = nullptr;   // font_text_small (secondary lines)
-  // Appended last: bindings.yaml aggregate-initialises this struct positionally,
-  // so inserting above would silently reassign every field after it.
-  const lv_font_t *body_small = nullptr;  // font_text_body_small (tight tiles)
+  // "tight" matches the vocabulary the tile-sizing policy uses (kTileTightWidth,
+  // TextScale::Tight); "small" was already taken by the unrelated 15px
+  // secondary-text font above.
+  const lv_font_t *body_tight = nullptr;  // font_text_body_tight (narrow tiles)
 };
 
 struct Card {

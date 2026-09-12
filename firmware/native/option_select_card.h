@@ -55,7 +55,7 @@ struct OptionSelectCard : Card {
     fonts_ = fonts;
     title_ = cfg.title;
     add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
 
     val_lbl_ = lv_label_create(cell);
     if (fonts.body) lv_obj_set_style_text_font(val_lbl_, fonts.body, 0);

@@ -44,7 +44,7 @@ font:
   # Tile names on tight (narrow) tiles — a 2-column tile has ~124px of content,
   # where the 22px body wraps an 11-character title onto two lines.
   - file: "gfonts://Roboto"
-    id: font_text_body_small
+    id: font_text_body_tight
     size: 17
     bpp: 4
     glyphs: !include assets/text_glyphs.yaml

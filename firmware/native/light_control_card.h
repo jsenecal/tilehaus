@@ -80,7 +80,7 @@ struct LightControlCard : Card {
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     follow_color_ = cfg.follow_color;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);  // tactile feedback on tap, right before the modal opens
     lv_subject_init_int(&on_, 0);

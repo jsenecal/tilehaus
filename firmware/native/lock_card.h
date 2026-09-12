@@ -43,7 +43,7 @@ struct LockCard : Card {
     icon_unlocked_ = cfg.icon_alt;
     locked_color_ = resolve_color(cfg.active_color, 0x2E7D32);
     unlocked_color_ = resolve_color(cfg.inactive_color, 0xC62828);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);  // tactile feedback on tap (before lock action / confirm)
     lv_subject_init_int(&locked_, 0);

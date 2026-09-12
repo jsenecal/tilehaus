@@ -4,13 +4,16 @@ esphome:
       then:
         - lambda: |-
             tilehaus::app_clock() = id(poc_time);
+            // Designated initialisers on purpose: this struct used to be
+            // filled positionally, where inserting a field mid-struct would
+            // silently shift every later font by one with no compiler error.
             static tilehaus::CardFonts poc_fonts{
-                id(font_icon_main)->get_lv_font(),
-                id(font_number_value)->get_lv_font(),
-                id(font_text_body)->get_lv_font(),
-                id(font_number_medium)->get_lv_font(),
-                id(font_text_small)->get_lv_font(),
-                id(font_text_body_small)->get_lv_font(),
+                .icon = id(font_icon_main)->get_lv_font(),
+                .value = id(font_number_value)->get_lv_font(),
+                .body = id(font_text_body)->get_lv_font(),
+                .medium = id(font_number_medium)->get_lv_font(),
+                .small = id(font_text_small)->get_lv_font(),
+                .body_tight = id(font_text_body_tight)->get_lv_font(),
             };
             // Boot splash on top of everything; fades out on the first HA state.
             tilehaus::splash_build(poc_fonts);

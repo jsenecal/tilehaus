@@ -23,7 +23,7 @@ struct ActionCard : Card {
              const CardFonts &fonts) override {
     cell_ = cell;
     add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     // inactive_color = resting bg, active_color = the momentary tap flash.
     style_action_feedback(cell, resolve_color(cfg.inactive_color, 0x313131),

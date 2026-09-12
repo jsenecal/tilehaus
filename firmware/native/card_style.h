@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 #include "card_config.h"  // accent_or
+#include "card.h"        // CardFonts
+#include "tile_scale.h"   // text_scale_for
 
 namespace tilehaus {
 
@@ -52,6 +54,24 @@ inline void style_cell(lv_obj_t *cell, int radius) {
   // Tiles never scroll internally: clip overflow to the rounded rect instead of
   // spawning a scrollbar when content sits a few px over the cell.
   lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+// The body/value font for the tile currently being built: the tight rung on a
+// narrow tile, the default otherwise.
+//
+// This choice deliberately lives here rather than in the CardFonts handed to
+// Card::build(). Eleven cards persist that struct (`fonts_ = fonts`) and later
+// hand it to their modal, dialog or PIN pad — so scaling it there would follow
+// them into full-screen overlays, which have none of a tile's width problem.
+// add_name and the sensor value are called only from tile bodies, so choosing
+// here keeps the scaling where it belongs by construction.
+inline const lv_font_t *tile_body_font(const CardFonts &fonts) {
+  const bool tight = text_scale_for(tile_metrics().px_w) == TextScale::Tight;
+  return (tight && fonts.body_tight) ? fonts.body_tight : fonts.body;
+}
+inline const lv_font_t *tile_value_font(const CardFonts &fonts) {
+  const bool tight = text_scale_for(tile_metrics().px_w) == TextScale::Tight;
+  return (tight && fonts.medium) ? fonts.medium : fonts.value;
 }
 
 // Icon label anchored top-left. Skipped when the glyph is empty.
@@ -110,11 +130,14 @@ inline void set_icon_glyph(lv_obj_t *icon, const std::string &glyph) {
 
 // Wrapping name label anchored bottom-left, full content width. Returns nullptr
 // when `hidden` (per-tile hide_label) so callers can skip it — the icon stays.
-inline lv_obj_t *add_name(lv_obj_t *cell, const lv_font_t *font,
+// Takes the whole CardFonts, not one font, so it can pick the tight rung for a
+// narrow tile — see tile_body_font.
+inline lv_obj_t *add_name(lv_obj_t *cell, const CardFonts &fonts,
                           const std::string &title, bool hidden = false,
                           lv_align_t align = LV_ALIGN_BOTTOM_LEFT,
                           int dx = 0, int dy = 0) {
   if (hidden || tile_compact()) return nullptr;  // no room for a label on a 1x1
+  const lv_font_t *font = tile_body_font(fonts);
   add_text_shadow(cell, font, title, true, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
   lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);

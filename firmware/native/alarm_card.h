@@ -55,7 +55,7 @@ struct AlarmCard : Card {
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt.empty() ? cfg.icon : cfg.icon_alt;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
+    add_name(cell, fonts, cfg.title, cfg.hide_label);
     on_color_ = resolve_color(cfg.active_color, 0xB23B3B);
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
 

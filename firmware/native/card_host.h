@@ -61,16 +61,11 @@ inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
                                            : card->default_size();
     tile_compact() = (sz.w <= 1 && sz.h <= 1);  // 1x1 → centred icon, no label
     tile_metrics() = {tile_pixel_width(gm, sz.w), tile_pixel_height(gm, sz.h)};
-    // Hand the card its own CardFonts rather than threading a size through
-    // every card's build(). Cards keep writing fonts.body / fonts.value
-    // unchanged, and modals — which receive the original CardFonts built in
-    // bindings.yaml — cannot pick up tile sizing by accident.
-    CardFonts tile_fonts = fonts;
-    if (text_scale_for(tile_metrics().px_w) == TextScale::Tight) {
-      if (fonts.body_small) tile_fonts.body = fonts.body_small;
-      if (fonts.medium) tile_fonts.value = fonts.medium;
-    }
-    card->build(cell, cfg, tile_fonts);
+    // Pass the fonts through untouched: eleven cards persist this struct and
+    // hand it to their modal or dialog, so scaling it here would shrink
+    // full-screen overlays too. The tile-only choice happens inside add_name
+    // and tile_value_font, which read tile_metrics() set just above.
+    card->build(cell, cfg, fonts);
     tile_compact() = false;
     tile_metrics() = {0, 0};
     tiles.push_back(GridTile{cell, sz.w, sz.h, cfg.col, cfg.row});
