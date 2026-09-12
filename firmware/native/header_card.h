@@ -9,6 +9,7 @@
 #include "card_style.h"
 #include "clock.h"
 #include "ha.h"
+#include "tile_scale.h"
 #include "weather_glyph.h"
 #include "esphome/core/time.h"
 
@@ -115,10 +116,20 @@ struct HeaderCard : Card {
     }
 
     if (cfg.show_clock) {
-      lv_obj_t *tx = flex_box(right, LV_FLEX_FLOW_COLUMN);
-      lv_obj_set_flex_align(tx, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END,
-                            LV_FLEX_ALIGN_END);
-      clock_ = text(tx, fonts.value, "--:--");
+      // This card's default size is 10x2. Dropped into a one-row slot it gets
+      // ~40px of content, but the 55px clock alone has a ~64px line height, so
+      // the stacked date was sliced in half. Shrinking to fit would need ~17px,
+      // which is unreadable across a room — so the pair goes side by side
+      // instead, which the header's ~986px of width easily absorbs.
+      const bool stacked =
+          header_clock_stacks(tile_metrics().px_h - 2 * kTileInset);
+      lv_obj_t *tx =
+          flex_box(right, stacked ? LV_FLEX_FLOW_COLUMN : LV_FLEX_FLOW_ROW);
+      lv_obj_set_flex_align(tx, LV_FLEX_ALIGN_END,
+                            stacked ? LV_FLEX_ALIGN_END : LV_FLEX_ALIGN_CENTER,
+                            LV_FLEX_ALIGN_CENTER);
+      if (!stacked) lv_obj_set_style_pad_column(tx, 12, 0);
+      clock_ = text(tx, stacked ? fonts.value : fonts.medium, "--:--");
       date_ = text(tx, fonts.body, "");
       lv_obj_set_style_text_color(date_, lv_color_hex(0xB0B0B0), 0);
       update_clock();
