@@ -19,6 +19,63 @@ inline int compute_columns(int width_px, int unit_px, int pad_px, int gap_px) {
   return c < 1 ? 1 : c;
 }
 
+// Pixel geometry of the final tile grid. Mirrors what poc_build_grid hands
+// LVGL, so a caller can size a tile *before* any layout pass: columns are
+// LV_GRID_FR(1) tracks that divide the remaining width evenly, and row tracks
+// are set to an explicit height.
+struct GridMetrics { int cell_w; int cell_h; int gap; };
+
+// The final sub-unit column count. `base_cols` (0 = derive from unit_px) sets
+// the pre-subdivision grid; `override_cols` (0 = derive) sets the final grid
+// outright, already including any subdivision factor.
+inline int grid_final_columns(int width_px, int unit_px, int pad_px, int gap_px,
+                              int subdivisions, int base_cols, int override_cols) {
+  if (subdivisions < 1) subdivisions = 1;
+  const int normal = base_cols > 0
+                         ? base_cols
+                         : compute_columns(width_px, unit_px, pad_px, gap_px);
+  const int cols = override_cols > 0 ? override_cols : normal * subdivisions;
+  return cols < 1 ? 1 : cols;
+}
+
+// Row twin of grid_final_columns — compute_columns is dimension-agnostic track
+// math, so height reuses it exactly as poc_build_grid does.
+inline int grid_final_rows(int height_px, int unit_px, int pad_px, int gap_px,
+                           int subdivisions, int base_rows, int override_rows) {
+  if (subdivisions < 1) subdivisions = 1;
+  const int normal = base_rows > 0
+                         ? base_rows
+                         : compute_columns(height_px, unit_px, pad_px, gap_px);
+  const int rows = override_rows > 0 ? override_rows : normal * subdivisions;
+  return rows < 1 ? 1 : rows;
+}
+
+inline GridMetrics compute_grid_metrics(int width_px, int height_px, int unit_px,
+                                        int pad_px, int gap_px, int subdivisions,
+                                        int base_cols, int base_rows,
+                                        int override_cols, int override_rows) {
+  const int cols = grid_final_columns(width_px, unit_px, pad_px, gap_px,
+                                      subdivisions, base_cols, override_cols);
+  const int rows = grid_final_rows(height_px, unit_px, pad_px, gap_px,
+                                   subdivisions, base_rows, override_rows);
+  int cell_w = (width_px - 2 * pad_px - (cols - 1) * gap_px) / cols;
+  if (cell_w < 1) cell_w = 1;
+  int cell_h = (height_px - 2 * pad_px - (rows - 1) * gap_px) / rows;
+  if (cell_h < 1) cell_h = 1;
+  return GridMetrics{cell_w, cell_h, gap_px};
+}
+
+// Pixel size of a tile spanning `span` tracks: the tracks plus the gaps between
+// them.
+inline int tile_pixel_width(const GridMetrics &m, int span) {
+  if (span < 1) span = 1;
+  return span * m.cell_w + (span - 1) * m.gap;
+}
+inline int tile_pixel_height(const GridMetrics &m, int span) {
+  if (span < 1) span = 1;
+  return span * m.cell_h + (span - 1) * m.gap;
+}
+
 inline std::vector<Placement> place_tiles(const std::vector<TileSpan>& tiles,
                                           int columns, int& out_rows) {
   if (columns < 1) columns = 1;
