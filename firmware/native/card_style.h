@@ -26,11 +26,6 @@ inline bool &tile_compact() {
 // One place so all tiles line up.
 inline constexpr int kTileInset = 16;
 
-// Horizontal room the bottom-right detail chevron takes up. Name labels on
-// tiles that show one reserve this much so a long title wraps before it runs
-// underneath the glyph.
-inline constexpr int kDetailChevronReserve = 44;
-
 // Ease duration for value glides (fill sliders, cover shade). Applied to
 // externally-pushed state changes (HA) and tap-to-position; a live drag stays
 // 1:1 with the finger and is never animated.
@@ -108,9 +103,9 @@ inline void set_icon_glyph(lv_obj_t *icon, const std::string &glyph) {
 inline lv_obj_t *add_name(lv_obj_t *cell, const lv_font_t *font,
                           const std::string &title, bool hidden = false,
                           lv_align_t align = LV_ALIGN_BOTTOM_LEFT,
-                          int dx = 0, int dy = 0, int reserve_right = 0) {
+                          int dx = 0, int dy = 0) {
   if (hidden || tile_compact()) return nullptr;  // no room for a label on a 1x1
-  lv_obj_t *sh = add_text_shadow(cell, font, title, true, align, dx, dy);
+  add_text_shadow(cell, font, title, true, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
   lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
@@ -118,13 +113,6 @@ inline lv_obj_t *add_name(lv_obj_t *cell, const lv_font_t *font,
   lv_obj_set_width(lbl, LV_PCT(100));
   lv_label_set_text(lbl, title.c_str());
   lv_obj_align(lbl, align, dx, dy);
-  if (reserve_right > 0) {
-    // Narrow the text area with padding rather than a pixel width: the cell's
-    // real width isn't known until the grid lays out, but padding is applied
-    // against whatever LV_PCT(100) resolves to.
-    lv_obj_set_style_pad_right(lbl, reserve_right, 0);
-    if (sh) lv_obj_set_style_pad_right(sh, reserve_right, 0);
-  }
   return lbl;
 }
 
@@ -216,19 +204,25 @@ inline void style_action_feedback(lv_obj_t *obj, uint32_t rest_color,
   lv_obj_set_style_transform_scale_y(obj, 250, LV_PART_MAIN | LV_STATE_PRESSED);
 }
 
-// A bottom-right "more-info" chevron overlaid on a tile. The tap target is a
-// large transparent button filling the bottom-right corner (easy to hit over a
-// slider), with the chevron glyph drawn in its corner. `inset` is the glyph's
-// offset from the content area (0 when the cell keeps its padding, kTileInset
-// when the cell zeroed its padding and positions its labels manually). Sits
-// above the primary control; events don't bubble to the cell. Opt-in.
+// A top-right "more-info" chevron overlaid on a tile. The tap target is a large
+// transparent button filling the top-right corner (easy to hit over a slider),
+// with the chevron glyph drawn in its corner. `inset` is the glyph's offset from
+// the content area (0 when the cell keeps its padding, kTileInset when the cell
+// zeroed its padding and positions its labels manually). Sits above the primary
+// control; events don't bubble to the cell. Opt-in.
+//
+// Top-right, not bottom-right: icons anchor top-LEFT and name labels bottom-LEFT
+// at full width, so the bottom-right corner is exactly where a long name lands.
+// Reserving width in the label can't fix that — on a 2-col tile a single-word
+// title has nowhere to wrap to — so the chevron gets the one corner nothing else
+// claims. Matches the intent documented on CardConfig::detail.
 inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
                                     int inset, lv_event_cb_t cb,
                                     void *user_data) {
   lv_obj_t *b = lv_button_create(cell);
   lv_obj_remove_style_all(b);
   lv_obj_set_size(b, 72, 56);  // generous corner hit surface
-  lv_obj_align(b, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+  lv_obj_align(b, LV_ALIGN_TOP_RIGHT, 0, 0);
   lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0);
   lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
   style_press_dip(b);  // soft dim of the whole corner (and its glyph) on press
@@ -243,12 +237,12 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
     lv_obj_set_style_text_color(l, lv_color_hex(color), 0);
     lv_obj_set_style_text_opa(l, opa, 0);
     lv_label_set_text(l, "\U000F0142");  // mdi-chevron-right
-    // Shrink the 46px glyph toward its bottom-right so it reads near the
-    // name-label size and lines up with the name's baseline.
+    // Shrink the 46px glyph toward its top-right so it reads near the
+    // name-label size and sits tight to the corner.
     lv_obj_set_style_transform_pivot_x(l, lv_pct(100), 0);
-    lv_obj_set_style_transform_pivot_y(l, lv_pct(100), 0);
+    lv_obj_set_style_transform_pivot_y(l, 0, 0);
     lv_obj_set_style_transform_scale(l, 165, 0);
-    lv_obj_align(l, LV_ALIGN_BOTTOM_RIGHT, -inset + nudge, -inset + nudge);
+    lv_obj_align(l, LV_ALIGN_TOP_RIGHT, -inset + nudge, inset + nudge);
     return l;
   };
   chevron_glyph(0x000000, LV_OPA_60, 1);            // shadow twin

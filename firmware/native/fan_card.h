@@ -39,8 +39,7 @@ struct FanCard : Card {
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt.empty() ? cfg.icon : cfg.icon_alt;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
-    add_name(cell, fonts.body, cfg.title, cfg.hide_label, LV_ALIGN_BOTTOM_LEFT, 0, 0,
-             kDetailChevronReserve);
+    add_name(cell, fonts.body, cfg.title, cfg.hide_label);
     on_color_ = resolve_color(cfg.active_color, 0x2C6E8A);
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
