@@ -21,6 +21,16 @@ inline bool &tile_compact() {
   return compact;
 }
 
+// Pixel size of the tile currently being built, set by build_page around each
+// card->build(). Same idiom as tile_compact() above: cards that need to adapt
+// to their own size read it during build, and it is meaningless outside that
+// window. Only HeaderCard uses it today.
+struct TileMetrics { int px_w; int px_h; };
+inline TileMetrics &tile_metrics() {
+  static TileMetrics m{0, 0};
+  return m;
+}
+
 // Inner content inset shared by every tile: the cell padding for normal cards,
 // and the manual label offset for cards that drop the padding (fill slider).
 // One place so all tiles line up.

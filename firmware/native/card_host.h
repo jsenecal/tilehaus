@@ -13,6 +13,7 @@
 #include "surface.h"
 #include "splash.h"
 #include "page_nav.h"
+#include "tile_scale.h"
 
 namespace tilehaus {
 
@@ -31,6 +32,13 @@ inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
                        int override_cols = 0, int override_rows = 0) {
   auto &cards = live_cards();
   const size_t start = cards.size();
+  // Same numbers poc_build_grid will use below, computed up front so each card
+  // can be built at the right text size — no layout pass, no reflow.
+  lv_display_t *disp = lv_obj_get_display(container);
+  const GridMetrics gm = compute_grid_metrics(
+      lv_display_get_horizontal_resolution(disp),
+      lv_display_get_vertical_resolution(disp), unit_px, pad_px, gap_px,
+      subdivisions, base_cols, base_rows, override_cols, override_rows);
   std::vector<GridTile> tiles;
   std::vector<CardConfig> cfgs;
   tiles.reserve(deck.size());
@@ -52,8 +60,19 @@ inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
     TileSpan sz = (cfg.w > 0 && cfg.h > 0) ? TileSpan{cfg.w, cfg.h}
                                            : card->default_size();
     tile_compact() = (sz.w <= 1 && sz.h <= 1);  // 1x1 → centred icon, no label
-    card->build(cell, cfg, fonts);
+    tile_metrics() = {tile_pixel_width(gm, sz.w), tile_pixel_height(gm, sz.h)};
+    // Hand the card its own CardFonts rather than threading a size through
+    // every card's build(). Cards keep writing fonts.body / fonts.value
+    // unchanged, and modals — which receive the original CardFonts built in
+    // bindings.yaml — cannot pick up tile sizing by accident.
+    CardFonts tile_fonts = fonts;
+    if (text_scale_for(tile_metrics().px_w) == TextScale::Tight) {
+      if (fonts.body_small) tile_fonts.body = fonts.body_small;
+      if (fonts.medium) tile_fonts.value = fonts.medium;
+    }
+    card->build(cell, cfg, tile_fonts);
     tile_compact() = false;
+    tile_metrics() = {0, 0};
     tiles.push_back(GridTile{cell, sz.w, sz.h, cfg.col, cfg.row});
     cfgs.push_back(cfg);
     cards.push_back(std::move(card));
