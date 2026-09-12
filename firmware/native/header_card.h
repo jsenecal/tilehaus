@@ -11,6 +11,7 @@
 #include "ha.h"
 #include "tile_scale.h"
 #include "weather_glyph.h"
+#include "forecast_helpers.h"
 #include "esphome/core/time.h"
 
 namespace tilehaus {
@@ -171,17 +172,21 @@ struct HeaderCard : Card {
     // live in input_number.<name>_temp_high / _low, derived from the weather
     // entity's object id (e.g. weather.forecast_home → …forecast_home_temp_high).
     // Missing helpers simply never push, so the line stays blank.
-    if (cfg.show_hilo && !cfg.entity2.empty()) {
-      std::string obj = cfg.entity2;
-      auto dot = obj.find('.');
-      if (dot != std::string::npos) obj = obj.substr(dot + 1);
-      ha_subscribe("input_number." + obj + "_temp_high", nullptr,
+    if (cfg.show_hilo) {
+      // Same resolution the Weather tile uses: derived from the weather entity
+      // unless the tile overrides it. This card has no icon of its own, so its
+      // icon / icon_alt fields carry the high / low overrides.
+      const ForecastHelpers helpers =
+          resolve_forecast_helpers(cfg.entity2, cfg.icon, cfg.icon_alt);
+      if (!helpers.high.empty())
+      ha_subscribe(helpers.high, nullptr,
                    [this](const std::string &s) {
         if (!s.empty() && s != "unknown" && s != "unavailable")
           hi_ = static_cast<int>(std::lround(std::atof(s.c_str())));
         update_hilo();
       });
-      ha_subscribe("input_number." + obj + "_temp_low", nullptr,
+      if (!helpers.low.empty())
+      ha_subscribe(helpers.low, nullptr,
                    [this](const std::string &s) {
         if (!s.empty() && s != "unknown" && s != "unavailable")
           lo_ = static_cast<int>(std::lround(std::atof(s.c_str())));

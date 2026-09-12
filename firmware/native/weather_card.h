@@ -9,6 +9,7 @@
 #include "card_style.h"
 #include "ha.h"
 #include "weather_glyph.h"
+#include "forecast_helpers.h"
 
 namespace tilehaus {
 
@@ -90,26 +91,20 @@ struct WeatherCard : Card {
       lv_subject_copy_string(subj, WeatherCard::deg(s).c_str());
     });
 
-    // Forecast high/low: entity2 carries the "…_high" input_number; derive the
-    // matching "…_low" id from it so the deck only needs one field.
-    std::string hi = cfg.entity2;
-    if (hi.empty()) return;
-    ha_subscribe(hi, nullptr, [this](const std::string &s) {
+    // Forecast high/low, resolved exactly as the Header does: derived from this
+    // tile's own weather entity unless overridden. entity2 carries the high
+    // override (icon is taken — it is this tile's condition glyph) and icon_alt
+    // the low. A deck that names its helpers by convention configures neither.
+    const ForecastHelpers helpers =
+        resolve_forecast_helpers(cfg.entity, cfg.entity2, cfg.icon_alt);
+    if (helpers.high.empty()) return;
+    ha_subscribe(helpers.high, nullptr, [this](const std::string &s) {
       if (!s.empty() && s != "unknown" && s != "unavailable")
         hi_ = static_cast<int>(std::lround(std::atof(s.c_str())));
       update_hilo();
     });
-    // Forecast low: prefer the explicit helper (icon_alt); otherwise derive a
-    // "…_low" id from the high helper so older single-field decks still work.
-    std::string lo = cfg.icon_alt;
-    if (lo.empty()) {
-      lo = hi;
-      auto p = lo.rfind("high");
-      if (p != std::string::npos) lo.replace(p, 4, "low");
-      else lo.clear();
-    }
-    if (!lo.empty()) {
-      ha_subscribe(lo, nullptr, [this](const std::string &s) {
+    if (!helpers.low.empty()) {
+      ha_subscribe(helpers.low, nullptr, [this](const std::string &s) {
         if (!s.empty() && s != "unknown" && s != "unavailable")
           lo_ = static_cast<int>(std::lround(std::atof(s.c_str())));
         update_hilo();
