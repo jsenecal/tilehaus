@@ -42,8 +42,10 @@ regenerate.
 
 - `npm run build` — bundle the web UI into `firmware/native/deck_ui_asset.h`.
 - `npm run typecheck` / `test:web` / `test:firmware` / `gen:icons` / `gen:fixtures`.
-- Firmware (ESPHome lives in a Python venv; mise pins only node/python):
-  - one-time: `python3 -m venv .venv-esphome && .venv-esphome/bin/pip install esphome`
+- Firmware (ESPHome lives in its own venv, kept out of the repo's `.venv`):
+  - one-time: `uv venv .venv-esphome --python 3.13 && uv pip install --python .venv-esphome/bin/python esphome`
+    (`uv` is pinned in `mise.toml`; `uvx esphome <cmd> firmware/tilehaus.yaml` also
+    works for a one-off without the venv, but re-resolves per invocation)
   - compile: `.venv-esphome/bin/esphome compile firmware/tilehaus.yaml`
   - OTA:     `.venv-esphome/bin/esphome upload firmware/tilehaus.yaml --device <ip>`
   - logs:    `.venv-esphome/bin/esphome logs firmware/tilehaus.yaml --device <ip>`

@@ -1,6 +1,7 @@
 [tools]
 node = "24"
 python = "3.13"
+uv = "latest"
 
 [env]
 # Match CI (UTC). Some web checks derive expected month/date strings from the
