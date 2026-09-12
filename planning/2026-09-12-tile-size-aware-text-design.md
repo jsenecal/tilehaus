@@ -193,3 +193,46 @@ its extremes, not near it.
 font chosen for the weather card. If that font is ever resized for weather, tight
 sensor tiles move with it. Acceptable now; worth a dedicated rung if they
 diverge.
+
+---
+
+## Addendum (2026-09-12, post-implementation)
+
+Two things in this document describe a design that did **not** ship. Read them
+alongside this note.
+
+**1. "How it reaches the cards" is wrong, and its safety claim was false.**
+The design had `build_page` hand each card a per-tile *copy* of `CardFonts` with
+`body`/`value` already swapped, and claimed modals were "structurally incapable"
+of picking up tile sizing because they receive the original struct. Review found
+that eleven cards do `fonts_ = fonts;` and later pass that stored struct to a
+modal, confirm dialog or PIN pad (`lock_card.h:39,64`; `climate_card.h:38,56`;
+`cover_card.h:88,176`; and eight more). The swapped copy therefore followed them
+into full-screen overlays: a modal opened from a 2-column tile rendered at 17px,
+the same modal from a wide tile at 22px. The alarm PIN pad and the lock's confirm
+dialog — both named in this document as things that must never scale — inherited
+it.
+
+The convenience that caused the bug *was* the design's selling point: swap in
+`build_page` so no card needs changing. Cards persisting what they are handed is
+exactly what makes that unsound.
+
+**Shipped instead:** `build_page` passes the fonts through untouched and only
+sets `tile_metrics()`. The choice moved to the tile-only render points —
+`add_name` takes the whole `CardFonts` and picks via `tile_body_font()`, and the
+sensor value picks via `tile_value_font()`. Both are reachable only from tile
+bodies, so containment is checkable rather than asserted. Fifteen `add_name` call
+sites changed; no card logic did. A follow-up guards `px_w > 0` so a call from
+outside the build window falls back to the full-size font rather than the shrunk
+one.
+
+**2. The field is `body_tight`, not `body_small`** (`font_text_body_tight` in
+`fonts.yaml`), matching the vocabulary the policy already uses —
+`kTileTightWidth`, `TextScale::Tight`. "Small" was already taken by the unrelated
+15px secondary-text font. `bindings.yaml` also uses designated initialisers now;
+the positional aggregate init described here was a silent-misorder hazard that a
+comment could only warn about.
+
+**Measured cost:** +34,376 bytes of flash (1,793,592 → 1,827,968; 22.1% → 22.5%),
+matching this document's ~34 KB estimate. RAM +104 bytes for the `TileMetrics`
+static.
