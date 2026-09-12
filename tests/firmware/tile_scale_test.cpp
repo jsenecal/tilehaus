@@ -23,6 +23,12 @@ int main() {
 
   // The header needs two rows' worth of content height for the full-size clock;
   // a one-row slot keeps the stack but drops both fonts a rung.
+  // A forecast column stacks high over low only when the tile is tall enough;
+  // at the card's own 4x2 default on a 12x7 grid it must collapse to one line.
+  using tilehaus::forecast_stacks_hilo;
+  assert(!forecast_stacks_hilo(154 - 32));   // 4x2 -> 122px content
+  assert(forecast_stacks_hilo(236 - 32));    // 4x3 -> 204px content
+
   using tilehaus::header_clock_full_size;
   assert(!header_clock_full_size(72 - 32));   // 12x1 slot -> 40px content
   assert(header_clock_full_size(154 - 32));   // 12x2 slot -> 122px content

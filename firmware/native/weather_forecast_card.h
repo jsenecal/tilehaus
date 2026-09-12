@@ -7,6 +7,7 @@
 #include "card_style.h"
 #include "ha.h"
 #include "weather_glyph.h"
+#include "tile_scale.h"
 
 namespace tilehaus {
 
@@ -18,6 +19,7 @@ struct WeatherForecastCard : Card {
   lv_obj_t *row_ = nullptr;
   CardFonts fonts_{};
   std::string last_;
+  bool stack_hilo_ = true;
 
   TileSpan default_size() const override { return {4, 2}; }
 
@@ -36,6 +38,9 @@ struct WeatherForecastCard : Card {
              const CardFonts &fonts) override {
     cell_ = cell;
     fonts_ = fonts;
+    // rebuild() runs later, from the HA subscription, by which point build_page
+    // has reset tile_metrics() — so decide the layout now, while it is valid.
+    stack_hilo_ = forecast_stacks_hilo(tile_metrics().px_h - 2 * kTileInset);
     row_ = lv_obj_create(cell);
     lv_obj_remove_style_all(row_);
     lv_obj_set_style_bg_opa(row_, LV_OPA_TRANSP, 0);
@@ -75,8 +80,25 @@ struct WeatherForecastCard : Card {
       char hi[16], lo[16];
       std::snprintf(hi, sizeof(hi), "%s\xC2\xB0", f[2].c_str());
       std::snprintf(lo, sizeof(lo), "%s\xC2\xB0", f[3].c_str());
-      add_label(col, fonts_.body, 0xFFFFFF, hi);  // high
-      add_label(col, fonts_.body, 0x909090, lo);  // low
+      if (stack_hilo_) {
+        add_label(col, fonts_.body, 0xFFFFFF, hi);  // high
+        add_label(col, fonts_.body, 0x909090, lo);  // low
+      } else {
+        // Short tile: the pair shares a line, saving a whole row. Kept as two
+        // labels rather than one string so the high stays white and the low
+        // stays grey — that contrast is the readable part.
+        lv_obj_t *hl = lv_obj_create(col);
+        lv_obj_remove_style_all(hl);
+        lv_obj_set_style_bg_opa(hl, LV_OPA_TRANSP, 0);
+        lv_obj_clear_flag(hl, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_size(hl, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_flex_flow(hl, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(hl, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                              LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_column(hl, 6, 0);
+        add_label(hl, fonts_.body, 0xFFFFFF, hi);
+        add_label(hl, fonts_.body, 0x909090, lo);
+      }
     }
   }
 

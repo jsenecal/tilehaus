@@ -31,6 +31,19 @@ inline TextScale text_scale_for(int tile_px_w) {
   return tile_px_w < kTileTightWidth ? TextScale::Tight : TextScale::Default;
 }
 
+// --- Forecast column layout (WeatherForecastCard only) ---
+
+// Minimum content height for a forecast column to stack high over low. The full
+// column is ~144px: a 22px weekday (~26), the 46px condition glyph (~54), and
+// two 22px temperatures (~26 each), plus row padding. 150 leaves a little slack.
+// Below it the two temperatures share one line (~114px), which is what makes the
+// card's own 4x2 default size fit a fine grid — on a 12x7 deck that is 122px.
+inline constexpr int kForecastStackedMinHeight = 150;
+
+inline bool forecast_stacks_hilo(int content_px_h) {
+  return content_px_h >= kForecastStackedMinHeight;
+}
+
 // --- Header clock sizing (HeaderCard only) ---
 
 inline bool header_clock_full_size(int content_px_h) {
