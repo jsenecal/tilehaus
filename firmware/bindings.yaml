@@ -10,6 +10,7 @@ esphome:
                 id(font_text_body)->get_lv_font(),
                 id(font_number_medium)->get_lv_font(),
                 id(font_text_small)->get_lv_font(),
+                id(font_text_body_small)->get_lv_font(),
             };
             // Boot splash on top of everything; fades out on the first HA state.
             tilehaus::splash_build(poc_fonts);

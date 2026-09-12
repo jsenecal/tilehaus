@@ -14,6 +14,9 @@ struct CardFonts {
   const lv_font_t *body = nullptr;    // font_text_body
   const lv_font_t *medium = nullptr;  // font_number_medium (compact values)
   const lv_font_t *small = nullptr;   // font_text_small (secondary lines)
+  // Appended last: bindings.yaml aggregate-initialises this struct positionally,
+  // so inserting above would silently reassign every field after it.
+  const lv_font_t *body_small = nullptr;  // font_text_body_small (tight tiles)
 };
 
 struct Card {
