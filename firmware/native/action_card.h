@@ -27,7 +27,7 @@ struct ActionCard : Card {
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     // inactive_color = resting bg, active_color = the momentary tap flash.
     style_action_feedback(cell, resolve_color(cfg.inactive_color, 0x313131),
-                          resolve_color(cfg.active_color, 0xFF8C00));
+                          resolve_color(cfg.active_color, tile_on_color()));
   }
 
   void bind(const CardConfig &cfg) override {

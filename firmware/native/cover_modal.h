@@ -111,7 +111,7 @@ struct CoverModal {
 
     fill_ = lv_obj_create(win);
     lv_obj_remove_style_all(fill_);
-    lv_obj_set_style_bg_color(fill_, lv_color_hex(0xFF8C00), 0);
+    lv_obj_set_style_bg_color(fill_, lv_color_hex(tile_on_color()), 0);
     lv_obj_set_style_bg_opa(fill_, LV_OPA_COVER, 0);
     lv_obj_set_width(fill_, LV_PCT(100));
     lv_obj_set_height(fill_, LV_PCT(0));

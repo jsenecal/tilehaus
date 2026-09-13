@@ -67,4 +67,18 @@ inline uint32_t accent_or(uint32_t builtin) {
   return a >= 0 ? static_cast<uint32_t>(a) : builtin;
 }
 
+// The generic "this tile is on" colour, and the built-in it falls back to when
+// the deck sets no accent.
+//
+// Use this for any tile whose active state carries no domain-specific meaning —
+// toggles, scenes, buttons, presence, lights, page tiles. Writing the literal
+// instead is how Toggle, Scene and Presence drifted out of sync with the accent
+// while Light and Page followed it.
+//
+// Tiles whose active colour *means* something keep their own: a lock's green
+// locked / red unlocked, an alarm's red armed, a fan's blue running. Recolouring
+// those to the accent would throw away the signal.
+inline constexpr uint32_t kTileOnBuiltin = 0xFF8C00;
+inline uint32_t tile_on_color() { return accent_or(kTileOnBuiltin); }
+
 }  // namespace tilehaus

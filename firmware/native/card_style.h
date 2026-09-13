@@ -305,7 +305,7 @@ inline void style_fill_slider(lv_obj_t *slider, int radius) {
   lv_obj_set_style_radius(slider, radius, LV_PART_MAIN);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);
 
-  lv_obj_set_style_bg_color(slider, lv_color_hex(accent_or(0xFF8C00)), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(slider, lv_color_hex(tile_on_color()), LV_PART_INDICATOR);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_INDICATOR);
   lv_obj_set_style_radius(slider, radius, LV_PART_INDICATOR);
 

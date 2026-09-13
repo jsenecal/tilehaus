@@ -14,7 +14,7 @@ struct PageCard : Card {
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *icon_lbl_ = nullptr;
   std::string target_, icon_on_, icon_off_;
-  uint32_t on_color_ = 0xFF8C00;
+  uint32_t on_color_ = kTileOnBuiltin;
   uint32_t off_color_ = 0x313131;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -32,7 +32,7 @@ struct PageCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, glyph);
     icon_on_ = glyph;
     icon_off_ = cfg.icon_alt.empty() ? glyph : cfg.icon_alt;
-    on_color_ = resolve_color(cfg.active_color, accent_or(0xFF8C00));
+    on_color_ = resolve_color(cfg.active_color, tile_on_color());
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);

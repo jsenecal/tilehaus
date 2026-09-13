@@ -74,7 +74,7 @@ struct LightSliderCard : Card {
                      ? ((static_cast<uint32_t>(fr_) << 16) |
                         (static_cast<uint32_t>(fg_) << 8) |
                         static_cast<uint32_t>(fb_))
-                     : accent_or(0xFF8C00);
+                     : tile_on_color();
     lv_obj_set_style_bg_color(slider_, lv_color_hex(c), LV_PART_INDICATOR);
   }
 
