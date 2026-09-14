@@ -1,5 +1,11 @@
 # Inactivity Timeout to Home — Implementation Plan
 
+> **SUPERSEDED** before execution by `2026-09-14-idle-engine.md`. The scope grew
+> from one timeout to the full three-stage idle model plus a wake button, which
+> changes the DECK header and several tasks. Kept because its Task 2 — freezing
+> `deck_v6_grid.bin` before the version bump rewrites it — is a real trap the
+> replacement plan carries over verbatim.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a per-deck inactivity timeout (seconds, `0` = disabled by default) that closes any open modal and returns the panel to Home, bundled with the second card flags byte that per-tile label scrolling needs.
