@@ -7,6 +7,17 @@
 
 namespace tilehaus {
 
+struct Overlay;
+
+// The overlay currently showing, or nullptr. Modals are owned by individual
+// cards with no registry between them, so this is the only way to ask "is a
+// modal open" — which the idle engine needs both to close one and to avoid
+// firing while the user is part-way through it.
+inline Overlay *&active_overlay() {
+  static Overlay *o = nullptr;
+  return o;
+}
+
 // Full-screen modal chrome on the top layer: opaque background that renders
 // above the grid and swallows touches, a back arrow (top-left) + title, and an
 // empty content() region the owner fills. Built once, reused via show()/hide().
@@ -81,11 +92,15 @@ struct Overlay {
     if (!root_) return;
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(root_);
+    active_overlay() = this;
   }
 
   void hide() {
     if (!root_) return;
     lv_obj_add_flag(root_, LV_OBJ_FLAG_HIDDEN);
+    // Only clear it if we are the one showing — a modal hiding itself after
+    // another has already opened must not blank the pointer.
+    if (active_overlay() == this) active_overlay() = nullptr;
   }
 };
 
