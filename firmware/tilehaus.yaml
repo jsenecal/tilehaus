@@ -42,6 +42,7 @@ packages:
   ui: !include ui.yaml
   fonts: !include fonts.yaml
   bindings: !include bindings.yaml
+  entities: !include panel_entities.yaml
 
 wifi:
   ssid: !secret wifi_ssid
