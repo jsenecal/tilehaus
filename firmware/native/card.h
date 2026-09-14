@@ -18,6 +18,7 @@ struct CardFonts {
   // TextScale::Tight); "small" was already taken by the unrelated 15px
   // secondary-text font above.
   const lv_font_t *body_tight = nullptr;  // font_text_body_tight (narrow tiles)
+  const lv_font_t *clock_xl = nullptr;    // font_clock_xl (screensaver clock)
 };
 
 struct Card {

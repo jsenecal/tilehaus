@@ -55,12 +55,14 @@ inline void screensaver_build(const CardFonts &fonts) {
                         LV_FLEX_ALIGN_CENTER);
 
   s.time_lbl = lv_label_create(s.overlay);
-  if (fonts.value) lv_obj_set_style_text_font(s.time_lbl, fonts.value, 0);
+  // clock_xl, not value: fonts.value is 55px, sized to fill a tile's value slot,
+  // which reads tiny across a 1024x600 screen.
+  if (fonts.clock_xl) lv_obj_set_style_text_font(s.time_lbl, fonts.clock_xl, 0);
   lv_obj_set_style_text_color(s.time_lbl, lv_color_hex(0xFFFFFF), 0);
   lv_label_set_text(s.time_lbl, "--:--");
 
   s.date_lbl = lv_label_create(s.overlay);
-  if (fonts.body) lv_obj_set_style_text_font(s.date_lbl, fonts.body, 0);
+  if (fonts.medium) lv_obj_set_style_text_font(s.date_lbl, fonts.medium, 0);
   lv_obj_set_style_text_color(s.date_lbl, lv_color_hex(0xB0B0B0), 0);
   lv_label_set_text(s.date_lbl, "");
 

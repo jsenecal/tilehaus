@@ -33,6 +33,26 @@ inline std::function<void(const std::string &)> &page_report_hook() {
   return hook;
 }
 
+// Input stays suppressed briefly after any wake. The touch that woke the panel
+// must not also land on whatever tile happened to be under the finger, and a
+// second tap arriving while the screen is still coming up is almost certainly
+// part of the same gesture rather than a deliberate press.
+inline constexpr uint32_t kWakeInputGuardMs = 500;
+
+inline uint32_t &wake_at() {
+  static uint32_t t = 0;
+  return t;
+}
+
+// lv_tick_elaps rather than comparing against a deadline: lv_tick_get() wraps
+// roughly every 49 days, and a plain `now < deadline` would invert across the
+// wrap and suppress input for the following 49 days.
+inline bool input_guarded() {
+  return wake_at() != 0 && lv_tick_elaps(wake_at()) < kWakeInputGuardMs;
+}
+
+inline void begin_wake_guard() { wake_at() = lv_tick_get(); }
+
 inline void apply_brightness(int pct) {
   static int last = -1;
   if (pct == last) return;        // the poll runs 4x a second; only act on change
@@ -76,6 +96,7 @@ inline void tick_idle() {
 // button.wake: put the panel into a known state for someone about to walk up.
 inline void panel_wake() {
   lv_display_trigger_activity(nullptr);   // without this the next tick re-sleeps it
+  begin_wake_guard();
   screensaver_hide();
   go_home();
   apply_brightness(idle_config().brightness);
@@ -86,6 +107,7 @@ inline void panel_wake() {
 // under someone mid-task — only button.wake does that.
 inline void panel_touch_wake() {
   lv_display_trigger_activity(nullptr);
+  begin_wake_guard();
   screensaver_hide();
   apply_brightness(idle_config().brightness);
 }
@@ -94,6 +116,7 @@ inline void panel_touch_wake() {
 // returned Home by the very next page_timeout crossing.
 inline void show_page(const std::string &name) {
   lv_display_trigger_activity(nullptr);
+  begin_wake_guard();
   screensaver_hide();
   apply_brightness(idle_config().brightness);
   const int i = page_nav().index_of(name);

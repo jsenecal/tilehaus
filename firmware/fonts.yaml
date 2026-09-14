@@ -48,3 +48,12 @@ font:
     size: 17
     bpp: 4
     glyphs: !include assets/text_glyphs.yaml
+
+  # Screensaver clock. 180px would be ruinous with a full character set, but a
+  # clock needs eleven glyphs, so the cost is the digits alone — and scaling the
+  # 55px value font up instead would resample a bitmap into mush.
+  - file: "gfonts://Roboto@Light"
+    id: font_clock_xl
+    size: 180
+    bpp: 4
+    glyphs: "0123456789:"
