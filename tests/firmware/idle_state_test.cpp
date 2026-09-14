@@ -51,6 +51,11 @@ int main() {
     assert(idle_targets(cfg, 10000, 0, false).brightness_pct == 100);
     assert(idle_targets(cfg, 40000, 0, false).brightness_pct == 25);
     assert(idle_targets(cfg, 70000, 0, false).brightness_pct == 0);
+    // The sleep boundary through brightness specifically, not only through the
+    // screensaver below: both gate on the same call today, but asserting only
+    // one of them would let a future split go unnoticed.
+    assert(idle_targets(cfg, 59999, 0, false).brightness_pct == 25);
+    assert(idle_targets(cfg, 60000, 0, false).brightness_pct == 0);
   }
 
   // Misconfiguration: sleep sooner than dim. Sleep still wins once crossed —
