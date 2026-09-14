@@ -81,35 +81,34 @@ touchscreen:
     i2c_id: bus_a
     reset_pin: GPIO22
     interrupt_pin: GPIO21
-    # Wake the panel: when the backlight is off / at zero brightness, the first
-    # touch just turns it back on (LVGL still sees the touch, but there's nothing
-    # visible to hit). Restores full brightness.
+    # Wake the panel: restores the configured brightness, hides the screensaver
+    # if it's up, and resets LVGL's inactivity clock. That reset matters because
+    # while input devices are disabled below (dark screen or screensaver), LVGL
+    # never sees touches at all, so without it the idle clock would keep
+    # climbing and the panel could never wake.
     on_touch:
-      - if:
-          condition:
-            lambda: |-
-              auto &v = id(display_backlight).current_values;
-              return !v.is_on() || v.get_brightness() <= 0.0f;
-          then:
-            - light.turn_on:
-                id: display_backlight
-                brightness: 100%
+      - lambda: "tilehaus::panel_touch_wake();"
 
-# While the backlight is off / at zero brightness, disable LVGL's touch input so
-# a wake touch (which on_touch above turns the screen back on) can't also toggle
-# a tile. Re-enabled as soon as the screen is bright. Polled so it covers both
-# "light off" and "on at brightness 0".
+# While the backlight is off / at zero brightness, or the screensaver is up,
+# disable LVGL's touch input so a wake touch (handled by on_touch above) can't
+# also toggle a tile underneath. Re-enabled as soon as the screen is bright and
+# the screensaver is down. Polled so it covers "light off", "on at brightness
+# 0", and the screensaver case; also drives the idle engine's tick.
 interval:
   - interval: 250ms
     then:
       - lambda: |-
           auto &v = id(display_backlight).current_values;
-          bool bright = v.is_on() && v.get_brightness() > 0.0f;
+          // The screensaver swallows the first touch for the same reason a dark
+          // screen does: that touch is a wake, not a tap on whatever is beneath.
+          bool bright = v.is_on() && v.get_brightness() > 0.0f &&
+                        !tilehaus::screensaver_showing();
           for (lv_indev_t *d = lv_indev_get_next(nullptr); d != nullptr;
                d = lv_indev_get_next(d)) {
             if (lv_indev_get_type(d) == LV_INDEV_TYPE_POINTER)
               lv_indev_enable(d, bright);
           }
+          tilehaus::tick_idle();
 
 display:
   - platform: mipi_dsi
