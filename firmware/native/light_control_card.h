@@ -23,6 +23,7 @@ struct LightControlCard : Card {
   std::string icon_on_, icon_off_;
   uint32_t on_color_ = kTileOnBuiltin;
   uint32_t off_color_ = 0x313131;
+  int32_t cfg_active_color_ = -1;
   std::unique_ptr<LightModal> modal_;
   bool follow_color_ = false;   // tile tint tracks the light's own colour
   int fr_ = -1, fg_ = -1, fb_ = -1;  // last rgb_color (-1 = unknown)
@@ -76,7 +77,8 @@ struct LightControlCard : Card {
     title_ = cfg.title;
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt;
-    on_color_ = resolve_color(cfg.active_color, tile_on_color());
+    cfg_active_color_ = cfg.active_color;
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     follow_color_ = cfg.follow_color;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
@@ -126,6 +128,18 @@ struct LightControlCard : Card {
       auto *self = static_cast<LightControlCard *>(lv_event_get_user_data(e));
       if (self->modal_) self->modal_->show();
     }, LV_EVENT_CLICKED, this);
+  }
+
+  // apply_color() reads on_/on_tint()/off_color_ directly and repaints, so
+  // this works regardless of whether lv_subject_set_int would re-notify (it
+  // would not, for an unchanged value). Also refreshes the modal's brightness
+  // fill fallback (tile_on_color()) when no explicit light colour is known
+  // yet — LightModal exposes set_brightness_fill() for exactly this, already
+  // used by the rgb_color subscription above.
+  void restyle() override {
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
+    apply_color();
+    if (follow_color_ && fr_ < 0 && modal_) modal_->set_brightness_fill(tile_on_color());
   }
 };
 

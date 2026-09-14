@@ -20,6 +20,7 @@ struct ToggleCard : Card {
   std::string icon_off_;  // glyph when off (empty = no swap)
   uint32_t on_color_ = kTileOnBuiltin;
   uint32_t off_color_ = 0x313131;
+  int32_t cfg_active_color_ = -1;
   std::unique_ptr<DetailModal> detail_;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -40,7 +41,8 @@ struct ToggleCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     icon_on_ = cfg.icon;
     icon_off_ = cfg.icon_alt;
-    on_color_ = resolve_color(cfg.active_color, tile_on_color());
+    cfg_active_color_ = cfg.active_color;
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
@@ -69,6 +71,17 @@ struct ToggleCard : Card {
         if (self->detail_) self->detail_->open();
       }, this);
     }
+  }
+
+  // See PageCard::restyle: repaint directly from current state rather than
+  // relying on lv_subject_set_int, which does not re-notify on an unchanged
+  // value. The optional detail_ modal (light/cover more-info) is a separate,
+  // independently-built widget and is not re-themed here — see the task
+  // report for that limitation.
+  void restyle() override {
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
+    const bool on = lv_subject_get_int(&on_) != 0;
+    lv_obj_set_style_bg_color(cell_, lv_color_hex(on ? on_color_ : off_color_), 0);
   }
 };
 

@@ -28,6 +28,11 @@ struct Card {
   virtual void build(lv_obj_t *cell, const CardConfig &cfg,
                      const CardFonts &fonts) = 0;
   virtual void bind(const CardConfig &cfg) = 0;
+  // Re-resolve colours against the current deck accent, without rebuilding.
+  // Rebuilding is not an option: HA state subscriptions cannot be torn down at
+  // runtime, so a rebuild would duplicate every subscription. Re-theming an
+  // existing widget has no such problem.
+  virtual void restyle() {}
   virtual ~Card() = default;
 };
 
