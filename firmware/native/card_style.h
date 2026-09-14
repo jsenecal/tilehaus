@@ -124,6 +124,17 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
   return lbl;
 }
 
+// Repaint a state-tint tile's cell for its current on/off state.
+//
+// Shared by the recolour observer and restyle() so a state change and an accent
+// change take the same path. Three cards had byte-identical copies of this, each
+// also duplicating half of its own observer — which is how a fourth card would
+// have arrived by copy-paste.
+inline void paint_state_cell(lv_obj_t *cell, bool on, uint32_t on_color,
+                             uint32_t off_color) {
+  if (cell) lv_obj_set_style_bg_color(cell, lv_color_hex(on ? on_color : off_color), 0);
+}
+
 // Swap an icon label's glyph, fading the new glyph in — but only when the glyph
 // actually changes (so frequent observer ticks, e.g. a light's brightness, do
 // not re-trigger the animation). A no-op when the label or glyph is empty.

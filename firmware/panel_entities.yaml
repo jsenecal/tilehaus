@@ -160,9 +160,13 @@ light:
       - lambda: |-
           auto &v = id(cfg_accent).remote_values;
           if (v.is_on()) {
-            uint32_t rgb = (((uint32_t) (v.get_red() * 255)) << 16) |
-                           (((uint32_t) (v.get_green() * 255)) << 8) |
-                           ((uint32_t) (v.get_blue() * 255));
+            // lroundf, not a plain cast: the channels are floats that rarely
+            // land exactly on an integer (128/255 round-trips as 0.50196...),
+            // and a C cast truncates toward zero — biasing every channel low by
+            // up to 1 and making the colour not round-trip.
+            uint32_t rgb = (((uint32_t) lroundf(v.get_red() * 255.0f)) << 16) |
+                           (((uint32_t) lroundf(v.get_green() * 255.0f)) << 8) |
+                           ((uint32_t) lroundf(v.get_blue() * 255.0f));
             tilehaus::set_accent(true, rgb);
           } else {
             tilehaus::set_accent(false, 0);

@@ -25,8 +25,7 @@ struct PresenceCard : Card {
   static void recolor_cb(lv_observer_t *o, lv_subject_t *s) {
     auto *self = static_cast<PresenceCard *>(lv_observer_get_user_data(o));
     bool on = lv_subject_get_int(s) != 0;
-    lv_obj_set_style_bg_color(
-        self->cell_, lv_color_hex(on ? self->on_color_ : self->off_color_), 0);
+    paint_state_cell(self->cell_, on, self->on_color_, self->off_color_);
     set_icon_glyph(self->icon_lbl_, on ? self->icon_on_ : self->icon_off_);
   }
 
@@ -57,8 +56,7 @@ struct PresenceCard : Card {
   // value == prev_value).
   void restyle() override {
     on_color_ = resolve_color(cfg_active_color_, tile_on_color());
-    const bool on = lv_subject_get_int(&on_) != 0;
-    lv_obj_set_style_bg_color(cell_, lv_color_hex(on ? on_color_ : off_color_), 0);
+    paint_state_cell(cell_, lv_subject_get_int(&on_) != 0, on_color_, off_color_);
   }
 };
 
