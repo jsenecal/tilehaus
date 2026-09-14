@@ -1,6 +1,9 @@
 # Inactivity Timeout to Home — Design
 
-**Status:** Design (approved)
+**Status:** SUPERSEDED by `2026-09-14-idle-engine-design.md`, which widens this
+to the full three-stage idle model (return home / dim / sleep), a screensaver
+and an HA wake button. The DECK v7 decision and the label-scrolling bundle
+carry over unchanged; the header simply gained more fields.
 **Date:** 2026-09-14
 **Closes:** [#2](https://github.com/jsenecal/tilehaus/issues/2) (label scrolling, bundled)
 
