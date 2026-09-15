@@ -15,5 +15,5 @@ node scripts/deck_cli.js status --device <ip>
   size, accent, and each tile (type, size, position, page, entity, title);
 - if `204`, reports **awaiting config** (no layout stored).
 
-Default device `192.168.252.221`. Read-only — safe to run anytime, including right
+Default device `tilehaus-office.local` (office) or `tilehaus-lobby.local` (lobby). Read-only — safe to run anytime, including right
 after an OTA to confirm the panel is back up before pushing a config.

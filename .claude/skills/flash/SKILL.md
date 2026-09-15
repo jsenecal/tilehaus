@@ -5,7 +5,7 @@ description: Build the Tilehaus web UI bundle, compile the ESPHome firmware, and
 
 # Flash Tilehaus firmware to a panel
 
-Default device: `192.168.252.221` — override with the target panel's IP.
+Default device: `tilehaus-office.local` (office) or `tilehaus-lobby.local` (lobby) — override with the target panel's IP.
 
 1. Rebuild the served UI bundle (whenever `web/` changed):
    ```bash
@@ -13,11 +13,11 @@ Default device: `192.168.252.221` — override with the target panel's IP.
    ```
 2. Compile the firmware:
    ```bash
-   .venv-esphome/bin/esphome compile firmware/tilehaus.yaml
+   .venv-esphome/bin/esphome compile firmware/tilehaus-office.yaml
    ```
 3. OTA-flash it (port 3232, no password):
    ```bash
-   .venv-esphome/bin/esphome upload firmware/tilehaus.yaml --device <ip>
+   .venv-esphome/bin/esphome upload firmware/tilehaus-office.yaml --device tilehaus-office.local
    ```
 4. The panel reboots into the new firmware.
 

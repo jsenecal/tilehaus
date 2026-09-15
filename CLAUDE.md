@@ -67,9 +67,21 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
 Config is applied by **reboot** — there is no live in-place rebuild (HA state
 subscriptions can't be torn down at runtime).
 
-Default dev panel: `tilehaus.local` (Guition JC1060P470) — prefer the mDNS name,
-the DHCP lease moves. OTA port 3232, no OTA
-password.
+**Two panels, one shared config.** `firmware/tilehaus.yaml` holds everything and
+is directly flashable for a single-panel install. Where more than one panel
+exists they each need their own ESPHome `name`, or they claim the same mDNS
+hostname and the tie goes to whichever announced first — so `tilehaus.local`
+could resolve to either panel after a reboot, and an OTA aimed at one could land
+on the other. The per-device files exist for that:
+
+| file | host | panel |
+|---|---|---|
+| `firmware/tilehaus-office.yaml` | `tilehaus-office.local` · .102 | office, 72 tiles |
+| `firmware/tilehaus-lobby.yaml`  | `tilehaus-lobby.local` · .101  | lobby |
+
+Each is a few lines: substitutions for `name`/`friendly_name`, then
+`packages: base: !include tilehaus.yaml`. Address panels by mDNS name — the DHCP
+leases move. OTA port 3232, no OTA password.
 
 > **Safety rule: after an OTA flash, do NOT push a config (PUT/DELETE) for >60s.**
 > The P4 can roll back to safe mode if it reboots again too soon after an OTA.

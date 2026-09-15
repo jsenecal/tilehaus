@@ -1,0 +1,16 @@
+# Office panel — 192.168.252.102.
+#
+# Everything real lives in tilehaus.yaml; this file exists only to give the
+# device its own identity. Both panels were previously flashed with the same
+# ESPHome name, so they claimed the same mDNS hostname and the tie was broken
+# by whichever announced first — meaning tilehaus.local could resolve to either
+# panel after a reboot, and an OTA aimed at one could land on the other.
+#
+# friendly_name matches the device name already set in Home Assistant, so the
+# existing entity ids are undisturbed.
+substitutions:
+  name: "tilehaus-office"
+  friendly_name: "Office Panel"
+
+packages:
+  base: !include tilehaus.yaml

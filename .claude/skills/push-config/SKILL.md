@@ -27,7 +27,7 @@ Home Assistant entity — don't guess IDs.
    back up. On `409 Conflict` it reports the device's current ETag — re-run to retry.
 
 > **Do not push within 60s of an OTA flash** (safe-mode rollback risk). Default
-> device `192.168.252.221`.
+> device `tilehaus-office.local` (office) or `tilehaus-lobby.local` (lobby).
 
 ## Deck JSON shape
 
