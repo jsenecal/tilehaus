@@ -1,8 +1,7 @@
 # =============================================================================
-# FONTS - reused from the espcontrol asset set (committed MDI TTF + Roboto),
-# sized to match devices/guition-esp32-p4-jc1060p470/device/fonts.yaml. Paths
-# are POC-relative (build dir is poc/.esphome). This block is standalone: it
-# only !includes the shared glyph lists and references the shared TTF.
+# FONTS - the committed MDI TTF + Roboto set, sized for the JC1060P470. Paths
+# are relative to firmware/ (build dir is firmware/.esphome). This block is
+# standalone: it only !includes the glyph lists and references the TTF.
 # =============================================================================
 font:
   # Tile icons (top-left)
@@ -48,3 +47,16 @@ font:
     size: 17
     bpp: 4
     glyphs: !include assets/text_glyphs.yaml
+
+  # Screensaver clock. 180px would be ruinous with a full character set, but a
+  # clock needs eleven glyphs, so the cost is the digits alone — and scaling the
+  # 55px value font up instead would resample a bitmap into mush.
+  - file: "gfonts://Roboto@Light"
+    id: font_clock_xl
+    size: 180
+    bpp: 4
+    # Exactly the characters screensaver.h's "%02d:%02d" can emit. LVGL skips
+    # glyphs it lacks silently rather than failing, so changing that format —
+    # a 12-hour clock with AM/PM, say — would render blanks with nothing to
+    # catch it but looking at the panel. Change both together.
+    glyphs: "0123456789:"

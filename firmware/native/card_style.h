@@ -43,7 +43,7 @@ inline constexpr int kTileInset = 16;
 // 1:1 with the finger and is never animated.
 inline constexpr uint32_t kSliderAnimMs = 100;
 
-// Shared tile background: espcontrol's proven control look.
+// Shared tile background — the common control look behind every tile.
 inline void style_cell(lv_obj_t *cell, int radius) {
   lv_obj_set_style_bg_color(cell, lv_color_hex(0x313131), 0);
   lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
@@ -122,6 +122,17 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
   lv_obj_align(lbl, align, dx, dy);
   lv_obj_set_user_data(lbl, sh);  // link shadow so set_icon_glyph can sync it
   return lbl;
+}
+
+// Repaint a state-tint tile's cell for its current on/off state.
+//
+// Shared by the recolour observer and restyle() so a state change and an accent
+// change take the same path. Three cards had byte-identical copies of this, each
+// also duplicating half of its own observer — which is how a fourth card would
+// have arrived by copy-paste.
+inline void paint_state_cell(lv_obj_t *cell, bool on, uint32_t on_color,
+                             uint32_t off_color) {
+  if (cell) lv_obj_set_style_bg_color(cell, lv_color_hex(on ? on_color : off_color), 0);
 }
 
 // Swap an icon label's glyph, fading the new glyph in — but only when the glyph

@@ -235,6 +235,14 @@ struct LightSliderCard : Card {
       }, this);
     }
   }
+
+  // apply_fill_color() already reads tile_on_color() live and repaints
+  // slider_'s indicator directly (it is also the sole path that repaints the
+  // fill after the initial style_fill_slider() in build() — see
+  // apply_fill_color's own comment), so restyle only needs to call it again.
+  // No lv_subject involved, so the "does set_int re-notify" question does not
+  // apply here.
+  void restyle() override { apply_fill_color(); }
 };
 
 }  // namespace tilehaus

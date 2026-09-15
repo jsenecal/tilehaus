@@ -12,7 +12,7 @@ target_compile_definitions(deck_document_test PRIVATE
   DECK_V6_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_v6_grid.bin")
 add_test(NAME deck_document_test COMMAND deck_document_test)
 
-foreach(t grid_layout sensor_format slider_map toggle_state tile_scale forecast_helpers)
+foreach(t grid_layout sensor_format slider_map toggle_state tile_scale forecast_helpers idle_state)
   add_executable(${t}_test ${t}_test.cpp)
   add_test(NAME ${t}_test COMMAND ${t}_test)
 endforeach()

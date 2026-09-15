@@ -14,6 +14,7 @@ struct ActionCard : Card {
   lv_obj_t *cell_ = nullptr;
   std::string entity_;
   const char *service_;
+  int32_t cfg_active_color_ = -1;
 
   explicit ActionCard(const char *service) : service_(service) {}
 
@@ -22,12 +23,22 @@ struct ActionCard : Card {
   void build(lv_obj_t *cell, const CardConfig &cfg,
              const CardFonts &fonts) override {
     cell_ = cell;
+    cfg_active_color_ = cfg.active_color;
     add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     // inactive_color = resting bg, active_color = the momentary tap flash.
     style_action_feedback(cell, resolve_color(cfg.inactive_color, 0x313131),
-                          resolve_color(cfg.active_color, tile_on_color()));
+                          resolve_color(cfg_active_color_, tile_on_color()));
+  }
+
+  // The tile is stateless at rest (no persistent on/off tint), so there is
+  // nothing to repaint immediately: only the LV_STATE_USER_1 flash colour
+  // needs updating, for the next tap.
+  void restyle() override {
+    lv_obj_set_style_bg_color(
+        cell_, lv_color_hex(resolve_color(cfg_active_color_, tile_on_color())),
+        LV_PART_MAIN | LV_STATE_USER_1);
   }
 
   void bind(const CardConfig &cfg) override {

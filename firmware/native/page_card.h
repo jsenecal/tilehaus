@@ -16,13 +16,14 @@ struct PageCard : Card {
   std::string target_, icon_on_, icon_off_;
   uint32_t on_color_ = kTileOnBuiltin;
   uint32_t off_color_ = 0x313131;
+  int32_t cfg_active_color_ = -1;
 
   TileSpan default_size() const override { return {2, 2}; }
 
   static void recolor_cb(lv_observer_t *o, lv_subject_t *s) {
     auto *self = static_cast<PageCard *>(lv_observer_get_user_data(o));
     const bool on = lv_subject_get_int(s) != 0;
-    lv_obj_set_style_bg_color(self->cell_, lv_color_hex(on ? self->on_color_ : self->off_color_), 0);
+    paint_state_cell(self->cell_, on, self->on_color_, self->off_color_);
     set_icon_glyph(self->icon_lbl_, on ? self->icon_on_ : self->icon_off_);
   }
 
@@ -32,7 +33,8 @@ struct PageCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, glyph);
     icon_on_ = glyph;
     icon_off_ = cfg.icon_alt.empty() ? glyph : cfg.icon_alt;
-    on_color_ = resolve_color(cfg.active_color, tile_on_color());
+    cfg_active_color_ = cfg.active_color;
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
     off_color_ = resolve_color(cfg.inactive_color, 0x313131);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
@@ -51,6 +53,15 @@ struct PageCard : Card {
       auto *self = static_cast<PageCard *>(lv_event_get_user_data(e));
       page_nav().go(self->target_);
     }, LV_EVENT_CLICKED, this);
+  }
+
+  // recolor_cb reads on_color_/off_color_ directly (not derived via a subject
+  // notify), so re-resolving them and repainting from the current on/off state
+  // repaints immediately, with no dependency on lv_subject_set_int re-notifying
+  // (it does not, for an unchanged value — see lv_subject_notify_if_changed).
+  void restyle() override {
+    on_color_ = resolve_color(cfg_active_color_, tile_on_color());
+    paint_state_cell(cell_, lv_subject_get_int(&on_) != 0, on_color_, off_color_);
   }
 };
 

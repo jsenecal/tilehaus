@@ -1,8 +1,9 @@
 lvgl:
   id: main_lvgl
   displays: my_display
-  # espcontrol pairs a static 180 base with a runtime 180 rotation that nets to
-  # upright; this POC has only the static value, so 0 is the correct upright.
+  # The stock device profile pairs a static 180 base with a runtime 180
+  # rotation that nets back to upright. Tilehaus carries only the static value,
+  # so 0 — not 180 — is what leaves the panel the right way up.
   rotation: 0
   byte_order: little_endian
   default_font: font_text_body

@@ -180,6 +180,13 @@ struct CoverCard : Card {
       }, this);
     }
   }
+
+  // fill_ is a stored member set once in build() with the literal
+  // tile_on_color() (no per-tile active_color override for the cover fill),
+  // so restyle can just re-apply it directly to the widget.
+  void restyle() override {
+    if (fill_) lv_obj_set_style_bg_color(fill_, lv_color_hex(tile_on_color()), 0);
+  }
 };
 
 }  // namespace tilehaus
