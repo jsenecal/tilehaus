@@ -76,6 +76,14 @@ inline void go_home() {
   // back button whenever the stack is non-empty, so returning without clearing
   // leaves a back button on Home pointing at a page nobody navigated from.
   page_nav().stack.clear();
+  // Rewind every page, not just Home. Pages taller than the grid scroll
+  // (grid.h sets LV_DIR_VER on the root), and PageNav::show() only toggles
+  // visibility — it never touches the offset. Returning home without this
+  // leaves Home wherever it was last dragged, and leaves the page you were
+  // actually on still scrolled for whenever you next open it.
+  for (lv_obj_t *c : page_nav().containers) {
+    if (c) lv_obj_scroll_to_y(c, 0, LV_ANIM_OFF);
+  }
   page_nav().show(0);
 }
 
