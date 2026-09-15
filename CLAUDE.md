@@ -67,7 +67,8 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
 Config is applied by **reboot** — there is no live in-place rebuild (HA state
 subscriptions can't be torn down at runtime).
 
-Default dev panel: `192.168.252.221` (Guition JC1060P470). OTA port 3232, no OTA
+Default dev panel: `tilehaus.local` (Guition JC1060P470) — prefer the mDNS name,
+the DHCP lease moves. OTA port 3232, no OTA
 password.
 
 > **Safety rule: after an OTA flash, do NOT push a config (PUT/DELETE) for >60s.**
