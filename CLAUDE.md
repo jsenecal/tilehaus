@@ -87,6 +87,25 @@ leases move. OTA port 3232, no OTA password.
 > The P4 can roll back to safe mode if it reboots again too soon after an OTA.
 > Wait until the panel is serving again (`panel-status`) before configuring.
 
+## Personal panel configuration — `local/` (gitignored)
+
+Deck generators and the JSON specs they emit live in `local/`, which is
+gitignored. Tilehaus is a public repo, so household entity ids, room names and
+layouts stay on the machine — but a scratchpad directory does not survive a
+session, and a deck generator is worth keeping.
+
+A generator emits a spec that `deck_cli.js` encodes:
+
+```bash
+node local/gen_<panel>_deck.js local/<panel>_deck.json
+node scripts/deck_cli.js push local/<panel>_deck.json --device <panel>.local
+```
+
+Write the spec from a script rather than by hand: `encodeCard` requires **every**
+field on every card, so a literal JSON deck is unmaintainable. Icons are glyph
+characters looked up from `web/icon_catalog.ts` — a curated ~348, not all of MDI,
+so have the generator throw on an unknown slug instead of emitting a blank tile.
+
 ## Interacting with the panel — skills
 
 Prefer the skills in `.claude/skills/`: **flash**, **push-config**,
