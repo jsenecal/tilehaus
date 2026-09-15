@@ -1,6 +1,5 @@
-# P4 hardware bring-up for the JC1060P470, distilled from
-# devices/guition-esp32-p4-jc1060p470/device/device.yaml with all espcontrol
-# component / script references removed. Hardware only.
+# P4 hardware bring-up for the JC1060P470. Hardware only — no card, script or
+# UI wiring lives here.
 esp32:
   variant: esp32p4
   flash_size: 16MB

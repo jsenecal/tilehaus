@@ -43,7 +43,7 @@ inline constexpr int kTileInset = 16;
 // 1:1 with the finger and is never animated.
 inline constexpr uint32_t kSliderAnimMs = 100;
 
-// Shared tile background: espcontrol's proven control look.
+// Shared tile background — the common control look behind every tile.
 inline void style_cell(lv_obj_t *cell, int radius) {
   lv_obj_set_style_bg_color(cell, lv_color_hex(0x313131), 0);
   lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);

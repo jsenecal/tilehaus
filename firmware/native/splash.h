@@ -5,9 +5,9 @@
 namespace tilehaus {
 
 // Boot / connection splash: a full-screen black overlay on the top layer (above
-// the grid and any modal) with a centered icon + title + grey subtitle, mirrored
-// on espcontrol's loading screen. Driven through connection phases from the
-// ESPHome wifi/api triggers, then faded out once Home Assistant is connected.
+// the grid and any modal) with a centered icon + title + grey subtitle. Driven
+// through connection phases from the ESPHome wifi/api triggers, then faded out
+// once Home Assistant is connected.
 struct Splash {
   lv_obj_t *overlay = nullptr;
   lv_obj_t *icon = nullptr;

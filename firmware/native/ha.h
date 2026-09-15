@@ -71,7 +71,7 @@ inline void ha_call_kv(const char *service, const std::string &entity,
 
 // Call light.turn_on with rgb_color (a HA list). A plain string data value
 // cannot carry a list, so we send a data_template Jinja expression that builds
-// the list from scalar variables — the same approach espcontrol uses.
+// the list from scalar variables.
 inline void ha_call_rgb(const std::string &entity, int r, int g, int b) {
   auto clamp = [](int v) { return v < 0 ? 0 : (v > 255 ? 255 : v); };
   r = clamp(r); g = clamp(g); b = clamp(b);
