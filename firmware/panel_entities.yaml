@@ -59,7 +59,12 @@ number:
     id: cfg_brightness
     entity_category: config
     unit_of_measurement: "%"
-    min_value: 0
+    # Floored at 10, unlike dim/sleep where 0 is a meaningful "go dark". At 0 the
+    # awake level turns the backlight off, which fails the brightness>0 term of
+    # hardware.yaml's input gate, so input devices are never re-enabled — and
+    # touching the panel restores brightness *to* this value, i.e. still 0. The
+    # panel becomes untouchable and is recoverable only from Home Assistant.
+    min_value: 10
     max_value: 100
     step: 1
     initial_value: 100

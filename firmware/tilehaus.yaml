@@ -81,6 +81,8 @@ time:
     id: poc_time
 
 api:
+  # bindings.yaml contributes a `services:` key to this same block — ESPHome
+  # merges package dicts key by key. Keep that in mind when editing either side.
   homeassistant_states: true
   homeassistant_services: true
   on_client_disconnected:

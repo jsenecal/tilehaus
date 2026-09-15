@@ -80,7 +80,12 @@ inline void go_home() {
 }
 
 // Called from the 250ms interval in hardware.yaml.
-inline void tick_idle() {
+//
+// noexcept because that lambda also drives LVGL's input devices: an exception
+// escaping into it would strand touch. The hooks below call into ESPHome
+// components, so this turns the design's stated "cannot throw" from a
+// convention into something the compiler enforces.
+inline void tick_idle() noexcept {
   const IdleTargets t = idle_targets(idle_config(),
                                      lv_display_get_inactive_time(nullptr),
                                      page_nav().current,
@@ -114,9 +119,15 @@ inline void panel_touch_wake() {
 
 // The show-page API service. Counts as activity, or an idle panel would be
 // returned Home by the very next page_timeout crossing.
+//
+// It deliberately does NOT arm the wake guard. The guard exists to stop the
+// physical touch that woke the panel from also pressing a tile; navigation from
+// HA has no touch underneath it to debounce, so arming it here would suppress a
+// deliberate press by someone already standing at the panel. Worse, a service
+// call repeating faster than the guard window would re-arm it forever and leave
+// the touchscreen dead.
 inline void show_page(const std::string &name) {
   lv_display_trigger_activity(nullptr);
-  begin_wake_guard();
   screensaver_hide();
   apply_brightness(idle_config().brightness);
   const int i = page_nav().index_of(name);
@@ -126,9 +137,7 @@ inline void show_page(const std::string &name) {
 
 // light.accent: off falls back to the deck's own accent, on overrides it live.
 inline void set_accent(bool on, uint32_t rgb) {
-  static int32_t deck_default = -2;       // -2 = not yet captured
-  if (deck_default == -2) deck_default = deck_accent();
-  deck_accent() = on ? static_cast<int32_t>(rgb) : deck_default;
+  deck_accent() = on ? static_cast<int32_t>(rgb) : deck_default_accent();
   for (auto &c : live_cards()) c->restyle();
 }
 

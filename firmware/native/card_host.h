@@ -109,6 +109,7 @@ inline void poc_build_cards(lv_obj_t *root, int unit_px, int pad_px, int gap_px,
     return;
   }
   deck_accent() = accent;  // drives the default on-tint before any card is built
+  deck_default_accent() = accent;  // what light.accent reverts to when switched off
   lv_display_t *disp = lv_display_get_default();
   const int max_cols = grid_max_cells(lv_display_get_horizontal_resolution(disp));
   const int max_rows = grid_max_cells(lv_display_get_vertical_resolution(disp));

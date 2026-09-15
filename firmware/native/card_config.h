@@ -58,6 +58,20 @@ struct CardConfig {
 // Deck-level accent colour (0xRRGGBB) or -1 for the built-in card colours. Set
 // once at boot from the decoded deck; read by tiles/modals as their default
 // on-tint (per-tile Active/Inactive colours still override via resolve_color).
+// The accent the deck itself specifies, captured when the deck loads.
+//
+// Kept separate from deck_accent() — which light.accent overwrites live — so
+// turning that light off can restore the deck's own colour. It must NOT be
+// captured lazily on first use: light.accent is restore_mode ALWAYS_OFF, and
+// ESPHome fires a light's on_state from LightState::setup(), which runs well
+// before the on_boot block (priority -100) that loads the deck. A lazy capture
+// therefore latches -1 on every boot and permanently breaks "off = the deck's
+// accent" for exactly the decks that set one.
+inline int32_t &deck_default_accent() {
+  static int32_t accent = -1;
+  return accent;
+}
+
 inline int32_t &deck_accent() {
   static int32_t accent = -1;
   return accent;

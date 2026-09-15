@@ -55,4 +55,8 @@ font:
     id: font_clock_xl
     size: 180
     bpp: 4
+    # Exactly the characters screensaver.h's "%02d:%02d" can emit. LVGL skips
+    # glyphs it lacks silently rather than failing, so changing that format —
+    # a 12-hour clock with AM/PM, say — would render blanks with nothing to
+    # catch it but looking at the panel. Change both together.
     glyphs: "0123456789:"
