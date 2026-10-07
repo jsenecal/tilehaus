@@ -93,6 +93,11 @@ struct Overlay {
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(root_);
     active_overlay() = this;
+    // Hide the grid beneath. LVGL never treats the top layer as covering the
+    // screen: every redraw paints the active screen first, then the top layer
+    // over it, so with the grid shown each frame of a modal scroll also
+    // repainted every tile hidden behind the modal (~35ms of a ~53ms frame).
+    if (app_grid_root()) lv_obj_add_flag(app_grid_root(), LV_OBJ_FLAG_HIDDEN);
   }
 
   void hide() {
@@ -101,6 +106,8 @@ struct Overlay {
     // Only clear it if we are the one showing — a modal hiding itself after
     // another has already opened must not blank the pointer.
     if (active_overlay() == this) active_overlay() = nullptr;
+    if (!active_overlay() && app_grid_root())
+      lv_obj_clear_flag(app_grid_root(), LV_OBJ_FLAG_HIDDEN);
   }
 };
 

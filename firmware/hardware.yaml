@@ -17,6 +17,11 @@ esp32:
       # ("connection reset by peer"). Raise the timeout so the erase/prep step
       # can finish. Mirrors devices/guition-esp32-p4-jc1060p470/device/device.yaml.
       CONFIG_ESP_TASK_WDT_TIMEOUT_S: "60"
+      # Build for speed, not size (-O2 instead of -Os). LVGL renders entirely
+      # in software here; measured on a scrolling modal list, render time fell
+      # from 62ms to 53ms a frame. Costs ~200KB of flash, which has room.
+      CONFIG_COMPILER_OPTIMIZATION_SIZE: n
+      CONFIG_COMPILER_OPTIMIZATION_PERF: y
 
 psram:
   mode: hex
