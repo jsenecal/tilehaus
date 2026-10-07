@@ -27,6 +27,7 @@ struct OptionListTab {
   CardFonts fonts_{};
   std::vector<std::string> values_;
   std::vector<lv_obj_t *> rows_;
+  int item_w_ = 0;  // grid cell width in px; 0 = full-width rows
   std::string list_raw_, active_;
   std::string set_service_, set_entity_, set_key_;
 
@@ -58,6 +59,9 @@ struct OptionListTab {
     return out;
   }
 
+  static constexpr int kGap = 10;    // between tiles, matching the grid
+  static constexpr int kItemH = 76;  // fixed so the grid reads as tiles
+
   void build(lv_obj_t *panel, const CardFonts &fonts,
              const std::string &list_entity, const char *list_attr,
              const std::string &cur_entity, const char *cur_attr,
@@ -74,9 +78,20 @@ struct OptionListTab {
     // not yet computed when tabs build (the modal is built hidden at boot).
     lv_obj_set_size(list_, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_bg_opa(list_, LV_OPA_TRANSP, 0);
-    lv_obj_set_flex_flow(list_, LV_FLEX_FLOW_COLUMN);
+    // Options as a grid of tiles, several per row, so a long list is a third
+    // as tall and needs far less scrolling — scrolling being the expensive part
+    // on this panel. Column count from the panel's pixel width (3 on the
+    // full-width select modal, 2 beside a tab rail); a panel without a pixel
+    // width falls back to full-width rows.
+    lv_obj_set_flex_flow(list_, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_style_pad_all(list_, kTileInset, 0);
-    lv_obj_set_style_pad_row(list_, 8, 0);
+    lv_obj_set_style_pad_row(list_, kGap, 0);
+    lv_obj_set_style_pad_column(list_, kGap, 0);
+    const int32_t pw = lv_obj_get_style_width(panel, LV_PART_MAIN);
+    if (pw > 0 && !LV_COORD_IS_PCT(pw) && pw != LV_SIZE_CONTENT) {
+      const int cols = pw >= 700 ? 3 : 2;
+      item_w_ = (pw - 2 * kTileInset - (cols - 1) * kGap) / cols;
+    }
     lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scroll_dir(list_, LV_DIR_VER);
 
@@ -108,23 +123,36 @@ struct OptionListTab {
     for (size_t i = 0; i < opts.size(); ++i) {
       lv_obj_t *r = lv_button_create(list_);
       lv_obj_remove_style_all(r);
-      lv_obj_set_width(r, LV_PCT(100));
-      lv_obj_set_height(r, LV_SIZE_CONTENT);
-      lv_obj_set_style_bg_color(r, lv_color_hex(0x2A2A2A), 0);
+      if (item_w_ > 0) lv_obj_set_size(r, item_w_, kItemH);
+      else lv_obj_set_size(r, LV_PCT(100), LV_SIZE_CONTENT);
+      lv_obj_set_style_bg_color(r, lv_color_hex(kTileBg), 0);
       lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
       lv_obj_set_style_radius(r, 0, 0);
-      lv_obj_set_style_pad_hor(r, 16, 0);
-      lv_obj_set_style_pad_ver(r, 14, 0);
-      lv_obj_set_style_bg_color(r, lv_color_hex(0xB5451B), LV_STATE_CHECKED);
-      style_press_dip(r);
+      lv_obj_set_style_pad_hor(r, 14, 0);
+      lv_obj_set_style_pad_ver(r, 10, 0);
+      // Press = a flat colour change, no scale or fade: every drag starts on a
+      // tile, and a scaled/faded object is rendered off-screen and blended,
+      // which is what made the start of each scroll stall.
+      lv_obj_set_style_bg_color(r, lv_color_hex(0x484848), LV_STATE_PRESSED);
+      lv_obj_set_style_bg_color(r, lv_color_hex(tile_on_color()), LV_STATE_CHECKED);
+      // Text colour lives on the tile so the label inherits it per state:
+      // white on charcoal, ink on the (light) accent.
+      lv_obj_set_style_text_color(r, lv_color_hex(0xFFFFFF), 0);
+      lv_obj_set_style_text_color(
+          r, lv_color_hex(needs_dark_ink(tile_on_color()) ? kInk : 0xFFFFFF),
+          LV_STATE_CHECKED);
       lv_obj_set_user_data(r,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
       lv_obj_add_event_cb(r, tap_cb, LV_EVENT_CLICKED, this);
       lv_obj_t *l = lv_label_create(r);
       if (fonts_.body) lv_obj_set_style_text_font(l, fonts_.body, 0);
-      lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+      if (item_w_ > 0) {
+        lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);  // two lines, then …
+        lv_obj_set_width(l, LV_PCT(100));
+        lv_obj_set_style_max_height(l, LV_PCT(100), 0);
+      }
       lv_label_set_text(l, display_label(opts[i]).c_str());
-      lv_obj_align(l, LV_ALIGN_LEFT_MID, 0, 0);
+      lv_obj_align(l, item_w_ > 0 ? LV_ALIGN_BOTTOM_LEFT : LV_ALIGN_LEFT_MID, 0, 0);
       rows_.push_back(r);
     }
     apply_active();
