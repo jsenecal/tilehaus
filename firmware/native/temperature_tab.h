@@ -40,7 +40,7 @@ struct TemperatureTab {
     lv_obj_set_size(slider_, sw, 56);
     lv_obj_align(slider_, LV_ALIGN_CENTER, 0, 0);
     // Track: warm -> cool horizontal gradient; indicator hidden; visible knob.
-    lv_obj_set_style_radius(slider_, 28, LV_PART_MAIN);
+    lv_obj_set_style_radius(slider_, 0, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(slider_, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_color(slider_, lv_color_hex(0xFF8C2A), LV_PART_MAIN);
     lv_obj_set_style_bg_grad_color(slider_, lv_color_hex(0xCFE0FF), LV_PART_MAIN);

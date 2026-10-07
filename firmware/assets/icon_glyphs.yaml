@@ -18,6 +18,7 @@
 - "\U000F02ED"  # mdi-image-broken (Image card unavailable state)
 - "\U000F0141"  # mdi-chevron-left
 - "\U000F0142"  # mdi-chevron-right
+- "\U000F004D"  # mdi-arrow-left (Modal back button)
 - "\U000F0004"  # mdi-account
 - "\U000F001B"  # mdi-air-conditioner
 - "\U000F0D43"  # mdi-air-filter

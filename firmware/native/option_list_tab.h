@@ -112,7 +112,7 @@ struct OptionListTab {
       lv_obj_set_height(r, LV_SIZE_CONTENT);
       lv_obj_set_style_bg_color(r, lv_color_hex(0x2A2A2A), 0);
       lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
-      lv_obj_set_style_radius(r, 10, 0);
+      lv_obj_set_style_radius(r, 0, 0);
       lv_obj_set_style_pad_hor(r, 16, 0);
       lv_obj_set_style_pad_ver(r, 14, 0);
       lv_obj_set_style_bg_color(r, lv_color_hex(0xB5451B), LV_STATE_CHECKED);

@@ -12,14 +12,20 @@ font:
     glyphs: !include assets/icon_glyphs.yaml
 
   # Tile names, units, brightness %
-  - file: "gfonts://Roboto"
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 700
     id: font_text_body
     size: 22
     bpp: 4
     glyphs: !include assets/text_glyphs.yaml
 
   # Sensor values (also covers ° and the invalid-state em-dash via text_glyphs)
-  - file: "gfonts://Roboto@Light"
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 800
     id: font_number_value
     size: 55
     bpp: 4
@@ -27,14 +33,20 @@ font:
 
   # Medium number — compact values (weather current temp) that need to read
   # bigger than body but not as large as the sensor value font.
-  - file: "gfonts://Roboto"
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 800
     id: font_number_medium
     size: 34
     bpp: 4
     glyphs: !include assets/text_glyphs.yaml
 
   # Small secondary text — e.g. the header's high/low beneath the temperature.
-  - file: "gfonts://Roboto"
+  - file:
+      type: gfonts
+      family: "JetBrains Mono"
+      weight: 500
     id: font_text_small
     size: 15
     bpp: 4
@@ -42,7 +54,10 @@ font:
 
   # Tile names on tight (narrow) tiles — a 2-column tile has ~124px of content,
   # where the 22px body wraps an 11-character title onto two lines.
-  - file: "gfonts://Roboto"
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 700
     id: font_text_body_tight
     size: 17
     bpp: 4
@@ -51,7 +66,10 @@ font:
   # Screensaver clock. 180px would be ruinous with a full character set, but a
   # clock needs eleven glyphs, so the cost is the digits alone — and scaling the
   # 55px value font up instead would resample a bitmap into mush.
-  - file: "gfonts://Roboto@Light"
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 800
     id: font_clock_xl
     size: 180
     bpp: 4
@@ -60,3 +78,34 @@ font:
     # a 12-hour clock with AM/PM, say — would render blanks with nothing to
     # catch it but looking at the panel. Change both together.
     glyphs: "0123456789:"
+
+  # Page titles (editorial theme): heavy grotesk on the page background, with
+  # the bar beneath. Sized to fit a one-row (~72px) title tile with the bar.
+  - file:
+      type: gfonts
+      family: "Inter Tight"
+      weight: 900
+    id: font_title
+    size: 46
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml
+
+  # Captions: small spaced monospace capitals (subtitles, dates).
+  - file:
+      type: gfonts
+      family: "JetBrains Mono"
+      weight: 500
+    id: font_caption
+    size: 14
+    bpp: 4
+    glyphs: !include assets/text_glyphs.yaml
+
+  # Header clock in monospace. Same eleven glyphs as the screensaver clock.
+  - file:
+      type: gfonts
+      family: "JetBrains Mono"
+      weight: 600
+    id: font_clock_mono
+    size: 30
+    bpp: 4
+    glyphs: "0123456789:-"

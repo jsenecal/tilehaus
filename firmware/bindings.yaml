@@ -15,6 +15,9 @@ esphome:
                 .small = id(font_text_small)->get_lv_font(),
                 .body_tight = id(font_text_body_tight)->get_lv_font(),
                 .clock_xl = id(font_clock_xl)->get_lv_font(),
+                .title = id(font_title)->get_lv_font(),
+                .caption = id(font_caption)->get_lv_font(),
+                .clock_mono = id(font_clock_mono)->get_lv_font(),
             };
             // Boot splash on top of everything; fades out on the first HA state.
             tilehaus::splash_build(poc_fonts);

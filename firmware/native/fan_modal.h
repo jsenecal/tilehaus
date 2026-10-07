@@ -39,7 +39,7 @@ struct FanModal {
   }
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     int cw = overlay_.content_w();

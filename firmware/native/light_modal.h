@@ -109,7 +109,7 @@ struct LightModal {
   }
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
 
@@ -146,7 +146,7 @@ struct LightModal {
       lv_obj_t *b = lv_button_create(rail_);
       lv_obj_remove_style_all(b);
       lv_obj_set_size(b, kRailW - 24, kRailW - 24);
-      lv_obj_set_style_radius(b, 16, 0);
+      lv_obj_set_style_radius(b, 0, 0);
       style_button_feedback(b, toggle_color(false), toggle_color(true));
       lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
       lv_obj_add_event_cb(b, tab_cb, LV_EVENT_CLICKED, this);

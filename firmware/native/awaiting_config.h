@@ -4,6 +4,7 @@
 
 #include "card.h"  // CardFonts
 #include "splash.h"  // splash_hide
+#include "theme.h"
 #include "esphome/components/network/util.h"
 
 namespace tilehaus {
@@ -66,16 +67,16 @@ inline void awaiting_build(lv_obj_t *root, const CardFonts &fonts) {
   lv_obj_t *icon = lv_label_create(col);
   lv_label_set_text(icon, "\U000F0493");  // mdi-cog
   lv_obj_set_style_text_font(icon, fonts.icon, 0);
-  lv_obj_set_style_text_color(icon, lv_color_hex(0x9AA0A6), 0);
+  lv_obj_set_style_text_color(icon, lv_color_hex(kInkMuted), 0);
 
   lv_obj_t *title = lv_label_create(col);
   lv_label_set_text(title, "Awaiting Configuration");
   lv_obj_set_style_text_font(title, fonts.medium, 0);
-  lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(title, lv_color_hex(kInk), 0);
 
   lv_obj_t *url = lv_label_create(col);
   lv_obj_set_style_text_font(url, fonts.body, 0);
-  lv_obj_set_style_text_color(url, lv_color_hex(0x9AA0A6), 0);
+  lv_obj_set_style_text_color(url, lv_color_hex(kInkMuted), 0);
   awaiting_ip_label() = url;
 
   awaiting_update();  // fill immediately if the network is already up

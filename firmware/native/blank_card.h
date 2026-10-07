@@ -16,6 +16,18 @@ struct BlankCard : Card {
     // sit close to the tile edges (handy for section headers).
     if (cfg.tight_margins) lv_obj_set_style_pad_all(cell, 2, 0);
 
+    // On the page itself (transparent), a titled tile is a page title: heavy
+    // near-black type with the short bar beneath. It needs the full row
+    // height, so only the side inset stays.
+    if (cfg.transparent && !cfg.title.empty()) {
+      lv_obj_set_style_pad_ver(cell, 0, 0);
+      lv_obj_t *t = add_page_title(cell, fonts.title ? fonts.title : fonts.value,
+                                   cfg.title.c_str());
+      lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
+      return;
+    }
+    const uint32_t ink = cfg.transparent ? kInk : 0xFFFFFF;
+
     // Icon and title sit inline in a content-sized row; the row is then aligned
     // within the tile per cfg.align.
     lv_obj_t *box = lv_obj_create(cell);
@@ -29,13 +41,13 @@ struct BlankCard : Card {
 
     if (!cfg.icon.empty()) {
       lv_obj_t *ic = lv_label_create(box);
-      lv_obj_set_style_text_color(ic, lv_color_hex(0xFFFFFF), 0);
+      lv_obj_set_style_text_color(ic, lv_color_hex(ink), 0);
       if (fonts.icon) lv_obj_set_style_text_font(ic, fonts.icon, 0);
       lv_label_set_text(ic, cfg.icon.c_str());
     }
     if (!cfg.title.empty()) {
       lv_obj_t *lbl = lv_label_create(box);
-      lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+      lv_obj_set_style_text_color(lbl, lv_color_hex(ink), 0);
       if (fonts.body) lv_obj_set_style_text_font(lbl, fonts.body, 0);
       lv_label_set_text(lbl, cfg.title.c_str());
     }

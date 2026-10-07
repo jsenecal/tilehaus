@@ -8,7 +8,7 @@ substitutions:
   grid_gap: "10"            # spacing between tiles in px
   grid_pad: "16"            # outer padding around the grid in px
   grid_subdivisions: "2"    # sub-cells per normal unit (2 = half-units)
-  tile_radius: "10"         # tile corner radius in px
+  tile_radius: "0"         # tile corner radius in px
   mdi_font_file: "assets/materialdesignicons-webfont-7.4.47.ttf"
 
 esphome:

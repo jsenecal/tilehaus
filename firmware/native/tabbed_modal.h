@@ -62,7 +62,7 @@ struct TabbedModal {
 
   // Build the rail + panels after all add_tab() calls.
   void build_chrome() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     int cw = overlay_.content_w();
@@ -95,7 +95,7 @@ struct TabbedModal {
       lv_obj_t *b = lv_button_create(rail);
       lv_obj_remove_style_all(b);
       lv_obj_set_size(b, bs, bs);
-      lv_obj_set_style_radius(b, 16, 0);
+      lv_obj_set_style_radius(b, 0, 0);
       style_button_feedback(b, toggle_color(false), toggle_color(true));
       lv_obj_set_user_data(b,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));

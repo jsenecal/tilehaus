@@ -105,7 +105,7 @@ struct CoverModal {
     lv_obj_set_size(win, 150, h);
     lv_obj_set_style_bg_color(win, lv_color_hex(0x1E1E1E), 0);
     lv_obj_set_style_bg_opa(win, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(win, 14, 0);
+    lv_obj_set_style_radius(win, 0, 0);
     lv_obj_set_style_clip_corner(win, true, 0);
     lv_obj_clear_flag(win, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -167,7 +167,7 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 76);
-    lv_obj_set_style_radius(b, 14, 0);
+    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
@@ -216,7 +216,7 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 64);
-    lv_obj_set_style_radius(b, 12, 0);
+    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);

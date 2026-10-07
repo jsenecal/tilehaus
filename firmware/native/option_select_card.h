@@ -25,7 +25,7 @@ struct OptionSelectModal {
       : entity_(entity), title_(title), fonts_(fonts) {}
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     list_.build(overlay_.content(), fonts_, entity_, "options", entity_, nullptr,
                 "select.select_option", entity_, "option");

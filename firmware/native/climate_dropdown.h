@@ -75,7 +75,7 @@ struct ClimateDropdown {
     lv_obj_set_style_text_align(dd_, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_set_style_border_width(dd_, 1, 0);
     lv_obj_set_style_border_color(dd_, lv_color_hex(0x444444), 0);
-    lv_obj_set_style_radius(dd_, 12, 0);
+    lv_obj_set_style_radius(dd_, 0, 0);
     lv_obj_set_style_pad_ver(dd_, 16, 0);
     lv_obj_set_style_pad_right(dd_, 16, 0);
     // Leave room on the left for the icon that sits inside the button.
@@ -99,7 +99,7 @@ struct ClimateDropdown {
       lv_obj_set_style_bg_color(list, lv_color_hex(0x2A2A2A), 0);
       lv_obj_set_style_text_color(list, lv_color_hex(0xFFFFFF), 0);
       lv_obj_set_style_border_color(list, lv_color_hex(0x444444), 0);
-      lv_obj_set_style_radius(list, 12, 0);
+      lv_obj_set_style_radius(list, 0, 0);
       // Clip children to the rounded rect so the option highlight doesn't paint
       // a square corner over the list's rounded top-left.
       lv_obj_set_style_clip_corner(list, true, 0);

@@ -20,6 +20,7 @@ export const ICON_CATALOG: readonly IconEntry[] = [
   { name: "application outline", slug: "application-outline", hex: "F0614", glyph: "\u{F0614}" },
   { name: "arrow down", slug: "arrow-down", hex: "F0045", glyph: "\u{F0045}" },
   { name: "arrow down bold circle", slug: "arrow-down-bold-circle", hex: "F0047", glyph: "\u{F0047}" },
+  { name: "arrow left", slug: "arrow-left", hex: "F004D", glyph: "\u{F004D}" },
   { name: "arrow left bold circle", slug: "arrow-left-bold-circle", hex: "F004F", glyph: "\u{F004F}" },
   { name: "arrow right bold circle", slug: "arrow-right-bold-circle", hex: "F0056", glyph: "\u{F0056}" },
   { name: "arrow up", slug: "arrow-up", hex: "F005D", glyph: "\u{F005D}" },

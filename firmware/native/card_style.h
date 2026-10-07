@@ -5,6 +5,7 @@
 #include "card_config.h"  // accent_or
 #include "card.h"        // CardFonts
 #include "tile_scale.h"   // text_scale_for
+#include "theme.h"
 
 namespace tilehaus {
 
@@ -45,7 +46,7 @@ inline constexpr uint32_t kSliderAnimMs = 100;
 
 // Shared tile background — the common control look behind every tile.
 inline void style_cell(lv_obj_t *cell, int radius) {
-  lv_obj_set_style_bg_color(cell, lv_color_hex(0x313131), 0);
+  lv_obj_set_style_bg_color(cell, lv_color_hex(kTileBg), 0);
   lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(cell, radius, 0);
   lv_obj_set_style_border_width(cell, 0, 0);
@@ -54,6 +55,7 @@ inline void style_cell(lv_obj_t *cell, int radius) {
   // Tiles never scroll internally: clip overflow to the rounded rect instead of
   // spawning a scrollbar when content sits a few px over the cell.
   lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+  add_corner_marks(cell);  // dark corner brackets while the fill is light
 }
 
 // The body/value font for the tile currently being built: the tight rung on a
@@ -132,7 +134,10 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
 // have arrived by copy-paste.
 inline void paint_state_cell(lv_obj_t *cell, bool on, uint32_t on_color,
                              uint32_t off_color) {
-  if (cell) lv_obj_set_style_bg_color(cell, lv_color_hex(on ? on_color : off_color), 0);
+  if (!cell) return;
+  const uint32_t bg = on ? on_color : off_color;
+  lv_obj_set_style_bg_color(cell, lv_color_hex(bg), 0);
+  ink_labels_for(cell, bg);  // dark text on a lime (or other light) fill
 }
 
 // Swap an icon label's glyph, fading the new glyph in — but only when the glyph
@@ -311,7 +316,7 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
 // Whole-tile vertical slider styled as a fill: empty track == cell bg so the
 // inset reads seamless, orange indicator, no visible knob.
 inline void style_fill_slider(lv_obj_t *slider, int radius) {
-  lv_obj_set_style_bg_color(slider, lv_color_hex(0x313131), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(slider, lv_color_hex(kTileBg), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
   lv_obj_set_style_radius(slider, radius, LV_PART_MAIN);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);

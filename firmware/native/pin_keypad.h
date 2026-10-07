@@ -43,7 +43,7 @@ struct PinPad {
     lv_obj_t *b = lv_button_create(grid);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 80, 80);
-    lv_obj_set_style_radius(b, 12, 0);
+    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
@@ -65,7 +65,7 @@ struct PinPad {
 
   void build(const std::string &title, const CardFonts &fonts) {
     fonts_ = fonts;
-    overlay_.build(title, fonts.icon, fonts.body);
+    overlay_.build(title, fonts);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
