@@ -33,7 +33,6 @@ struct PowerTab {
     lv_obj_remove_style_all(btn_);
     lv_obj_set_size(btn_, 180, 180);
     lv_obj_center(btn_);
-    lv_obj_set_style_radius(btn_, 90, 0);
     style_button_feedback(btn_, toggle_color(false), toggle_color(true));
     lv_obj_t *g = lv_label_create(btn_);
     if (fonts.icon) lv_obj_set_style_text_font(g, fonts.icon, 0);

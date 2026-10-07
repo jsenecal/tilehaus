@@ -10,6 +10,7 @@
 #include "option_list_tab.h"
 #include "toggle_state.h"
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -26,6 +27,7 @@ struct FanModal {
   lv_obj_t *speed_ = nullptr;
   lv_obj_t *speed_lbl_ = nullptr;
   int speed_touch_ = 0;
+  HaHold hold_;  // no HA pushes onto the speed slider mid-drag or settling
   OptionListTab presets_;
 
   FanModal(const std::string &entity, const std::string &title,
@@ -56,7 +58,6 @@ struct FanModal {
     power_btn_ = lv_button_create(c);
     lv_obj_remove_style_all(power_btn_);
     lv_obj_set_size(power_btn_, 120, 120);
-    lv_obj_set_style_radius(power_btn_, 60, 0);
     style_button_feedback(power_btn_, toggle_color(false), toggle_color(true));
     lv_obj_t *pg = lv_label_create(power_btn_);
     if (fonts_.icon) lv_obj_set_style_text_font(pg, fonts_.icon, 0);
@@ -88,7 +89,7 @@ struct FanModal {
     lv_obj_set_width(speed_, LV_PCT(100));
     lv_obj_set_height(speed_, 72);
     lv_slider_set_range(speed_, 0, 100);
-    style_fill_slider(speed_, 14);
+    style_fill_slider(speed_);
     lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
       static_cast<FanModal *>(lv_event_get_user_data(e))->speed_touch_ = 1;
     }, LV_EVENT_PRESSED, this);
@@ -121,13 +122,15 @@ struct FanModal {
       if (s == "on") lv_obj_add_state(power_btn_, LV_STATE_CHECKED);
       else lv_obj_remove_state(power_btn_, LV_STATE_CHECKED);
     });
+    hold_.attach(speed_);
     ha_subscribe(entity_, "percentage", [this](const std::string &s) {
-      if (speed_touch_ == 1) return;
       bool bad =
           s.empty() || s == "unknown" || s == "unavailable" || s == "None";
       int v = bad ? 0 : static_cast<int>(std::lround(std::atof(s.c_str())));
-      lv_slider_set_value(speed_, v, LV_ANIM_ON);
-      set_speed_lbl(speed_lbl_, v);
+      hold_.gate([this, v]() {
+        lv_slider_set_value(speed_, v, LV_ANIM_ON);
+        set_speed_lbl(speed_lbl_, v);
+      });
     });
     built_ = true;
   }

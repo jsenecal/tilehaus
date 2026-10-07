@@ -32,29 +32,6 @@ inline int color_luma(uint32_t rgb) {
 // A light tile fill (lime, a pale follow colour) needs dark text.
 inline bool needs_dark_ink(uint32_t bg) { return color_luma(bg) > 150; }
 
-// Re-ink a tile's labels for its current fill: white text turns near-black on
-// a light fill (and back), and the black legibility twins add_icon/add_name
-// draw behind white text are hidden while the text is dark. Other colours
-// (muted greys, the chevron) are left alone.
-inline void ink_labels_for(lv_obj_t *obj, uint32_t bg) {
-  const bool dark = needs_dark_ink(bg);
-  const uint32_t n = lv_obj_get_child_count(obj);
-  for (uint32_t i = 0; i < n; ++i) {
-    lv_obj_t *c = lv_obj_get_child(obj, i);
-    if (lv_obj_check_type(c, &lv_label_class)) {
-      const uint32_t col =
-          lv_color_to_u32(lv_obj_get_style_text_color(c, LV_PART_MAIN)) &
-          0xFFFFFF;
-      if (col == 0xFFFFFF || col == kInk) {
-        lv_obj_set_style_text_color(c, lv_color_hex(dark ? kInk : 0xFFFFFF), 0);
-      } else if (col == 0x000000) {
-        lv_obj_set_style_text_opa(c, dark ? LV_OPA_TRANSP : LV_OPA_60, 0);
-      }
-    }
-    ink_labels_for(c, bg);
-  }
-}
-
 // Corner brackets: a light tile (lime when on, a pale follow colour) gets dark
 // L-shaped marks in its four corners, where rounded corners used to be. Drawn
 // in the post pass so they sit above the tile's content, and decided per frame
@@ -63,38 +40,148 @@ inline void ink_labels_for(lv_obj_t *obj, uint32_t bg) {
 inline constexpr int kCornerArm = 6;     // length of each bracket arm
 inline constexpr int kCornerThick = 2;   // stroke weight
 
-inline void corner_marks_draw_cb(lv_event_t *e) {
-  lv_obj_t *obj = lv_event_get_target_obj(e);
-  if (lv_obj_get_style_bg_opa(obj, LV_PART_MAIN) < LV_OPA_50) return;
-  const uint32_t bg =
-      lv_color_to_u32(lv_obj_get_style_bg_color(obj, LV_PART_MAIN)) & 0xFFFFFF;
-  if (!needs_dark_ink(bg)) return;
+inline bool &night_mode();
 
-  lv_layer_t *layer = lv_event_get_layer(e);
-  lv_area_t a;
-  lv_obj_get_coords(obj, &a);
+// Bracket corners, as bits: which of a box's corners get a mark.
+enum : uint8_t { kCornerTL = 1, kCornerTR = 2, kCornerBL = 4, kCornerBR = 8,
+                 kCornersTop = 3, kCornersBottom = 12, kCornersAll = 15 };
+
+inline void draw_corner_marks(lv_layer_t *layer, const lv_area_t &a,
+                              uint8_t corners) {
   lv_draw_rect_dsc_t d;
   lv_draw_rect_dsc_init(&d);
   d.bg_color = lv_color_hex(kInk);
   d.bg_opa = LV_OPA_COVER;
-  d.radius = 0;
   auto rect = [&](int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
     lv_area_t r = {x1, y1, x2, y2};
     lv_draw_rect(layer, &d, &r);
   };
   const int32_t L = kCornerArm - 1, T = kCornerThick - 1;
-  rect(a.x1, a.y1, a.x1 + L, a.y1 + T);  // ┌
-  rect(a.x1, a.y1, a.x1 + T, a.y1 + L);
-  rect(a.x2 - L, a.y1, a.x2, a.y1 + T);  // ┐
-  rect(a.x2 - T, a.y1, a.x2, a.y1 + L);
-  rect(a.x1, a.y2 - T, a.x1 + L, a.y2);  // └
-  rect(a.x1, a.y2 - L, a.x1 + T, a.y2);
-  rect(a.x2 - L, a.y2 - T, a.x2, a.y2);  // ┘
-  rect(a.x2 - T, a.y2 - L, a.x2, a.y2);
+  if (corners & kCornerTL) {  // ┌
+    rect(a.x1, a.y1, a.x1 + L, a.y1 + T);
+    rect(a.x1, a.y1, a.x1 + T, a.y1 + L);
+  }
+  if (corners & kCornerTR) {  // ┐
+    rect(a.x2 - L, a.y1, a.x2, a.y1 + T);
+    rect(a.x2 - T, a.y1, a.x2, a.y1 + L);
+  }
+  if (corners & kCornerBL) {  // └
+    rect(a.x1, a.y2 - T, a.x1 + L, a.y2);
+    rect(a.x1, a.y2 - L, a.x1 + T, a.y2);
+  }
+  if (corners & kCornerBR) {  // ┘
+    rect(a.x2 - L, a.y2 - T, a.x2, a.y2);
+    rect(a.x2 - T, a.y2 - L, a.x2, a.y2);
+  }
 }
 
+// The fill of `part` right now, if it is opaque and light enough to mark.
+inline bool part_is_light(lv_obj_t *obj, lv_part_t part) {
+  if (lv_obj_get_style_bg_opa(obj, part) < LV_OPA_50) return false;
+  if (lv_obj_get_style_opa(obj, part) < LV_OPA_50) return false;
+  return needs_dark_ink(
+      lv_color_to_u32(lv_obj_get_style_bg_color(obj, part)) & 0xFFFFFF);
+}
+
+// Tiles, buttons, option tiles: marks while the object's own fill is light.
+inline void corner_marks_draw_cb(lv_event_t *e) {
+  if (night_mode()) return;  // a day-page detail; night keeps plain tiles
+  lv_obj_t *obj = lv_event_get_target_obj(e);
+  if (!part_is_light(obj, LV_PART_MAIN)) return;
+  lv_area_t a;
+  lv_obj_get_coords(obj, &a);
+  draw_corner_marks(lv_event_get_layer(e), a, kCornersAll);
+}
+
+// Idempotent: a tile can reach this through more than one shared style (an
+// action tile is both a cell and a flashing button).
 inline void add_corner_marks(lv_obj_t *obj) {
+  lv_obj_remove_event_cb(obj, corner_marks_draw_cb);
   lv_obj_add_event_cb(obj, corner_marks_draw_cb, LV_EVENT_DRAW_POST, nullptr);
+}
+
+// A tile whose light part is a child panel (the cover tile's shade, hanging
+// from the top): mark the tile's corners that the panel covers, while light.
+inline void fill_marks_draw_cb(lv_event_t *e) {
+  if (night_mode()) return;
+  lv_obj_t *cell = lv_event_get_target_obj(e);
+  auto *fill = static_cast<lv_obj_t *>(lv_event_get_user_data(e));
+  if (!fill || lv_obj_has_flag(fill, LV_OBJ_FLAG_HIDDEN)) return;
+  if (!part_is_light(fill, LV_PART_MAIN)) return;
+  lv_area_t a, f;
+  lv_obj_get_coords(cell, &a);
+  lv_obj_get_coords(fill, &f);
+  auto covers = [&](int32_t x, int32_t y) {
+    return x >= f.x1 && x <= f.x2 && y >= f.y1 && y <= f.y2;
+  };
+  uint8_t corners = 0;
+  if (covers(a.x1, a.y1)) corners |= kCornerTL;
+  if (covers(a.x2, a.y1)) corners |= kCornerTR;
+  if (covers(a.x1, a.y2)) corners |= kCornerBL;
+  if (covers(a.x2, a.y2)) corners |= kCornerBR;
+  if (corners) draw_corner_marks(lv_event_get_layer(e), a, corners);
+}
+
+inline void add_fill_corner_marks(lv_obj_t *cell, lv_obj_t *fill) {
+  lv_obj_add_event_cb(cell, fill_marks_draw_cb, LV_EVENT_DRAW_POST, fill);
+}
+
+// Fill sliders: the light part is the fill (indicator), which only reaches
+// some corners. A vertical fill grows from the bottom: the bottom corners sit
+// on the fill once there is any, the top corners only when it is full; a
+// horizontal one grows from the left. Corners the fill doesn't reach are
+// judged on the track instead.
+inline void slider_marks_draw_cb(lv_event_t *e) {
+  if (night_mode()) return;
+  lv_obj_t *s = lv_event_get_target_obj(e);
+  const int32_t v = lv_slider_get_value(s);
+  const bool any = v > lv_slider_get_min_value(s);
+  const bool full = v >= lv_slider_get_max_value(s);
+  const bool fill_light = part_is_light(s, LV_PART_INDICATOR);
+  const bool track_light = part_is_light(s, LV_PART_MAIN);
+  lv_area_t a;
+  lv_obj_get_coords(s, &a);
+  const bool vertical = lv_area_get_height(&a) > lv_area_get_width(&a);
+  const uint8_t near = vertical ? kCornersBottom : (kCornerTL | kCornerBL);
+  const uint8_t far = kCornersAll & ~near;
+  uint8_t corners = 0;
+  if (any ? fill_light : track_light) corners |= near;
+  if (full ? fill_light : track_light) corners |= far;
+  if (corners) draw_corner_marks(lv_event_get_layer(e), a, corners);
+}
+
+inline void add_slider_corner_marks(lv_obj_t *slider) {
+  lv_obj_add_event_cb(slider, slider_marks_draw_cb, LV_EVENT_DRAW_POST, nullptr);
+}
+
+// No rounded corners anywhere. LVGL's default theme rounds what it styles —
+// slider tracks and knobs, arc ends, dropdown lists, buttons, plain objects —
+// so this theme sits on top of it and squares every part of every widget as
+// it is created. Installed once at boot, before any UI is built.
+inline void square_theme_apply_cb(lv_theme_t *, lv_obj_t *obj) {
+  static lv_style_t sq;
+  static bool inited = false;
+  if (!inited) {
+    lv_style_init(&sq);
+    lv_style_set_radius(&sq, 0);
+    lv_style_set_arc_rounded(&sq, false);
+    inited = true;
+  }
+  static const lv_part_t kParts[] = {LV_PART_MAIN, LV_PART_INDICATOR,
+                                     LV_PART_KNOB, LV_PART_ITEMS,
+                                     LV_PART_SELECTED, LV_PART_SCROLLBAR};
+  for (lv_part_t p : kParts) lv_obj_add_style(obj, &sq, p);
+}
+
+inline void install_square_theme() {
+  lv_display_t *disp = lv_display_get_default();
+  if (!disp) return;
+  lv_theme_t *base = lv_display_get_theme(disp);
+  lv_theme_t *th = lv_theme_create();
+  if (!th) return;
+  if (base) lv_theme_set_parent(th, base);
+  lv_theme_set_apply_cb(th, square_theme_apply_cb);
+  lv_display_set_theme(disp, th);
 }
 
 // Re-ink text that sits on the light page rather than inside a dark control:
@@ -159,6 +246,15 @@ inline uint32_t style_rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xFFFFFF; 
 // from either palette to the current one — so it is safe to run on every
 // toggle, after the deck builds, and each time a modal opens.
 inline void retheme(lv_obj_t *obj, bool on_page = false) {
+  // An outline is drawn outside the object, on whatever surrounds it — so it
+  // follows the page when its parent sits on the page, whatever the object's
+  // own fill (the brightness slider's ink outline around a charcoal track).
+  if (on_page && lv_obj_get_style_outline_width(obj, LV_PART_MAIN) > 0) {
+    bool hit = false;
+    const uint32_t col = style_rgb(lv_obj_get_style_outline_color(obj, LV_PART_MAIN));
+    const uint32_t want = theme_color(col, kBgPairs, &hit);
+    if (hit && want != col) lv_obj_set_style_outline_color(obj, lv_color_hex(want), 0);
+  }
   if (lv_obj_get_style_bg_opa(obj, LV_PART_MAIN) >= LV_OPA_50) {
     bool hit = false;
     const uint32_t bg = style_rgb(lv_obj_get_style_bg_color(obj, LV_PART_MAIN));
@@ -189,6 +285,10 @@ inline void apply_theme() {
     retheme(scr, true);
   }
   retheme(lv_layer_top());
+  // Corner brackets are drawn per frame from night_mode(), not stored in any
+  // style, so recolouring alone would not repaint them.
+  lv_obj_invalidate(lv_layer_top());
+  if (lv_obj_t *scr = lv_screen_active()) lv_obj_invalidate(scr);
 }
 
 inline void set_night_mode(bool on) {

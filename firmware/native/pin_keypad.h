@@ -43,7 +43,6 @@ struct PinPad {
     lv_obj_t *b = lv_button_create(grid);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 80, 80);
-    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);

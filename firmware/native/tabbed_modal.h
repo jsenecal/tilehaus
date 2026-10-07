@@ -28,6 +28,10 @@ struct TabbedModal {
   // available (lv_obj_get_height == 0) when tabs build, since the modal is built
   // hidden at boot before any layout pass.
   std::vector<std::function<void(lv_obj_t *, int, int)>> builders_;
+  // Rail actions (add_action): a tap callback instead of a page, and a subject
+  // whose non-zero value lights the button. Empty / null for ordinary tabs.
+  std::vector<std::function<void()>> actions_;
+  std::vector<lv_subject_t *> lit_;
   std::vector<lv_obj_t *> tab_btn_;
   std::vector<lv_obj_t *> panels_;
   int active_ = 0;
@@ -39,11 +43,41 @@ struct TabbedModal {
                std::function<void(lv_obj_t *, int, int)> builder) {
     glyphs_.push_back(glyph);
     builders_.push_back(std::move(builder));
+    actions_.emplace_back();
+    lit_.push_back(nullptr);
+  }
+
+  // A rail button that acts rather than opening a page — a light's power
+  // button, as in Home Assistant's light dialog. Lit while `lit` is non-zero.
+  // Set apart from the tabs below it; add actions before tabs.
+  void add_action(const std::string &glyph, std::function<void()> tap,
+                  lv_subject_t *lit) {
+    glyphs_.push_back(glyph);
+    builders_.emplace_back();
+    actions_.push_back(std::move(tap));
+    lit_.push_back(lit);
+  }
+
+  bool is_action(size_t k) const { return k < actions_.size() && actions_[k]; }
+
+  int first_tab() const {
+    for (size_t k = 0; k < glyphs_.size(); ++k)
+      if (!is_action(k)) return static_cast<int>(k);
+    return 0;
+  }
+
+  static void lit_cb(lv_observer_t *o, lv_subject_t *s) {
+    auto *b = static_cast<lv_obj_t *>(lv_observer_get_user_data(o));
+    if (lv_subject_get_int(s) != 0) lv_obj_add_state(b, LV_STATE_CHECKED);
+    else lv_obj_remove_state(b, LV_STATE_CHECKED);
   }
 
   void select(int i) {
+    if (i < 0 || i >= static_cast<int>(tab_btn_.size()) || is_action(i))
+      i = first_tab();
     active_ = i;
     for (size_t k = 0; k < tab_btn_.size(); ++k) {
+      if (is_action(k)) continue;  // lit by its subject, and has no page
       bool on = static_cast<int>(k) == i;
       if (on) lv_obj_add_state(tab_btn_[k], LV_STATE_CHECKED);
       else lv_obj_remove_state(tab_btn_[k], LV_STATE_CHECKED);
@@ -57,6 +91,10 @@ struct TabbedModal {
     lv_obj_t *b = lv_event_get_target_obj(e);
     int idx =
         static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(b)));
+    if (self->is_action(idx)) {
+      self->actions_[idx]();  // the subject repaints it when state comes back
+      return;
+    }
     self->select(idx);
   }
 
@@ -82,7 +120,8 @@ struct TabbedModal {
     lv_obj_set_size(rail, kRailW, ch);
     lv_obj_align(rail, LV_ALIGN_TOP_LEFT, 0, 0);
     lv_obj_set_flex_flow(rail, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(rail, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
+    // Centred down the rail, not stacked from the top.
+    lv_obj_set_flex_align(rail, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(rail, pad, 0);
     lv_obj_set_style_pad_row(rail, gap, 0);
@@ -95,7 +134,6 @@ struct TabbedModal {
       lv_obj_t *b = lv_button_create(rail);
       lv_obj_remove_style_all(b);
       lv_obj_set_size(b, bs, bs);
-      lv_obj_set_style_radius(b, 0, 0);
       style_button_feedback(b, toggle_color(false), toggle_color(true));
       lv_obj_set_user_data(b,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
@@ -106,6 +144,13 @@ struct TabbedModal {
       lv_label_set_text(g, glyphs_[i].c_str());
       lv_obj_center(g);
       tab_btn_.push_back(b);
+
+      if (is_action(i)) {
+        lv_obj_set_style_margin_bottom(b, gap, 0);  // set apart from the tabs
+        if (lit_[i]) lv_subject_add_observer_obj(lit_[i], lit_cb, b, b);
+        panels_.push_back(nullptr);
+        continue;
+      }
 
       lv_obj_t *p = lv_obj_create(c);
       lv_obj_remove_style_all(p);

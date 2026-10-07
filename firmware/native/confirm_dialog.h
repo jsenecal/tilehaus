@@ -23,7 +23,6 @@ struct ConfirmDialog {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 210, 84);
-    lv_obj_set_style_radius(b, 0, 0);
     style_button_feedback(b, color, color);
     lv_obj_t *l = lv_label_create(b);
     if (fonts.body) lv_obj_set_style_text_font(l, fonts.body, 0);
@@ -47,7 +46,6 @@ struct ConfirmDialog {
     lv_obj_remove_style_all(card);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x313131), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, 0, 0);
     lv_obj_set_style_pad_all(card, 24, 0);
     lv_obj_set_size(card, 520, 240);
     lv_obj_center(card);

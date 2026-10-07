@@ -45,15 +45,13 @@ inline constexpr int kTileInset = 16;
 inline constexpr uint32_t kSliderAnimMs = 100;
 
 // Shared tile background — the common control look behind every tile.
-inline void style_cell(lv_obj_t *cell, int radius) {
+inline void style_cell(lv_obj_t *cell) {
   lv_obj_set_style_bg_color(cell, lv_color_hex(kTileBg), 0);
   lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(cell, radius, 0);
   lv_obj_set_style_border_width(cell, 0, 0);
   lv_obj_set_style_pad_all(cell, kTileInset, 0);
-  lv_obj_set_style_clip_corner(cell, true, 0);
-  // Tiles never scroll internally: clip overflow to the rounded rect instead of
-  // spawning a scrollbar when content sits a few px over the cell.
+  // Tiles never scroll internally: clip overflow to the cell instead of
+  // spawning a scrollbar when content sits a few px over it.
   lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
   add_corner_marks(cell);  // dark corner brackets while the fill is light
 }
@@ -134,10 +132,7 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
 // have arrived by copy-paste.
 inline void paint_state_cell(lv_obj_t *cell, bool on, uint32_t on_color,
                              uint32_t off_color) {
-  if (!cell) return;
-  const uint32_t bg = on ? on_color : off_color;
-  lv_obj_set_style_bg_color(cell, lv_color_hex(bg), 0);
-  ink_labels_for(cell, bg);  // dark text on a lime (or other light) fill
+  if (cell) lv_obj_set_style_bg_color(cell, lv_color_hex(on ? on_color : off_color), 0);
 }
 
 // Swap an icon label's glyph, fading the new glyph in — but only when the glyph
@@ -203,6 +198,7 @@ inline void style_button_feedback(lv_obj_t *btn, uint32_t off_color,
   lv_obj_set_style_opa(btn, 210, LV_PART_MAIN | LV_STATE_PRESSED);  // ~82%
   lv_obj_set_style_transform_scale_x(btn, 250, LV_PART_MAIN | LV_STATE_PRESSED);
   lv_obj_set_style_transform_scale_y(btn, 250, LV_PART_MAIN | LV_STATE_PRESSED);
+  add_corner_marks(btn);  // while lit (the accent is light)
 }
 
 // Soft press feedback: on press the element briefly dims (whole-object opacity,
@@ -260,6 +256,7 @@ inline void style_action_feedback(lv_obj_t *obj, uint32_t rest_color,
   lv_obj_set_style_opa(obj, 210, LV_PART_MAIN | LV_STATE_PRESSED);  // ~82%
   lv_obj_set_style_transform_scale_x(obj, 250, LV_PART_MAIN | LV_STATE_PRESSED);
   lv_obj_set_style_transform_scale_y(obj, 250, LV_PART_MAIN | LV_STATE_PRESSED);
+  add_corner_marks(obj);  // while flashed (the flash colour may be light)
 }
 
 // A top-right "more-info" chevron overlaid on a tile. The tap target is a large
@@ -313,20 +310,20 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
   return b;
 }
 
-// Whole-tile vertical slider styled as a fill: empty track == cell bg so the
-// inset reads seamless, orange indicator, no visible knob.
-inline void style_fill_slider(lv_obj_t *slider, int radius) {
+// Slider styled as a fill: empty track == cell bg so the inset reads
+// seamless, accent indicator, no visible knob. Corner brackets mark the
+// corners the fill reaches while it is light.
+inline void style_fill_slider(lv_obj_t *slider) {
   lv_obj_set_style_bg_color(slider, lv_color_hex(kTileBg), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
-  lv_obj_set_style_radius(slider, radius, LV_PART_MAIN);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);
 
   lv_obj_set_style_bg_color(slider, lv_color_hex(tile_on_color()), LV_PART_INDICATOR);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(slider, radius, LV_PART_INDICATOR);
 
   lv_obj_set_style_opa(slider, LV_OPA_TRANSP, LV_PART_KNOB);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_KNOB);
+  add_slider_corner_marks(slider);
 }
 
 }  // namespace tilehaus

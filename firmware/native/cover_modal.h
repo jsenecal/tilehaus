@@ -8,6 +8,7 @@
 #include "card_style.h"
 #include "tabbed_modal.h"
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -26,6 +27,7 @@ struct CoverModal {
   lv_timer_t *hide_ = nullptr;
   lv_subject_t pos_subj_{};     // open % (0..100)
   int touch_ = 0;
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   int fill_closed_ = 0;         // current shade height (closed %), anim start
 
   CoverModal(const std::string &entity, const std::string &title,
@@ -105,8 +107,6 @@ struct CoverModal {
     lv_obj_set_size(win, 150, h);
     lv_obj_set_style_bg_color(win, lv_color_hex(0x1E1E1E), 0);
     lv_obj_set_style_bg_opa(win, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(win, 0, 0);
-    lv_obj_set_style_clip_corner(win, true, 0);
     lv_obj_clear_flag(win, LV_OBJ_FLAG_SCROLLABLE);
 
     fill_ = lv_obj_create(win);
@@ -118,6 +118,7 @@ struct CoverModal {
     lv_obj_align(fill_, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_SCROLLABLE);
+    add_fill_corner_marks(win, fill_);  // window corners the shade reaches
 
     val_ = lv_label_create(win);
     if (fonts_.value) lv_obj_set_style_text_font(val_, fonts_.value, 0);
@@ -152,12 +153,13 @@ struct CoverModal {
                  std::to_string(static_cast<int>(lv_slider_get_value(s->pos_))));
     }, LV_EVENT_RELEASED, this);
 
+    hold_.attach(pos_);
     ha_subscribe(entity_, "current_position", [this](const std::string &s) {
-      if (touch_ == 1) return;
       if (s.empty() || s == "unknown" || s == "unavailable" || s == "None")
         return;
       int open = std::atoi(s.c_str());
-      lv_subject_set_int(&pos_subj_, open < 0 ? 0 : (open > 100 ? 100 : open));
+      open = open < 0 ? 0 : (open > 100 ? 100 : open);
+      hold_.gate([this, open]() { lv_subject_set_int(&pos_subj_, open); });
     });
   }
 
@@ -167,7 +169,6 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 76);
-    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
@@ -216,7 +217,6 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 64);
-    lv_obj_set_style_radius(b, 0, 0);
     lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);

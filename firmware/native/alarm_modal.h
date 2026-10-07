@@ -59,7 +59,6 @@ struct AlarmModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 72);
-    lv_obj_set_style_radius(b, 0, 0);
     style_button_feedback(b, 0x2A2A2A, on_color);
     lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(idx)));
     lv_obj_add_event_cb(b, tap_cb, LV_EVENT_CLICKED, this);

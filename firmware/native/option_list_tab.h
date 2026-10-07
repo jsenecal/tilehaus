@@ -127,7 +127,6 @@ struct OptionListTab {
       else lv_obj_set_size(r, LV_PCT(100), LV_SIZE_CONTENT);
       lv_obj_set_style_bg_color(r, lv_color_hex(kTileBg), 0);
       lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
-      lv_obj_set_style_radius(r, 0, 0);
       lv_obj_set_style_pad_hor(r, 14, 0);
       lv_obj_set_style_pad_ver(r, 10, 0);
       // Press = a flat colour change, no scale or fade: every drag starts on a
@@ -135,12 +134,8 @@ struct OptionListTab {
       // which is what made the start of each scroll stall.
       lv_obj_set_style_bg_color(r, lv_color_hex(0x484848), LV_STATE_PRESSED);
       lv_obj_set_style_bg_color(r, lv_color_hex(tile_on_color()), LV_STATE_CHECKED);
-      // Text colour lives on the tile so the label inherits it per state:
-      // white on charcoal, ink on the (light) accent.
-      lv_obj_set_style_text_color(r, lv_color_hex(0xFFFFFF), 0);
-      lv_obj_set_style_text_color(
-          r, lv_color_hex(needs_dark_ink(tile_on_color()) ? kInk : 0xFFFFFF),
-          LV_STATE_CHECKED);
+      lv_obj_set_style_text_color(r, lv_color_hex(0xFFFFFF), 0);  // white, as on tiles
+      add_corner_marks(r);  // while selected (the accent is light)
       lv_obj_set_user_data(r,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
       lv_obj_add_event_cb(r, tap_cb, LV_EVENT_CLICKED, this);
