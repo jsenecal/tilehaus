@@ -48,6 +48,9 @@ esphome:
             tilehaus::poc_build_cards(id(grid_root),
                 ${grid_unit}, ${grid_pad}, ${grid_gap}, ${grid_subdivisions},
                 ${grid_cols}, ${grid_rows}, ${tile_radius}, poc_fonts);
+            // Night mode may have been restored before there was a deck to
+            // recolour; bring the freshly built grid into the current mode.
+            tilehaus::apply_theme();
 
 # The main api: block lives in tilehaus.yaml; this merges in via ESPHome's
 # package-config merge (dicts merge key-by-key, so this only adds `services`

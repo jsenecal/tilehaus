@@ -177,6 +177,23 @@ light:
             tilehaus::set_accent(false, 0);
           }
 
+switch:
+  # Night mode: the page goes dark and its text light; tiles are unchanged.
+  # Applied live by recolouring (tilehaus::set_night_mode), no rebuild or
+  # reboot. A switch rather than a deck setting so an HA automation can flip it
+  # at sunset, and a deck tile can bind to it.
+  - platform: template
+    name: "Night mode"
+    id: cfg_night_mode
+    entity_category: config
+    icon: mdi:weather-night
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: "tilehaus::set_night_mode(true);"
+    on_turn_off:
+      - lambda: "tilehaus::set_night_mode(false);"
+
 button:
   - platform: template
     name: "Wake"

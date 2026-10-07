@@ -58,7 +58,9 @@ struct Overlay {
     style_press_dip(back);
     lv_obj_t *bl = lv_label_create(back);
     if (fonts.icon) lv_obj_set_style_text_font(bl, fonts.icon, 0);
-    lv_obj_set_style_text_color(bl, lv_color_hex(0xFFFFFF), 0);
+    // The arrow is cut out of the button in the page colour, so it follows the
+    // page through night mode (see retheme).
+    lv_obj_set_style_text_color(bl, lv_color_hex(kPageBg), 0);
     lv_label_set_text(bl, "\U000F004D");  // mdi-arrow-left
     lv_obj_set_style_transform_pivot_x(bl, lv_pct(50), 0);
     lv_obj_set_style_transform_pivot_y(bl, lv_pct(50), 0);
@@ -117,9 +119,12 @@ struct Overlay {
   // is both instant and cheap. (A cheap slide could be added later if desired.)
   void show() {
     if (!root_) return;
-    // Re-ink on every show: bodies set white text as state changes, and this
-    // is cheaper than teaching each modal about the light page.
-    ink_page_text(content_, true);
+    // Bring the modal into the current day/night mode, then (by day) re-ink
+    // any text the body left white on the light page. Both on every show:
+    // bodies set colours as state changes, and the mode may have flipped
+    // since this modal last opened.
+    retheme(root_);
+    if (!night_mode()) ink_page_text(content_, true);
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(root_);
     active_overlay() = this;

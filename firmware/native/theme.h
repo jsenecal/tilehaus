@@ -1,5 +1,6 @@
 #pragma once
 #include "lvgl.h"
+#include <cstddef>
 #include <cstdint>
 
 namespace tilehaus {
@@ -12,6 +13,13 @@ inline constexpr uint32_t kPageBg = 0xE9E6E0;     // warm off-white page
 inline constexpr uint32_t kInk = 0x141414;        // text on the page
 inline constexpr uint32_t kInkMuted = 0x5C5955;   // captions on the page
 inline constexpr uint32_t kTileBg = 0x313131;     // tile chrome (cards still repaint with the literal)
+// Night mode: the page goes near-black and its text near-white. Tiles keep
+// their charcoal, so night reads as the original dark look. The night ink is a
+// warm off-white rather than pure white so the swap can tell page text (which
+// flips) from tile text (always 0xFFFFFF, never flips) going back to day.
+inline constexpr uint32_t kNightBg = 0x0E0E0E;
+inline constexpr uint32_t kNightInk = 0xF2F0EC;
+inline constexpr uint32_t kNightInkMuted = 0x8E8B86;
 inline constexpr uint32_t kTitleBarW = 64;        // the bar under a page title
 inline constexpr uint32_t kTitleBarH = 8;
 
@@ -113,6 +121,79 @@ inline void ink_page_text(lv_obj_t *obj, bool on_light) {
   }
   const uint32_t n = lv_obj_get_child_count(obj);
   for (uint32_t i = 0; i < n; ++i) ink_page_text(lv_obj_get_child(obj, i), on_light);
+}
+
+inline bool &night_mode() {
+  static bool night = false;
+  return night;
+}
+
+// Day <-> night colour pairs for things on the page. Backgrounds: the page and
+// the ink-coloured title bar / back button. Text: ink, muted ink, and the page
+// colour itself (the back arrow is cut out of its button in the page colour).
+struct ThemePair { uint32_t day, night; };
+inline constexpr ThemePair kBgPairs[] = {{kPageBg, kNightBg}, {kInk, kNightInk}};
+inline constexpr ThemePair kTextPairs[] = {
+    {kInk, kNightInk}, {kInkMuted, kNightInkMuted}, {kPageBg, kNightBg}};
+
+// The colour `c` should be in the current mode, if it is one of `pairs` (in
+// either mode); sets *hit accordingly.
+template <size_t N>
+inline uint32_t theme_color(uint32_t c, const ThemePair (&pairs)[N], bool *hit) {
+  for (const ThemePair &p : pairs) {
+    if (c == p.day || c == p.night) {
+      *hit = true;
+      return night_mode() ? p.night : p.day;
+    }
+  }
+  *hit = false;
+  return c;
+}
+
+inline uint32_t style_rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xFFFFFF; }
+
+// Bring everything that sits on the page into the current mode. `on_page`
+// tracks whether the nearest opaque ancestor is the page (or a page-coloured
+// piece like the title bar): an opaque tile, lime state tile or modal row cuts
+// its subtree off, so tile content never flips. Idempotent — it maps colours
+// from either palette to the current one — so it is safe to run on every
+// toggle, after the deck builds, and each time a modal opens.
+inline void retheme(lv_obj_t *obj, bool on_page = false) {
+  if (lv_obj_get_style_bg_opa(obj, LV_PART_MAIN) >= LV_OPA_50) {
+    bool hit = false;
+    const uint32_t bg = style_rgb(lv_obj_get_style_bg_color(obj, LV_PART_MAIN));
+    const uint32_t want = theme_color(bg, kBgPairs, &hit);
+    if (hit && want != bg) lv_obj_set_style_bg_color(obj, lv_color_hex(want), 0);
+    on_page = hit;
+  }
+  if (on_page && lv_obj_check_type(obj, &lv_label_class)) {
+    bool hit = false;
+    const uint32_t col = style_rgb(lv_obj_get_style_text_color(obj, LV_PART_MAIN));
+    const uint32_t want = theme_color(col, kTextPairs, &hit);
+    if (hit && want != col) lv_obj_set_style_text_color(obj, lv_color_hex(want), 0);
+  }
+  const uint32_t n = lv_obj_get_child_count(obj);
+  for (uint32_t i = 0; i < n; ++i) retheme(lv_obj_get_child(obj, i), on_page);
+}
+
+// Re-theme the whole display (the grid's screen and the modals' top layer).
+// A no-op before LVGL is up — the switch restores its state during setup,
+// before the deck is built, and the build applies the mode itself.
+inline void apply_theme() {
+  if (!lv_is_initialized() || !lv_display_get_default()) return;
+  if (lv_obj_t *scr = lv_screen_active()) {
+    // The screen is the page by definition; set it outright rather than rely
+    // on how ESPHome styled its opacity.
+    lv_obj_set_style_bg_color(scr, lv_color_hex(night_mode() ? kNightBg : kPageBg), 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+    retheme(scr, true);
+  }
+  retheme(lv_layer_top());
+}
+
+inline void set_night_mode(bool on) {
+  night_mode() = on;
+  apply_theme();
 }
 
 // Uppercase ASCII in place — captions are set in spaced capitals.
