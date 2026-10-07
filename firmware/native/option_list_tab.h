@@ -116,7 +116,10 @@ struct OptionListTab {
       lv_obj_set_style_pad_hor(r, 16, 0);
       lv_obj_set_style_pad_ver(r, 14, 0);
       lv_obj_set_style_bg_color(r, lv_color_hex(0xB5451B), LV_STATE_CHECKED);
-      style_press_dip(r);
+      // Press = a flat colour change, no scale or fade: every drag starts on a
+      // row, and a scaled/faded object is rendered off-screen and blended,
+      // which is what made the start of each scroll stall.
+      lv_obj_set_style_bg_color(r, lv_color_hex(0x484848), LV_STATE_PRESSED);
       lv_obj_set_user_data(r,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
       lv_obj_add_event_cb(r, tap_cb, LV_EVENT_CLICKED, this);
