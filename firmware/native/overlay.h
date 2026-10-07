@@ -71,13 +71,30 @@ struct Overlay {
 
     // Title top sits a few px above the button so the cap height and the
     // button share a top edge (the font's line box carries internal leading).
-    lv_obj_t *tt = add_page_title(root_, fonts.title ? fonts.title : fonts.body,
-                                  title.c_str());
-    lv_obj_align(tt, LV_ALIGN_TOP_LEFT, kTileInset + kBack + 20, kTileInset - 6);
+    const lv_font_t *tfont = fonts.title ? fonts.title : fonts.body;
+    const int title_y = kTileInset - 6;
+    lv_obj_t *tt = add_page_title(root_, tfont, title.c_str());
+    lv_obj_align(tt, LV_ALIGN_TOP_LEFT, kTileInset + kBack + 20, title_y);
 
     int w = lv_display_get_horizontal_resolution(lv_display_get_default());
     int h = lv_display_get_vertical_resolution(lv_display_get_default());
-    int top = kTileInset + 80;
+    // The body is cut right under the title's bar, and a hairline rule carries
+    // the bar's bottom edge across the full width, so lists read as sliding
+    // under a ruled header. Both are drawn once — nothing repaints behind the
+    // header while a list scrolls. Computed from the font's line height
+    // (add_page_title stacks: line, 4px gap, bar) since the overlay is built
+    // hidden, before any layout pass could measure it.
+    const int bar_bottom =
+        title_y + (tfont ? lv_font_get_line_height(tfont) : 56) + 4 + kTitleBarH;
+    constexpr int kRuleH = 2;
+    lv_obj_t *rule = lv_obj_create(root_);
+    lv_obj_remove_style_all(rule);
+    lv_obj_clear_flag(rule, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(rule, w - 2 * kTileInset, kRuleH);
+    lv_obj_set_style_bg_color(rule, lv_color_hex(kInk), 0);
+    lv_obj_set_style_bg_opa(rule, LV_OPA_COVER, 0);
+    lv_obj_align(rule, LV_ALIGN_TOP_LEFT, kTileInset, bar_bottom - kRuleH);
+    const int top = bar_bottom;
     content_w_ = w - 2 * kTileInset;
     content_h_ = h - top - kTileInset;
     content_ = lv_obj_create(root_);
@@ -106,6 +123,11 @@ struct Overlay {
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(root_);
     active_overlay() = this;
+    // Hide the grid beneath. LVGL never treats the top layer as covering the
+    // screen: every redraw paints the active screen first, then the top layer
+    // over it, so with the grid shown each frame of a modal scroll also
+    // repainted every tile hidden behind the modal (~35ms of a ~53ms frame).
+    if (app_grid_root()) lv_obj_add_flag(app_grid_root(), LV_OBJ_FLAG_HIDDEN);
   }
 
   void hide() {
@@ -114,6 +136,8 @@ struct Overlay {
     // Only clear it if we are the one showing — a modal hiding itself after
     // another has already opened must not blank the pointer.
     if (active_overlay() == this) active_overlay() = nullptr;
+    if (!active_overlay() && app_grid_root())
+      lv_obj_clear_flag(app_grid_root(), LV_OBJ_FLAG_HIDDEN);
   }
 };
 

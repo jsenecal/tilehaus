@@ -131,6 +131,8 @@ inline lv_obj_t *add_page_title(lv_obj_t *parent, const lv_font_t *font,
   lv_obj_clear_flag(col, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(col, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_row(col, 4, 0);
+  // Decoration only: never swallow a tap meant for what sits around a title.
+  lv_obj_clear_flag(col, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_t *lbl = lv_label_create(col);
   lv_obj_set_style_text_color(lbl, lv_color_hex(kInk), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
@@ -139,6 +141,7 @@ inline lv_obj_t *add_page_title(lv_obj_t *parent, const lv_font_t *font,
   lv_obj_t *bar = lv_obj_create(col);
   lv_obj_remove_style_all(bar);
   lv_obj_set_size(bar, kTitleBarW, kTitleBarH);
+  lv_obj_clear_flag(bar, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_bg_color(bar, lv_color_hex(kInk), 0);
   lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
   return col;
