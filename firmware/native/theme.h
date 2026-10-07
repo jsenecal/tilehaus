@@ -2,6 +2,7 @@
 #include "lvgl.h"
 #include <cstddef>
 #include <cstdint>
+#include "palette.h"  // kTileBg and friends
 
 namespace tilehaus {
 
@@ -12,7 +13,6 @@ namespace tilehaus {
 inline constexpr uint32_t kPageBg = 0xE9E6E0;     // warm off-white page
 inline constexpr uint32_t kInk = 0x141414;        // text on the page
 inline constexpr uint32_t kInkMuted = 0x5C5955;   // captions on the page
-inline constexpr uint32_t kTileBg = 0x313131;     // tile chrome (cards still repaint with the literal)
 // Night mode: the page goes near-black and its text near-white. Tiles keep
 // their charcoal, so night reads as the original dark look. The night ink is a
 // warm off-white rather than pure white so the swap can tell page text (which
@@ -32,6 +32,35 @@ inline int color_luma(uint32_t rgb) {
 // A light tile fill (lime, a pale follow colour) needs dark text.
 inline bool needs_dark_ink(uint32_t bg) { return color_luma(bg) > 150; }
 
+inline uint32_t style_rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xFFFFFF; }
+
+// Whether `part` has an opaque background; if so, its colour in *rgb.
+inline bool opaque_bg(lv_obj_t *obj, lv_part_t part, uint32_t *rgb) {
+  if (lv_obj_get_style_bg_opa(obj, part) < LV_OPA_50) return false;
+  *rgb = style_rgb(lv_obj_get_style_bg_color(obj, part));
+  return true;
+}
+
+// A solid, square rectangle drawn straight into a layer (draw callbacks).
+inline void fill_rect(lv_layer_t *layer, const lv_area_t &r, uint32_t rgb) {
+  lv_draw_rect_dsc_t d;
+  lv_draw_rect_dsc_init(&d);
+  d.bg_color = lv_color_hex(rgb);
+  d.bg_opa = LV_OPA_COVER;
+  lv_draw_rect(layer, &d, &r);
+}
+
+// A solid ink bar object (the title bar, the modal header rule).
+inline lv_obj_t *add_ink_bar(lv_obj_t *parent, int w, int h) {
+  lv_obj_t *bar = lv_obj_create(parent);
+  lv_obj_remove_style_all(bar);
+  lv_obj_set_size(bar, w, h);
+  lv_obj_clear_flag(bar, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_style_bg_color(bar, lv_color_hex(kInk), 0);
+  lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
+  return bar;
+}
+
 // Corner brackets: a light tile (lime when on, a pale follow colour) gets dark
 // L-shaped marks in its four corners, where rounded corners used to be. Drawn
 // in the post pass so they sit above the tile's content, and decided per frame
@@ -48,13 +77,8 @@ enum : uint8_t { kCornerTL = 1, kCornerTR = 2, kCornerBL = 4, kCornerBR = 8,
 
 inline void draw_corner_marks(lv_layer_t *layer, const lv_area_t &a,
                               uint8_t corners) {
-  lv_draw_rect_dsc_t d;
-  lv_draw_rect_dsc_init(&d);
-  d.bg_color = lv_color_hex(kInk);
-  d.bg_opa = LV_OPA_COVER;
   auto rect = [&](int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
-    lv_area_t r = {x1, y1, x2, y2};
-    lv_draw_rect(layer, &d, &r);
+    fill_rect(layer, lv_area_t{x1, y1, x2, y2}, kInk);
   };
   const int32_t L = kCornerArm - 1, T = kCornerThick - 1;
   if (corners & kCornerTL) {  // ┌
@@ -77,10 +101,10 @@ inline void draw_corner_marks(lv_layer_t *layer, const lv_area_t &a,
 
 // The fill of `part` right now, if it is opaque and light enough to mark.
 inline bool part_is_light(lv_obj_t *obj, lv_part_t part) {
-  if (lv_obj_get_style_bg_opa(obj, part) < LV_OPA_50) return false;
+  uint32_t rgb;
+  if (!opaque_bg(obj, part, &rgb)) return false;
   if (lv_obj_get_style_opa(obj, part) < LV_OPA_50) return false;
-  return needs_dark_ink(
-      lv_color_to_u32(lv_obj_get_style_bg_color(obj, part)) & 0xFFFFFF);
+  return needs_dark_ink(rgb);
 }
 
 // Tiles, buttons, option tiles: marks while the object's own fill is light.
@@ -190,14 +214,10 @@ inline void install_square_theme() {
 // nearest opaque ancestor is light, so labels inside dark buttons and panels
 // are left white. Built for modal bodies that were designed on near-black.
 inline void ink_page_text(lv_obj_t *obj, bool on_light) {
-  if (lv_obj_get_style_bg_opa(obj, LV_PART_MAIN) >= LV_OPA_50) {
-    const uint32_t bg =
-        lv_color_to_u32(lv_obj_get_style_bg_color(obj, LV_PART_MAIN)) & 0xFFFFFF;
-    on_light = needs_dark_ink(bg);
-  }
+  uint32_t bg;
+  if (opaque_bg(obj, LV_PART_MAIN, &bg)) on_light = needs_dark_ink(bg);
   if (on_light && lv_obj_check_type(obj, &lv_label_class)) {
-    const uint32_t col =
-        lv_color_to_u32(lv_obj_get_style_text_color(obj, LV_PART_MAIN)) & 0xFFFFFF;
+    const uint32_t col = style_rgb(lv_obj_get_style_text_color(obj, LV_PART_MAIN));
     if (col == 0xFFFFFF) {
       lv_obj_set_style_text_color(obj, lv_color_hex(kInk), 0);
     } else if (col == 0x000000) {
@@ -237,7 +257,15 @@ inline uint32_t theme_color(uint32_t c, const ThemePair (&pairs)[N], bool *hit) 
   return c;
 }
 
-inline uint32_t style_rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xFFFFFF; }
+// Map `cur` into the current mode and, if it changed, hand the result to
+// `set`. Returns whether `cur` was one of `pairs` at all.
+template <size_t N, typename Set>
+inline bool remap(uint32_t cur, const ThemePair (&pairs)[N], Set set) {
+  bool hit = false;
+  const uint32_t want = theme_color(cur, pairs, &hit);
+  if (hit && want != cur) set(lv_color_hex(want));
+  return hit;
+}
 
 // Bring everything that sits on the page into the current mode. `on_page`
 // tracks whether the nearest opaque ancestor is the page (or a page-coloured
@@ -250,23 +278,17 @@ inline void retheme(lv_obj_t *obj, bool on_page = false) {
   // follows the page when its parent sits on the page, whatever the object's
   // own fill (the brightness slider's ink outline around a charcoal track).
   if (on_page && lv_obj_get_style_outline_width(obj, LV_PART_MAIN) > 0) {
-    bool hit = false;
-    const uint32_t col = style_rgb(lv_obj_get_style_outline_color(obj, LV_PART_MAIN));
-    const uint32_t want = theme_color(col, kBgPairs, &hit);
-    if (hit && want != col) lv_obj_set_style_outline_color(obj, lv_color_hex(want), 0);
+    remap(style_rgb(lv_obj_get_style_outline_color(obj, LV_PART_MAIN)), kBgPairs,
+          [obj](lv_color_t c) { lv_obj_set_style_outline_color(obj, c, 0); });
   }
-  if (lv_obj_get_style_bg_opa(obj, LV_PART_MAIN) >= LV_OPA_50) {
-    bool hit = false;
-    const uint32_t bg = style_rgb(lv_obj_get_style_bg_color(obj, LV_PART_MAIN));
-    const uint32_t want = theme_color(bg, kBgPairs, &hit);
-    if (hit && want != bg) lv_obj_set_style_bg_color(obj, lv_color_hex(want), 0);
-    on_page = hit;
+  uint32_t bg;
+  if (opaque_bg(obj, LV_PART_MAIN, &bg)) {
+    on_page = remap(bg, kBgPairs,
+                    [obj](lv_color_t c) { lv_obj_set_style_bg_color(obj, c, 0); });
   }
   if (on_page && lv_obj_check_type(obj, &lv_label_class)) {
-    bool hit = false;
-    const uint32_t col = style_rgb(lv_obj_get_style_text_color(obj, LV_PART_MAIN));
-    const uint32_t want = theme_color(col, kTextPairs, &hit);
-    if (hit && want != col) lv_obj_set_style_text_color(obj, lv_color_hex(want), 0);
+    remap(style_rgb(lv_obj_get_style_text_color(obj, LV_PART_MAIN)), kTextPairs,
+          [obj](lv_color_t c) { lv_obj_set_style_text_color(obj, c, 0); });
   }
   const uint32_t n = lv_obj_get_child_count(obj);
   for (uint32_t i = 0; i < n; ++i) retheme(lv_obj_get_child(obj, i), on_page);
@@ -319,12 +341,7 @@ inline lv_obj_t *add_page_title(lv_obj_t *parent, const lv_font_t *font,
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
   lv_obj_set_style_text_letter_space(lbl, -1, 0);
   lv_label_set_text(lbl, text);
-  lv_obj_t *bar = lv_obj_create(col);
-  lv_obj_remove_style_all(bar);
-  lv_obj_set_size(bar, kTitleBarW, kTitleBarH);
-  lv_obj_clear_flag(bar, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(bar, lv_color_hex(kInk), 0);
-  lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
+  add_ink_bar(col, kTitleBarW, kTitleBarH);
   return col;
 }
 

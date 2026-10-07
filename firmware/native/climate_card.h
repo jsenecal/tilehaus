@@ -19,7 +19,7 @@ struct ClimateCard : Card {
   CardFonts fonts_{};
   std::string entity_, title_;
   uint32_t warm_color_ = 0xC24E1E;
-  uint32_t idle_color_ = 0x313131;
+  uint32_t idle_color_ = kTileBg;
   std::unique_ptr<ClimateModal> modal_;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -40,7 +40,7 @@ struct ClimateCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     warm_color_ = resolve_color(cfg.active_color, 0xC24E1E);
-    idle_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    idle_color_ = resolve_color(cfg.inactive_color, kTileBg);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);
     lv_subject_init_int(&heating_, 0);

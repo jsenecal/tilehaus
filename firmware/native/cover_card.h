@@ -161,9 +161,7 @@ struct CoverCard : Card {
     // HA reports current_position as open percent (0=closed, 100=open); the
     // tile value is the inverse (closed percent).
     ha_subscribe(cfg.entity, "current_position", [this, subj](const std::string &s) {
-      float p = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
-      if (std::isnan(p)) p = 0.0f;
-      int open = std::max(0, std::min(100, static_cast<int>(p)));
+      int open = std::max(0, std::min(100, static_cast<int>(ha_float_or(s, 0.0f))));
       hold_.gate([subj, open]() { lv_subject_set_int(subj, open); });
     });
     lv_obj_add_event_cb(slider_, [](lv_event_t *e) {

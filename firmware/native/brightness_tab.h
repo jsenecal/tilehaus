@@ -42,12 +42,8 @@ struct BrightnessTab {
     if (fill < 2 * kGripInset + kGripH) return;  // no room inside a short fill
     const int32_t w = lv_area_get_width(&a);
     const int32_t y = a.y2 - fill + kGripInset;
-    lv_area_t r = {a.x1 + w / 4, y, a.x2 - w / 4, y + kGripH - 1};
-    lv_draw_rect_dsc_t d;
-    lv_draw_rect_dsc_init(&d);
-    d.bg_color = lv_color_hex(0xFFFFFF);
-    d.bg_opa = LV_OPA_COVER;
-    lv_draw_rect(lv_event_get_layer(e), &d, &r);
+    fill_rect(lv_event_get_layer(e),
+              lv_area_t{a.x1 + w / 4, y, a.x2 - w / 4, y + kGripH - 1}, 0xFFFFFF);
   }
 
   static void relabel_cb(lv_observer_t *o, lv_subject_t *s) {
@@ -102,13 +98,7 @@ struct BrightnessTab {
     }, LV_EVENT_RELEASED, this);
 
     hold_.attach(slider_);
-    lv_subject_t *subj = &value_;
-    ha_subscribe(entity_, "brightness", [this, subj](const std::string &s) {
-      float b = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
-      if (b != b) b = 0.0f;  // NaN guard
-      const int v = brightness_to_slider(static_cast<uint8_t>(b));
-      hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
-    });
+    subscribe_brightness(entity_, &value_, hold_);
   }
 };
 

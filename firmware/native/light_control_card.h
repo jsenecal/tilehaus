@@ -22,7 +22,7 @@ struct LightControlCard : Card {
   std::string entity_, title_;
   std::string icon_on_, icon_off_;
   uint32_t on_color_ = kTileOnBuiltin;
-  uint32_t off_color_ = 0x313131;
+  uint32_t off_color_ = kTileBg;
   int32_t cfg_active_color_ = -1;
   std::unique_ptr<LightModal> modal_;
   bool follow_color_ = false;   // tile tint tracks the light's own colour
@@ -79,7 +79,7 @@ struct LightControlCard : Card {
     icon_off_ = cfg.icon_alt;
     cfg_active_color_ = cfg.active_color;
     on_color_ = resolve_color(cfg_active_color_, tile_on_color());
-    off_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    off_color_ = resolve_color(cfg.inactive_color, kTileBg);
     follow_color_ = cfg.follow_color;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);

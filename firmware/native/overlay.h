@@ -89,12 +89,7 @@ struct Overlay {
     const int bar_bottom =
         title_y + (tfont ? lv_font_get_line_height(tfont) : 56) + 4 + kTitleBarH;
     constexpr int kRuleH = 2;
-    lv_obj_t *rule = lv_obj_create(root_);
-    lv_obj_remove_style_all(rule);
-    lv_obj_clear_flag(rule, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_size(rule, w - 2 * kTileInset, kRuleH);
-    lv_obj_set_style_bg_color(rule, lv_color_hex(kInk), 0);
-    lv_obj_set_style_bg_opa(rule, LV_OPA_COVER, 0);
+    lv_obj_t *rule = add_ink_bar(root_, w - 2 * kTileInset, kRuleH);
     lv_obj_align(rule, LV_ALIGN_TOP_LEFT, kTileInset, bar_bottom - kRuleH);
     const int top = bar_bottom;
     content_w_ = w - 2 * kTileInset;

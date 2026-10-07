@@ -21,7 +21,7 @@ struct AlarmCard : Card {
   CardFonts fonts_{};
   std::string entity_, title_, icon_on_, icon_off_;
   uint32_t on_color_ = 0xB23B3B;  // red while armed
-  uint32_t off_color_ = 0x313131;
+  uint32_t off_color_ = kTileBg;
   std::unique_ptr<AlarmModal> modal_;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -57,7 +57,7 @@ struct AlarmCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     on_color_ = resolve_color(cfg.active_color, 0xB23B3B);
-    off_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    off_color_ = resolve_color(cfg.inactive_color, kTileBg);
 
     state_lbl_ = lv_label_create(cell);
     if (fonts.body) lv_obj_set_style_text_font(state_lbl_, fonts.body, 0);

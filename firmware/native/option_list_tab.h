@@ -132,7 +132,7 @@ struct OptionListTab {
       // Press = a flat colour change, no scale or fade: every drag starts on a
       // tile, and a scaled/faded object is rendered off-screen and blended,
       // which is what made the start of each scroll stall.
-      lv_obj_set_style_bg_color(r, lv_color_hex(0x484848), LV_STATE_PRESSED);
+      lv_obj_set_style_bg_color(r, lv_color_hex(kPressedBg), LV_STATE_PRESSED);
       lv_obj_set_style_bg_color(r, lv_color_hex(tile_on_color()), LV_STATE_CHECKED);
       lv_obj_set_style_text_color(r, lv_color_hex(0xFFFFFF), 0);  // white, as on tiles
       add_corner_marks(r);  // while selected (the accent is light)

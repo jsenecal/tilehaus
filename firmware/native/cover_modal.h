@@ -169,7 +169,7 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 76);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
     lv_obj_set_flex_flow(b, LV_FLEX_FLOW_ROW);
@@ -217,7 +217,7 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 64);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
     lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(pos)));

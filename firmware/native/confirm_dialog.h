@@ -44,7 +44,7 @@ struct ConfirmDialog {
 
     lv_obj_t *card = lv_obj_create(scrim);
     lv_obj_remove_style_all(card);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x313131), 0);
+    lv_obj_set_style_bg_color(card, lv_color_hex(kTileBg), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_pad_all(card, 24, 0);
     lv_obj_set_size(card, 520, 240);

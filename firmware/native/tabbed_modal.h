@@ -38,6 +38,59 @@ struct TabbedModal {
   bool built_ = false;
 
   static constexpr int kRailW = 112;
+  static constexpr int kRailPad = 12, kRailGap = 12;
+
+  // The pieces of a tabbed modal, shared with LightModal (which keeps its own
+  // capability-driven tab logic but builds the same rail).
+
+  // The left icon rail: a column of buttons centred down its height.
+  static lv_obj_t *make_rail(lv_obj_t *content, int h, bool scrollable) {
+    lv_obj_t *rail = lv_obj_create(content);
+    lv_obj_remove_style_all(rail);
+    lv_obj_set_size(rail, kRailW, h);
+    lv_obj_align(rail, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_flex_flow(rail, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(rail, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(rail, kRailPad, 0);
+    lv_obj_set_style_pad_row(rail, kRailGap, 0);
+    if (scrollable) lv_obj_set_scroll_dir(rail, LV_DIR_VER);
+    else lv_obj_clear_flag(rail, LV_OBJ_FLAG_SCROLLABLE);
+    return rail;
+  }
+
+  // One square rail button: a glyph, the tile on/off colours, and `cb` on tap
+  // with the button's index in its user data.
+  static lv_obj_t *make_rail_button(lv_obj_t *rail, int size, const char *glyph,
+                                    const lv_font_t *icon_font, int idx,
+                                    lv_event_cb_t cb, void *user_data) {
+    lv_obj_t *b = lv_button_create(rail);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, size, size);
+    style_button_feedback(b, toggle_color(false), toggle_color(true));
+    lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(idx)));
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, user_data);
+    lv_obj_t *g = lv_label_create(b);
+    if (icon_font) lv_obj_set_style_text_font(g, icon_font, 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
+    lv_label_set_text(g, glyph);
+    lv_obj_center(g);
+    return b;
+  }
+
+  // A rail action is set apart from the tabs below it.
+  static void set_apart(lv_obj_t *b) { lv_obj_set_style_margin_bottom(b, kRailGap, 0); }
+
+  // A tab's content panel, right of the rail.
+  static lv_obj_t *make_tab_panel(lv_obj_t *content, int x, int w, int h) {
+    lv_obj_t *p = lv_obj_create(content);
+    lv_obj_remove_style_all(p);
+    lv_obj_set_style_bg_opa(p, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(p, w, h);
+    lv_obj_align(p, LV_ALIGN_TOP_LEFT, x, 0);
+    return p;
+  }
 
   void add_tab(const std::string &glyph,
                std::function<void(lv_obj_t *, int, int)> builder) {
@@ -107,57 +160,31 @@ struct TabbedModal {
     int ch = overlay_.content_h();
     int n = static_cast<int>(glyphs_.size());
 
-    const int pad = 12, gap = 12;
-    int bs = kRailW - 24;
+    int bs = kRailW - 2 * kRailPad;
     if (n > 0) {
-      int fit = (ch - 2 * pad - (n - 1) * gap) / n;
+      int fit = (ch - 2 * kRailPad - (n - 1) * kRailGap) / n;
       bs = std::min(bs, fit);
       if (bs < 40) bs = 40;  // floor; the rail scrolls if they overflow
     }
 
-    lv_obj_t *rail = lv_obj_create(c);
-    lv_obj_remove_style_all(rail);
-    lv_obj_set_size(rail, kRailW, ch);
-    lv_obj_align(rail, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_obj_set_flex_flow(rail, LV_FLEX_FLOW_COLUMN);
-    // Centred down the rail, not stacked from the top.
-    lv_obj_set_flex_align(rail, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(rail, pad, 0);
-    lv_obj_set_style_pad_row(rail, gap, 0);
-    lv_obj_set_scroll_dir(rail, LV_DIR_VER);
+    lv_obj_t *rail = make_rail(c, ch, true);  // scrolls if buttons overflow
 
     int px = kRailW + kTileInset;
     int pw = cw - px - kTileInset;
 
     for (int i = 0; i < n; ++i) {
-      lv_obj_t *b = lv_button_create(rail);
-      lv_obj_remove_style_all(b);
-      lv_obj_set_size(b, bs, bs);
-      style_button_feedback(b, toggle_color(false), toggle_color(true));
-      lv_obj_set_user_data(b,
-                           reinterpret_cast<void *>(static_cast<intptr_t>(i)));
-      lv_obj_add_event_cb(b, tab_cb, LV_EVENT_CLICKED, this);
-      lv_obj_t *g = lv_label_create(b);
-      if (fonts_.icon) lv_obj_set_style_text_font(g, fonts_.icon, 0);
-      lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
-      lv_label_set_text(g, glyphs_[i].c_str());
-      lv_obj_center(g);
+      lv_obj_t *b = make_rail_button(rail, bs, glyphs_[i].c_str(), fonts_.icon,
+                                     i, tab_cb, this);
       tab_btn_.push_back(b);
 
       if (is_action(i)) {
-        lv_obj_set_style_margin_bottom(b, gap, 0);  // set apart from the tabs
+        set_apart(b);
         if (lit_[i]) lv_subject_add_observer_obj(lit_[i], lit_cb, b, b);
         panels_.push_back(nullptr);
         continue;
       }
 
-      lv_obj_t *p = lv_obj_create(c);
-      lv_obj_remove_style_all(p);
-      lv_obj_set_style_bg_opa(p, LV_OPA_TRANSP, 0);
-      lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
-      lv_obj_set_size(p, pw, ch);
-      lv_obj_align(p, LV_ALIGN_TOP_LEFT, px, 0);
+      lv_obj_t *p = make_tab_panel(c, px, pw, ch);
       panels_.push_back(p);
       builders_[i](p, pw, ch);  // pass the intended size; p's geometry is 0 here
     }

@@ -19,7 +19,7 @@ struct ToggleCard : Card {
   std::string icon_on_;   // glyph when on
   std::string icon_off_;  // glyph when off (empty = no swap)
   uint32_t on_color_ = kTileOnBuiltin;
-  uint32_t off_color_ = 0x313131;
+  uint32_t off_color_ = kTileBg;
   int32_t cfg_active_color_ = -1;
   std::unique_ptr<DetailModal> detail_;
 
@@ -42,7 +42,7 @@ struct ToggleCard : Card {
     icon_off_ = cfg.icon_alt;
     cfg_active_color_ = cfg.active_color;
     on_color_ = resolve_color(cfg_active_color_, tile_on_color());
-    off_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    off_color_ = resolve_color(cfg.inactive_color, kTileBg);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);

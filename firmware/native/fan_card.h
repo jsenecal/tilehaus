@@ -18,7 +18,7 @@ struct FanCard : Card {
   CardFonts fonts_{};
   std::string entity_, title_, icon_on_, icon_off_;
   uint32_t on_color_ = 0x2C6E8A;  // cool teal while running
-  uint32_t off_color_ = 0x313131;
+  uint32_t off_color_ = kTileBg;
   std::unique_ptr<FanModal> modal_;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -41,7 +41,7 @@ struct FanCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     on_color_ = resolve_color(cfg.active_color, 0x2C6E8A);
-    off_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    off_color_ = resolve_color(cfg.inactive_color, kTileBg);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);
     lv_subject_init_int(&on_, 0);

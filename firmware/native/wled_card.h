@@ -18,7 +18,7 @@ struct WledCard : Card {
   CardFonts fonts_{};
   std::string entity_, title_, icon_on_, icon_off_;
   uint32_t active_color_ = 0x5A3E8A;  // WLED-ish violet while on
-  uint32_t idle_color_ = 0x313131;
+  uint32_t idle_color_ = kTileBg;
   std::unique_ptr<WledModal> modal_;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -42,7 +42,7 @@ struct WledCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     active_color_ = resolve_color(cfg.active_color, 0x5A3E8A);
-    idle_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    idle_color_ = resolve_color(cfg.inactive_color, kTileBg);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);
     lv_subject_init_int(&on_, 0);

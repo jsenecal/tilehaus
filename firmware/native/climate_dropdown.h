@@ -5,6 +5,7 @@
 #include <vector>
 #include "card.h"        // CardFonts
 #include "ha.h"
+#include "palette.h"   // kControlBg
 
 namespace tilehaus {
 
@@ -69,7 +70,7 @@ struct ClimateDropdown {
     // Roboto subset) — it renders as a tofu box, so drop it.
     lv_dropdown_set_symbol(dd_, nullptr);
     if (fonts.body) lv_obj_set_style_text_font(dd_, fonts.body, 0);
-    lv_obj_set_style_bg_color(dd_, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(dd_, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(dd_, LV_OPA_COVER, 0);
     lv_obj_set_style_text_color(dd_, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_align(dd_, LV_TEXT_ALIGN_LEFT, 0);
@@ -95,7 +96,7 @@ struct ClimateDropdown {
     // Style the opened option list for the dark theme.
     lv_obj_t *list = lv_dropdown_get_list(dd_);
     if (list) {
-      lv_obj_set_style_bg_color(list, lv_color_hex(0x2A2A2A), 0);
+      lv_obj_set_style_bg_color(list, lv_color_hex(kControlBg), 0);
       lv_obj_set_style_text_color(list, lv_color_hex(0xFFFFFF), 0);
       lv_obj_set_style_border_color(list, lv_color_hex(0x444444), 0);
       // Clip children to the rounded rect so the option highlight doesn't paint

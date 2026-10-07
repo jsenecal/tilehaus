@@ -5,6 +5,7 @@
 #include "card.h"         // CardFonts
 #include "card_style.h"   // kTileInset, style_button_feedback
 #include "overlay.h"
+#include "tabbed_modal.h"  // shared rail / button / panel builders
 #include "toggle_state.h" // toggle_color
 #include "power_tab.h"
 #include "brightness_tab.h"
@@ -44,7 +45,7 @@ struct LightModal {
   TemperatureTab temp_tab_;
   ColorTab color_tab_;
 
-  static constexpr int kRailW = 112;
+  static constexpr int kRailW = TabbedModal::kRailW;
 
   LightModal(const std::string &entity, const std::string &title,
              const CardFonts &fonts, lv_subject_t *power)
@@ -151,17 +152,7 @@ struct LightModal {
     int cw = overlay_.content_w();
     int ch = overlay_.content_h();
 
-    rail_ = lv_obj_create(c);
-    lv_obj_remove_style_all(rail_);
-    lv_obj_set_size(rail_, kRailW, ch);
-    lv_obj_align(rail_, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_obj_clear_flag(rail_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_flex_flow(rail_, LV_FLEX_FLOW_COLUMN);
-    // Centred down the rail, not stacked from the top.
-    lv_obj_set_flex_align(rail_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(rail_, 12, 0);
-    lv_obj_set_style_pad_row(rail_, 12, 0);
+    rail_ = TabbedModal::make_rail(c, ch, false);
 
     static const char *kGlyph[4] = {
         "\U000F0425",  // mdi-power
@@ -177,28 +168,13 @@ struct LightModal {
     pw_ = pw;
 
     for (int i = 0; i < 4; ++i) {
-      lv_obj_t *b = lv_button_create(rail_);
-      lv_obj_remove_style_all(b);
-      lv_obj_set_size(b, kRailW - 24, kRailW - 24);
-      style_button_feedback(b, toggle_color(false), toggle_color(true));
-      lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
-      lv_obj_add_event_cb(b, tab_cb, LV_EVENT_CLICKED, this);
-      lv_obj_t *g = lv_label_create(b);
-      if (fonts_.icon) lv_obj_set_style_text_font(g, fonts_.icon, 0);
-      lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
-      lv_label_set_text(g, kGlyph[i]);
-      lv_obj_center(g);
+      lv_obj_t *b = TabbedModal::make_rail_button(
+          rail_, kRailW - 2 * TabbedModal::kRailPad, kGlyph[i], fonts_.icon, i,
+          tab_cb, this);
       tab_btn_[i] = b;
-      // Set the power action apart from the tabs below it.
-      if (i == 0) lv_obj_set_style_margin_bottom(b, 12, 0);
+      if (i == 0) TabbedModal::set_apart(b);  // the power action
 
-      lv_obj_t *p = lv_obj_create(c);
-      lv_obj_remove_style_all(p);
-      lv_obj_set_style_bg_opa(p, LV_OPA_TRANSP, 0);
-      lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
-      lv_obj_set_size(p, pw, ch);
-      lv_obj_align(p, LV_ALIGN_TOP_LEFT, px, 0);
-      panels_[i] = p;
+      panels_[i] = TabbedModal::make_tab_panel(c, px, pw, ch);
     }
 
     power_tab_.build(panels_[0], entity_, fonts_, power_);
