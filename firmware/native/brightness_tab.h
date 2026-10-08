@@ -6,6 +6,7 @@
 #include "card.h"         // CardFonts
 #include "card_style.h"   // style_fill_slider, kTileInset
 #include "ha.h"
+#include "ha_hold.h"
 #include "slider_glide.h"
 #include "slider_map.h"
 
@@ -22,6 +23,7 @@ struct BrightnessTab {
   lv_obj_t *slider_ = nullptr;
   lv_obj_t *lbl_ = nullptr;
   SliderGlide glide_;
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   std::string entity_;
 
   // Override the slider fill colour (follow-colour lights tint it to the light's
@@ -68,11 +70,13 @@ struct BrightnessTab {
                       std::to_string(static_cast<int>(bri)));
     }, LV_EVENT_RELEASED, this);
 
+    hold_.attach(slider_);
     lv_subject_t *subj = &value_;
-    ha_subscribe(entity_, "brightness", [subj](const std::string &s) {
+    ha_subscribe(entity_, "brightness", [this, subj](const std::string &s) {
       float b = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
       if (b != b) b = 0.0f;  // NaN guard
-      lv_subject_set_int(subj, brightness_to_slider(static_cast<uint8_t>(b)));
+      const int v = brightness_to_slider(static_cast<uint8_t>(b));
+      hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
     });
   }
 };
