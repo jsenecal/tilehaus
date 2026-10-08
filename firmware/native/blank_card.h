@@ -1,5 +1,6 @@
 #pragma once
 #include "lvgl.h"
+#include <string>
 #include "card.h"
 #include "card_style.h"
 
@@ -16,14 +17,29 @@ struct BlankCard : Card {
     // sit close to the tile edges (handy for section headers).
     if (cfg.tight_margins) lv_obj_set_style_pad_all(cell, 2, 0);
 
-    // On the page itself (transparent), a titled tile is a page title: heavy
-    // near-black type with the short bar beneath. It needs the full row
-    // height, so only the side inset stays.
+    // On the page itself (transparent), a titled tile is a heading. In the
+    // top row it is the page title: heavy near-black type with the short bar
+    // beneath, using the full row height (only the side inset stays).
+    // Anywhere else it is a section caption: small spaced mono capitals in
+    // muted ink, resting on the bottom of the row so it labels the tiles
+    // under it.
     if (cfg.transparent && !cfg.title.empty()) {
-      lv_obj_set_style_pad_ver(cell, 0, 0);
-      lv_obj_t *t = add_page_title(cell, fonts.title ? fonts.title : fonts.value,
-                                   cfg.title.c_str());
-      lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
+      if (cfg.row == 0) {
+        lv_obj_set_style_pad_ver(cell, 0, 0);
+        lv_obj_t *t = add_page_title(cell, fonts.title ? fonts.title : fonts.value,
+                                     cfg.title.c_str());
+        lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
+      } else {
+        lv_obj_set_style_pad_bottom(cell, 4, 0);
+        std::string caps = cfg.title;
+        ascii_upper(caps.data());
+        lv_obj_t *l = lv_label_create(cell);
+        lv_obj_set_style_text_color(l, lv_color_hex(kInkMuted), 0);
+        if (fonts.caption) lv_obj_set_style_text_font(l, fonts.caption, 0);
+        lv_obj_set_style_text_letter_space(l, 2, 0);
+        lv_label_set_text(l, caps.c_str());
+        lv_obj_align(l, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+      }
       return;
     }
     const uint32_t ink = cfg.transparent ? kInk : 0xFFFFFF;
