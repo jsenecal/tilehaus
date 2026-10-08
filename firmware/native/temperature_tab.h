@@ -6,6 +6,7 @@
 #include "card_style.h"   // kTileInset
 #include "kelvin_map.h"
 #include "ha.h"
+#include "ha_hold.h"
 #include "slider_glide.h"
 
 namespace tilehaus {
@@ -18,6 +19,7 @@ struct TemperatureTab {
   char buf_[12] = {0};
   char prev_[12] = {0};
   lv_obj_t *slider_ = nullptr;
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   lv_obj_t *lbl_ = nullptr;
   SliderGlide glide_;
   int min_k_ = 2202;
@@ -76,12 +78,15 @@ struct TemperatureTab {
                  std::to_string(k));
     }, LV_EVENT_RELEASED, this);
 
+    hold_.attach(slider_);
     ha_subscribe(entity_, "color_temp_kelvin", [this](const std::string &s) {
       if (s.empty() || s == "None" || s == "unknown") return;
       int k = atoi(s.c_str());
       if (k <= 0 || !slider_) return;
-      lv_slider_set_value(slider_, k, LV_ANIM_ON);
-      relabel();
+      hold_.gate([this, k]() {
+        lv_slider_set_value(slider_, k, LV_ANIM_ON);
+        relabel();
+      });
     });
     ha_subscribe(entity_, "min_color_temp_kelvin", [this](const std::string &s) {
       int k = atoi(s.c_str());

@@ -8,6 +8,7 @@
 #include "card_style.h"
 #include "tabbed_modal.h"
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -26,6 +27,7 @@ struct CoverModal {
   lv_timer_t *hide_ = nullptr;
   lv_subject_t pos_subj_{};     // open % (0..100)
   int touch_ = 0;
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   int fill_closed_ = 0;         // current shade height (closed %), anim start
 
   CoverModal(const std::string &entity, const std::string &title,
@@ -152,12 +154,13 @@ struct CoverModal {
                  std::to_string(static_cast<int>(lv_slider_get_value(s->pos_))));
     }, LV_EVENT_RELEASED, this);
 
+    hold_.attach(pos_);
     ha_subscribe(entity_, "current_position", [this](const std::string &s) {
-      if (touch_ == 1) return;
       if (s.empty() || s == "unknown" || s == "unavailable" || s == "None")
         return;
       int open = std::atoi(s.c_str());
-      lv_subject_set_int(&pos_subj_, open < 0 ? 0 : (open > 100 ? 100 : open));
+      open = open < 0 ? 0 : (open > 100 ? 100 : open);
+      hold_.gate([this, open]() { lv_subject_set_int(&pos_subj_, open); });
     });
   }
 

@@ -7,6 +7,7 @@
 #include "card.h"
 #include "card_style.h"
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -24,6 +25,7 @@ struct LevelsTab {
     int press_value = 0;          // slider value captured at press (tap replay)
     bool drag_moved = false;      // value changed during the press => real drag
     std::function<void(int)> send;
+    HaHold hold;  // no HA pushes onto the slider mid-drag or while it settles
   };
   static constexpr int kMax = 3;
   Row rows_[kMax];
@@ -105,12 +107,12 @@ struct LevelsTab {
       if (r->send) r->send(static_cast<int>(lv_slider_get_value(r->slider)));
     }, LV_EVENT_RELEASED, row);
 
+    row->hold.attach(row->slider);
     ha_subscribe(follow_entity, follow_attr, [row](const std::string &s) {
-      if (row->touch == 1) return;
       bool bad =
           s.empty() || s == "unknown" || s == "unavailable" || s == "None";
-      lv_slider_set_value(row->slider, bad ? 0 : std::atoi(s.c_str()),
-                          LV_ANIM_ON);
+      const int v = bad ? 0 : std::atoi(s.c_str());
+      row->hold.gate([row, v]() { lv_slider_set_value(row->slider, v, LV_ANIM_ON); });
     });
   }
 

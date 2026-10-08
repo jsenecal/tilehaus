@@ -17,6 +17,18 @@ esp32:
       # ("connection reset by peer"). Raise the timeout so the erase/prep step
       # can finish. Mirrors devices/guition-esp32-p4-jc1060p470/device/device.yaml.
       CONFIG_ESP_TASK_WDT_TIMEOUT_S: "60"
+      # Build for speed, not size (-O2 instead of -Os). LVGL renders entirely
+      # in software here; measured on a scrolling modal list, render time fell
+      # from 62ms to 53ms a frame. Costs ~200KB of flash, which has room.
+      CONFIG_COMPILER_OPTIMIZATION_SIZE: n
+      CONFIG_COMPILER_OPTIMIZATION_PERF: y
+      # Let plain malloc/new use PSRAM. The default here is caps-only, so every
+      # C++ allocation competes for internal SRAM; once LVGL's draw buffer took
+      # ~150KB of it, saving a deck failed its 16KB allocations and aborted the
+      # panel. With this, allocations of 16KB and up go to PSRAM, smaller ones
+      # stay internal, and 32KB of internal is held back for DMA and drivers.
+      CONFIG_SPIRAM_USE_CAPS_ALLOC: n
+      CONFIG_SPIRAM_USE_MALLOC: y
 
 psram:
   mode: hex

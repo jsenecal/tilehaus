@@ -10,6 +10,7 @@
 #include "option_list_tab.h"
 #include "toggle_state.h"
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -25,7 +26,7 @@ struct FanModal {
   lv_obj_t *power_btn_ = nullptr;
   lv_obj_t *speed_ = nullptr;
   lv_obj_t *speed_lbl_ = nullptr;
-  int speed_touch_ = 0;
+  HaHold hold_;  // no HA pushes onto the speed slider mid-drag or settling
   OptionListTab presets_;
 
   FanModal(const std::string &entity, const std::string &title,
@@ -90,19 +91,12 @@ struct FanModal {
     lv_slider_set_range(speed_, 0, 100);
     style_fill_slider(speed_, 14);
     lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
-      static_cast<FanModal *>(lv_event_get_user_data(e))->speed_touch_ = 1;
-    }, LV_EVENT_PRESSED, this);
-    lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
-      static_cast<FanModal *>(lv_event_get_user_data(e))->speed_touch_ = 1;
-    }, LV_EVENT_PRESSING, this);
-    lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
       auto *s = static_cast<FanModal *>(lv_event_get_user_data(e));
       set_speed_lbl(s->speed_lbl_,
                     static_cast<int>(lv_slider_get_value(s->speed_)));
     }, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
       auto *s = static_cast<FanModal *>(lv_event_get_user_data(e));
-      s->speed_touch_ = 0;
       ha_call_kv("fan.set_percentage", s->entity_, "percentage",
                  std::to_string(static_cast<int>(lv_slider_get_value(s->speed_))));
     }, LV_EVENT_RELEASED, this);
@@ -121,13 +115,15 @@ struct FanModal {
       if (s == "on") lv_obj_add_state(power_btn_, LV_STATE_CHECKED);
       else lv_obj_remove_state(power_btn_, LV_STATE_CHECKED);
     });
+    hold_.attach(speed_);
     ha_subscribe(entity_, "percentage", [this](const std::string &s) {
-      if (speed_touch_ == 1) return;
       bool bad =
           s.empty() || s == "unknown" || s == "unavailable" || s == "None";
       int v = bad ? 0 : static_cast<int>(std::lround(std::atof(s.c_str())));
-      lv_slider_set_value(speed_, v, LV_ANIM_ON);
-      set_speed_lbl(speed_lbl_, v);
+      hold_.gate([this, v]() {
+        lv_slider_set_value(speed_, v, LV_ANIM_ON);
+        set_speed_lbl(speed_lbl_, v);
+      });
     });
     built_ = true;
   }

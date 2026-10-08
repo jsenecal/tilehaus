@@ -8,6 +8,7 @@
 #include "card.h"
 #include "card_style.h"
 #include "ha.h"
+#include "ha_hold.h"
 #include "slider_map.h"
 #include "detail_modal.h"
 
@@ -37,6 +38,7 @@ struct LightSliderCard : Card {
   std::string icon_on_;   // filled glyph when > 0
   std::string icon_off_;  // outline glyph at 0 (empty = no swap)
   int touch_phase_ = 0;   // 0 idle, 1 pressing, 2 releasing
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   int press_value_ = 0;   // slider value captured when the press began
   bool drag_moved_ = false;  // value changed *during* a press => real drag
   bool is_number_ = false;   // number entity vs light brightness
@@ -184,6 +186,7 @@ struct LightSliderCard : Card {
 
   void bind(const CardConfig &cfg) override {
     entity_ = cfg.entity;
+    hold_.attach(slider_);
     if (is_number_) {
       ha_subscribe(entity_, "min", [this](const std::string &s) {
         if (!s.empty()) { nmin_ = static_cast<int>(std::atof(s.c_str())); apply_number_range(); }
@@ -194,7 +197,7 @@ struct LightSliderCard : Card {
       ha_subscribe(entity_, nullptr, [this](const std::string &s) {
         if (s.empty() || s == "unknown" || s == "unavailable") return;
         ncur_ = static_cast<int>(std::lround(std::atof(s.c_str())));
-        if (touch_phase_ == 0) lv_subject_set_int(&value_, ncur_);
+        hold_.gate([this]() { lv_subject_set_int(&value_, ncur_); });
       });
       lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
         auto *self = static_cast<LightSliderCard *>(lv_event_get_user_data(e));
@@ -204,10 +207,11 @@ struct LightSliderCard : Card {
       return;
     }
     lv_subject_t *subj = &value_;
-    ha_subscribe(entity_, "brightness", [subj](const std::string &s) {
+    ha_subscribe(entity_, "brightness", [this, subj](const std::string &s) {
       float b = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
       if (std::isnan(b)) b = 0.0f;
-      lv_subject_set_int(subj, brightness_to_slider(static_cast<uint8_t>(b)));
+      const int v = brightness_to_slider(static_cast<uint8_t>(b));
+      hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
     });
     if (follow_color_) {
       ha_subscribe(entity_, "rgb_color", [this](const std::string &s) {

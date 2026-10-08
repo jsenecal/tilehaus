@@ -7,6 +7,7 @@
 #include <string>
 #include "card.h"        // CardFonts
 #include "ha.h"
+#include "ha_hold.h"
 
 namespace tilehaus {
 
@@ -22,7 +23,7 @@ struct ClimateArc {
   lv_obj_t *target_lbl_ = nullptr;
   lv_obj_t *current_lbl_ = nullptr;
   std::string entity_;
-  int touch_phase_ = 0;      // 0 idle, 1 dragging
+  HaHold hold_;  // no HA pushes onto the arc mid-drag or while it settles
 
   static int temp_to_arc(float t) {
     return static_cast<int>(std::lround(t * 2.0f));
@@ -55,12 +56,8 @@ struct ClimateArc {
     auto *self = static_cast<ClimateArc *>(lv_event_get_user_data(e));
     set_target_text(self->target_lbl_, lv_arc_get_value(self->arc_));
   }
-  static void pressed_cb(lv_event_t *e) {
-    static_cast<ClimateArc *>(lv_event_get_user_data(e))->touch_phase_ = 1;
-  }
   static void released_cb(lv_event_t *e) {
     auto *self = static_cast<ClimateArc *>(lv_event_get_user_data(e));
-    self->touch_phase_ = 0;
     self->send_temp(lv_arc_get_value(self->arc_));
   }
 
@@ -83,7 +80,6 @@ struct ClimateArc {
     lv_obj_set_style_bg_color(arc_, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
     lv_obj_set_style_pad_all(arc_, 6, LV_PART_KNOB);
     lv_obj_add_event_cb(arc_, changed_cb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_add_event_cb(arc_, pressed_cb, LV_EVENT_PRESSED, this);
     lv_obj_add_event_cb(arc_, released_cb, LV_EVENT_RELEASED, this);
 
     action_lbl_ = lv_label_create(parent);
@@ -106,13 +102,15 @@ struct ClimateArc {
   }
 
   void bind() {
+    hold_.attach(arc_);
     ha_subscribe(entity_, "temperature", [this](const std::string &s) {
-      if (touch_phase_ == 1) return;  // don't fight the finger mid-drag
       bool valid = !s.empty() && s != "unknown" && s != "unavailable";
       if (!valid) return;
       int v = temp_to_arc(static_cast<float>(std::atof(s.c_str())));
-      lv_arc_set_value(arc_, v);
-      set_target_text(target_lbl_, v);
+      hold_.gate([this, v]() {
+        lv_arc_set_value(arc_, v);
+        set_target_text(target_lbl_, v);
+      });
     });
     ha_subscribe(entity_, "hvac_action", [this](const std::string &s) {
       const char *t;

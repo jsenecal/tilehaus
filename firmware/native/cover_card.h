@@ -8,6 +8,7 @@
 #include "card.h"
 #include "card_style.h"
 #include "ha.h"
+#include "ha_hold.h"
 #include "slider_map.h"
 #include "detail_modal.h"
 
@@ -33,6 +34,7 @@ struct CoverCard : Card {
   std::string icon_closed_;  // glyph when fully closed
   std::string icon_open_;    // glyph when any part open (empty = no swap)
   int touch_phase_ = 0;   // 0 idle, 1 pressing, 2 releasing
+  HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   int fill_closed_ = 0;   // current shade height (closed %), anim start value
   lv_obj_t *cell_ = nullptr;
   CardFonts fonts_{};
@@ -157,11 +159,12 @@ struct CoverCard : Card {
     lv_subject_t *subj = &value_;
     // HA reports current_position as open percent (0=closed, 100=open); the
     // tile value is the inverse (closed percent).
-    ha_subscribe(cfg.entity, "current_position", [subj](const std::string &s) {
+    hold_.attach(slider_);
+    ha_subscribe(cfg.entity, "current_position", [this, subj](const std::string &s) {
       float p = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
       if (std::isnan(p)) p = 0.0f;
       int open = std::max(0, std::min(100, static_cast<int>(p)));
-      lv_subject_set_int(subj, open);
+      hold_.gate([subj, open]() { lv_subject_set_int(subj, open); });
     });
     lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
       auto *self = static_cast<CoverCard *>(lv_event_get_user_data(e));

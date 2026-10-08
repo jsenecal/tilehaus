@@ -7,6 +7,11 @@ lvgl:
   rotation: 0
   byte_order: little_endian
   default_font: font_text_body
+  # Render in 1/8-screen strips (~150KB) so the draw buffer fits in internal
+  # SRAM — ESPHome tries internal RAM first at 1/4 or smaller. Unset, it is a
+  # full-screen buffer in PSRAM; measured on a scrolling modal list, render
+  # time fell from 90ms to 62ms a frame.
+  buffer_size: 12%
   touchscreens:
     - touchscreen_id: my_touchscreen
   pages:
