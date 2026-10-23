@@ -40,7 +40,7 @@ struct FanModal {
   }
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     int cw = overlay_.content_w();
@@ -57,11 +57,10 @@ struct FanModal {
     power_btn_ = lv_button_create(c);
     lv_obj_remove_style_all(power_btn_);
     lv_obj_set_size(power_btn_, 120, 120);
-    lv_obj_set_style_radius(power_btn_, 60, 0);
     style_button_feedback(power_btn_, toggle_color(false), toggle_color(true));
     lv_obj_t *pg = lv_label_create(power_btn_);
     if (fonts_.icon) lv_obj_set_style_text_font(pg, fonts_.icon, 0);
-    lv_obj_set_style_text_color(pg, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(pg, lv_color_hex(kTileInk), 0);
     lv_label_set_text(pg, "\U000F0425");  // mdi-power
     lv_obj_center(pg);
     lv_obj_add_event_cb(power_btn_, [](lv_event_t *e) {
@@ -80,7 +79,7 @@ struct FanModal {
 
     speed_lbl_ = lv_label_create(sbox);
     if (fonts_.body) lv_obj_set_style_text_font(speed_lbl_, fonts_.body, 0);
-    lv_obj_set_style_text_color(speed_lbl_, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(speed_lbl_, lv_color_hex(kTileInkDim), 0);
     set_speed_lbl(speed_lbl_, 0);
 
     // Reuse the dimmer's tall fill look (horizontal): no protruding knob, so
@@ -89,7 +88,7 @@ struct FanModal {
     lv_obj_set_width(speed_, LV_PCT(100));
     lv_obj_set_height(speed_, 72);
     lv_slider_set_range(speed_, 0, 100);
-    style_fill_slider(speed_, 14);
+    style_fill_slider(speed_);
     lv_obj_add_event_cb(speed_, [](lv_event_t *e) {
       auto *s = static_cast<FanModal *>(lv_event_get_user_data(e));
       set_speed_lbl(s->speed_lbl_,

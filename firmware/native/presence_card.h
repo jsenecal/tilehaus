@@ -17,7 +17,7 @@ struct PresenceCard : Card {
   std::string icon_on_;   // glyph when occupied
   std::string icon_off_;  // glyph when clear
   uint32_t on_color_ = kTileOnBuiltin;
-  uint32_t off_color_ = 0x313131;
+  uint32_t off_color_ = kTileBg;
   int32_t cfg_active_color_ = -1;
 
   TileSpan default_size() const override { return {2, 2}; }
@@ -37,7 +37,7 @@ struct PresenceCard : Card {
     icon_off_ = cfg.icon_alt;
     cfg_active_color_ = cfg.active_color;
     on_color_ = resolve_color(cfg_active_color_, tile_on_color());
-    off_color_ = resolve_color(cfg.inactive_color, 0x313131);
+    off_color_ = resolve_color(cfg.inactive_color, kTileBg);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_subject_init_int(&on_, 0);
     lv_subject_add_observer(&on_, recolor_cb, this);

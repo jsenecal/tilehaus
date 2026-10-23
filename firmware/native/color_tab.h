@@ -44,25 +44,25 @@ struct ColorTab {
         // bright hues
         0xFF3B30, 0xFF7A1A, 0xFFB300, 0xFFE000, 0xB4EC1E, 0x4CD964, 0x00D3A7,
         0x00C2D6, 0x2A9BFF, 0x3D5AFE, 0x8E4CFF, 0xE040FB, 0xFF4FA3, 0xFF6F5A,
-        // lighter / pastel tones
-        0xFFB3AE, 0xFFD1A6, 0xFFE8A8, 0xF3F0A8, 0xD8F0A8, 0xB8ECC4, 0xAEE9DC,
-        0xB3E5EA, 0xBBD9FF, 0xC7CCFF, 0xDCC6FF, 0xF3C6FF, 0xFFC9E0, 0xF0D9C0,
+        // lighter / pastel tones (thinned to the ten most distinct)
+        0xFFB3AE, 0xFFD1A6, 0xFFE8A8, 0xD8F0A8, 0xB8ECC4,
+        0xB3E5EA, 0xBBD9FF, 0xDCC6FF, 0xF3C6FF, 0xFFC9E0,
         // whites, warm -> cool
         0xFFCE96, 0xFFF0D8, 0xFFFFFF, 0xE6EEFF,
     };
+    // 28 = 7 x 4: what one page of the panel holds (88px swatches, 18px gaps,
+    // in an ~816 x 474 inner area). Adding swatches brings scrolling back.
     lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(panel, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(panel, kTileInset, 0);
     lv_obj_set_style_pad_row(panel, 18, 0);
     lv_obj_set_style_pad_column(panel, 18, 0);
-    lv_obj_add_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_scroll_dir(panel, LV_DIR_VER);
+    lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);  // one page; see above
     for (uint32_t c : kSwatches) {
       lv_obj_t *dot = lv_obj_create(panel);
       lv_obj_remove_style_all(dot);
       lv_obj_set_size(dot, 88, 88);
-      lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
       lv_obj_set_style_bg_color(dot, lv_color_hex(c), 0);
       lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
       lv_obj_set_style_shadow_color(dot, lv_color_hex(c), 0);  // glow in own hue

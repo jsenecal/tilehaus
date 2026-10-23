@@ -3,19 +3,18 @@
 #include <string>
 #include "card.h"
 #include "tabbed_modal.h"
-#include "power_tab.h"
+#include "ha.h"
 #include "color_tab.h"
 #include "option_list_tab.h"
 #include "levels_tab.h"
 
 namespace tilehaus {
 
-// The WLED modal: seven tabs over the shared TabbedModal, reusing the light
-// modal's Power / Brightness / Color tab components and adding WLED-specific
-// Presets / Effects / Palette (each a scrollable OptionListTab) and Dynamics
-// (Speed + Intensity). Companion entities are derived from the light slug.
-// Built once (hidden) at boot; shown on tap. PowerTab shares the tile's on/off
-// subject (owned by the card).
+// The WLED modal over the shared TabbedModal: a power action (toggle, lit
+// from the tile's shared on/off subject) above tabs for Dynamics (Speed +
+// Intensity), the light modal's Color swatches, and WLED-specific Presets /
+// Effects / Palette (each an OptionListTab). Companion entities are derived
+// from the light slug. Built once (hidden) at boot; shown on tap.
 struct WledModal {
   TabbedModal tabs_;
   std::string entity_;  // light.<base>
@@ -23,7 +22,6 @@ struct WledModal {
   lv_subject_t *power_ = nullptr;
   bool built_ = false;
 
-  PowerTab power_tab_;
   LevelsTab levels_tab_;
   ColorTab color_tab_;
   OptionListTab presets_, effects_, palette_;
@@ -49,9 +47,11 @@ struct WledModal {
     speed_e_ = derive(entity_, "number", "_speed");
     intensity_e_ = derive(entity_, "number", "_intensity");
 
-    tabs_.add_tab("\U000F0425", [this](lv_obj_t *p, int, int) {  // power
-      power_tab_.build(p, entity_, fonts_, power_);
-    });
+    // Power is a rail action, as in the light modal: it toggles the light and
+    // is lit while it is on, rather than opening a page with one button on it.
+    tabs_.add_action("\U000F0425", [this]() {  // power
+      ha_call("light.toggle", entity_);
+    }, power_);
     tabs_.add_tab("\U000F029A", [this](lv_obj_t *p, int, int) {  // levels
       levels_tab_.build(p, fonts_, entity_, speed_e_, intensity_e_);
     });

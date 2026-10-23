@@ -94,7 +94,7 @@ struct CoverModal {
     centered_col(panel, 12);
     lv_obj_t *cap = lv_label_create(panel);
     if (fonts_.body) lv_obj_set_style_text_font(cap, fonts_.body, 0);
-    lv_obj_set_style_text_color(cap, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(cap, lv_color_hex(kTileInkDim), 0);
     lv_label_set_text(cap, "Position");
 
     // "Window" box with a shade that descends from the TOP (like the tile): a
@@ -105,10 +105,8 @@ struct CoverModal {
     lv_obj_t *win = lv_obj_create(panel);
     lv_obj_remove_style_all(win);
     lv_obj_set_size(win, 150, h);
-    lv_obj_set_style_bg_color(win, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_bg_color(win, lv_color_hex(kModalWell), 0);
     lv_obj_set_style_bg_opa(win, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(win, 14, 0);
-    lv_obj_set_style_clip_corner(win, true, 0);
     lv_obj_clear_flag(win, LV_OBJ_FLAG_SCROLLABLE);
 
     fill_ = lv_obj_create(win);
@@ -123,7 +121,7 @@ struct CoverModal {
 
     val_ = lv_label_create(win);
     if (fonts_.value) lv_obj_set_style_text_font(val_, fonts_.value, 0);
-    lv_obj_set_style_text_color(val_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(val_, lv_color_hex(kTileInk), 0);
     lv_obj_center(val_);
     lv_obj_set_style_opa(val_, LV_OPA_TRANSP, 0);
     hide_ = lv_timer_create(hide_cb, 1500, this);
@@ -170,8 +168,7 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 76);
-    lv_obj_set_style_radius(b, 14, 0);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
     lv_obj_set_flex_flow(b, LV_FLEX_FLOW_ROW);
@@ -180,11 +177,11 @@ struct CoverModal {
     lv_obj_set_style_pad_column(b, 12, 0);
     lv_obj_t *g = lv_label_create(b);
     if (fonts_.icon) lv_obj_set_style_text_font(g, fonts_.icon, 0);
-    lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(kTileInk), 0);
     lv_label_set_text(g, glyph);
     lv_obj_t *t = lv_label_create(b);
     if (fonts_.body) lv_obj_set_style_text_font(t, fonts_.body, 0);
-    lv_obj_set_style_text_color(t, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(t, lv_color_hex(kTileInk), 0);
     lv_label_set_text(t, label);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, this);
     return b;
@@ -219,15 +216,14 @@ struct CoverModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 64);
-    lv_obj_set_style_radius(b, 12, 0);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
     lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(pos)));
     lv_obj_add_event_cb(b, preset_cb, LV_EVENT_CLICKED, this);
     lv_obj_t *l = lv_label_create(b);
     if (fonts_.medium) lv_obj_set_style_text_font(l, fonts_.medium, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kTileInk), 0);
     lv_label_set_text(l, label);
     lv_obj_center(l);
   }

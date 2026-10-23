@@ -156,6 +156,10 @@ matching docs page (`docs/*.md`) in the same change.
   two, and name the panel when firmware needs flashing.
 - **Commit messages: no Claude Code / co-author attributions, ever.** Files end with
   a trailing newline.
+- Firmware colours are named roles in `firmware/native/palette.h` (page colours
+  in `theme.h`). `scripts/check_palette.js`, run by `npm run test:firmware`,
+  rejects a raw `0xRRGGBB` anywhere else — night mode recolours by value, so a
+  stray literal is a colour the theme can't see.
 - The DECK format is versioned (`web/model/deck.ts` + `firmware/native/deck_document.h`,
   pinned by golden fixtures) — bump the version and update both sides + fixtures when
   changing the byte layout.

@@ -43,8 +43,7 @@ struct PinPad {
     lv_obj_t *b = lv_button_create(grid);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 80, 80);
-    lv_obj_set_style_radius(b, 12, 0);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     style_press_dip(b);
     lv_obj_set_user_data(b,
@@ -58,14 +57,14 @@ struct PinPad {
     }, LV_EVENT_CLICKED, this);
     lv_obj_t *l = lv_label_create(b);
     if (font) lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kTileInk), 0);
     lv_label_set_text(l, label);
     lv_obj_center(l);
   }
 
   void build(const std::string &title, const CardFonts &fonts) {
     fonts_ = fonts;
-    overlay_.build(title, fonts.icon, fonts.body);
+    overlay_.build(title, fonts);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
@@ -76,7 +75,7 @@ struct PinPad {
 
     disp_ = lv_label_create(c);
     if (fonts.value) lv_obj_set_style_text_font(disp_, fonts.value, 0);
-    lv_obj_set_style_text_color(disp_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(disp_, lv_color_hex(kTileInk), 0);
     lv_label_set_text(disp_, " ");
 
     lv_obj_t *grid = lv_obj_create(c);

@@ -5,6 +5,7 @@
 #include "card.h"         // CardFonts
 #include "card_style.h"   // kTileInset, style_button_feedback
 #include "overlay.h"
+#include "tabbed_modal.h"  // shared rail / button / panel builders
 #include "toggle_state.h" // toggle_color
 #include "power_tab.h"
 #include "brightness_tab.h"
@@ -27,9 +28,14 @@ struct LightModal {
   lv_obj_t *tab_btn_[4] = {nullptr, nullptr, nullptr, nullptr};
   lv_obj_t *panels_[4] = {nullptr, nullptr, nullptr, nullptr};
   // Which tabs apply to this light, decided from supported_color_modes:
-  // [0] power, [1] brightness, [2] temperature, [3] colour. A dimmable light
-  // drops power (its brightness slider hits 0 = off); an on/off-only light
-  // drops brightness/temp/colour and keeps power. All-on until caps arrive.
+  // [0] power, [1] brightness, [2] temperature, [3] colour. Power always
+  // applies; an on/off-only light drops brightness/temp/colour. All-on until
+  // caps arrive.
+  //
+  // Power is a page only when it is the sole tab (an on/off light: the big
+  // round button, no rail). Beside other tabs it is an action, as in Home
+  // Assistant's light dialog: the rail's power button toggles the light and is
+  // lit while the light is on, and never opens a page (see power_is_action).
   bool enabled_[4] = {true, true, true, true};
   int active_ = 0;
   int cw_ = 0, px_ = 0, pw_ = 0;  // content width + panel x/width with the rail
@@ -39,27 +45,39 @@ struct LightModal {
   TemperatureTab temp_tab_;
   ColorTab color_tab_;
 
-  static constexpr int kRailW = 112;
+  static constexpr int kRailW = TabbedModal::kRailW;
 
   LightModal(const std::string &entity, const std::string &title,
              const CardFonts &fonts, lv_subject_t *power)
       : entity_(entity), title_(title), fonts_(fonts), power_(power) {}
 
+  bool power_is_action() const {
+    return enabled_[1] || enabled_[2] || enabled_[3];
+  }
+
   int first_enabled() const {
-    for (int k = 0; k < 4; ++k)
+    for (int k = power_is_action() ? 1 : 0; k < 4; ++k)
       if (enabled_[k]) return k;
     return 0;
   }
 
   void select(int i) {
-    if (i < 0 || i >= 4 || !enabled_[i]) i = first_enabled();
+    if (i < 0 || i >= 4 || !enabled_[i] || (i == 0 && power_is_action()))
+      i = first_enabled();
     active_ = i;
     for (int k = 0; k < 4; ++k) {
       if (tab_btn_[k]) {
         if (enabled_[k]) lv_obj_clear_flag(tab_btn_[k], LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(tab_btn_[k], LV_OBJ_FLAG_HIDDEN);
-        if (k == i) lv_obj_add_state(tab_btn_[k], LV_STATE_CHECKED);
-        else lv_obj_remove_state(tab_btn_[k], LV_STATE_CHECKED);
+        // The power action's lit state tracks the light (power_cb), not the
+        // selected tab.
+        if (k == 0 && power_is_action()) {
+          paint_power_button();
+        } else if (k == i) {
+          lv_obj_add_state(tab_btn_[k], LV_STATE_CHECKED);
+        } else {
+          lv_obj_remove_state(tab_btn_[k], LV_STATE_CHECKED);
+        }
       }
       if (panels_[k]) {
         if (enabled_[k] && k == i) lv_obj_clear_flag(panels_[k], LV_OBJ_FLAG_HIDDEN);
@@ -93,7 +111,7 @@ struct LightModal {
                     has("hs") || has("xy") || has("white");
     bool has_temp = has("color_temp");
     bool has_color = has("rgb") || has("hs") || has("xy");
-    enabled_[0] = !dimmable;              // power: only when not dimmable
+    enabled_[0] = true;                   // power: a page alone, else an action
     enabled_[1] = dimmable;               // brightness
     enabled_[2] = dimmable && has_temp;   // temperature
     enabled_[3] = dimmable && has_color;  // colour
@@ -105,11 +123,27 @@ struct LightModal {
     lv_obj_t *b = static_cast<lv_obj_t *>(lv_event_get_target(e));
     int idx =
         static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(b)));
+    if (idx == 0 && self->power_is_action()) {
+      ha_call("light.toggle", self->entity_);  // HA decides; power_cb repaints
+      return;
+    }
     self->select(idx);
   }
 
+  void paint_power_button() {
+    if (!tab_btn_[0]) return;
+    const bool on = power_ && lv_subject_get_int(power_) != 0;
+    if (on) lv_obj_add_state(tab_btn_[0], LV_STATE_CHECKED);
+    else lv_obj_remove_state(tab_btn_[0], LV_STATE_CHECKED);
+  }
+
+  static void power_cb(lv_observer_t *o, lv_subject_t *) {
+    auto *self = static_cast<LightModal *>(lv_observer_get_user_data(o));
+    if (self->power_is_action()) self->paint_power_button();
+  }
+
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
 
@@ -118,16 +152,7 @@ struct LightModal {
     int cw = overlay_.content_w();
     int ch = overlay_.content_h();
 
-    rail_ = lv_obj_create(c);
-    lv_obj_remove_style_all(rail_);
-    lv_obj_set_size(rail_, kRailW, ch);
-    lv_obj_align(rail_, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_obj_clear_flag(rail_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_flex_flow(rail_, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(rail_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(rail_, 12, 0);
-    lv_obj_set_style_pad_row(rail_, 12, 0);
+    rail_ = TabbedModal::make_rail(c, ch, false);
 
     static const char *kGlyph[4] = {
         "\U000F0425",  // mdi-power
@@ -143,27 +168,13 @@ struct LightModal {
     pw_ = pw;
 
     for (int i = 0; i < 4; ++i) {
-      lv_obj_t *b = lv_button_create(rail_);
-      lv_obj_remove_style_all(b);
-      lv_obj_set_size(b, kRailW - 24, kRailW - 24);
-      lv_obj_set_style_radius(b, 16, 0);
-      style_button_feedback(b, toggle_color(false), toggle_color(true));
-      lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
-      lv_obj_add_event_cb(b, tab_cb, LV_EVENT_CLICKED, this);
-      lv_obj_t *g = lv_label_create(b);
-      if (fonts_.icon) lv_obj_set_style_text_font(g, fonts_.icon, 0);
-      lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
-      lv_label_set_text(g, kGlyph[i]);
-      lv_obj_center(g);
+      lv_obj_t *b = TabbedModal::make_rail_button(
+          rail_, kRailW - 2 * TabbedModal::kRailPad, kGlyph[i], fonts_.icon, i,
+          tab_cb, this);
       tab_btn_[i] = b;
+      if (i == 0) TabbedModal::set_apart(b);  // the power action
 
-      lv_obj_t *p = lv_obj_create(c);
-      lv_obj_remove_style_all(p);
-      lv_obj_set_style_bg_opa(p, LV_OPA_TRANSP, 0);
-      lv_obj_clear_flag(p, LV_OBJ_FLAG_SCROLLABLE);
-      lv_obj_set_size(p, pw, ch);
-      lv_obj_align(p, LV_ALIGN_TOP_LEFT, px, 0);
-      panels_[i] = p;
+      panels_[i] = TabbedModal::make_tab_panel(c, px, pw, ch);
     }
 
     power_tab_.build(panels_[0], entity_, fonts_, power_);
@@ -175,6 +186,7 @@ struct LightModal {
     ha_subscribe(entity_, "supported_color_modes",
                  [this](const std::string &s) { set_caps(s); });
 
+    if (power_) lv_subject_add_observer(power_, power_cb, this);
     select(0);
     built_ = true;
   }

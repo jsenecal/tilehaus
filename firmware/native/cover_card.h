@@ -92,7 +92,6 @@ struct CoverCard : Card {
     lv_obj_set_style_pad_all(cell, 0, 0);
 
     // Visual shade: a top-anchored panel whose height is the closed percent.
-    // The cell's clip_corner rounds its top edges to the tile.
     fill_ = lv_obj_create(cell);
     lv_obj_remove_style_all(fill_);
     lv_obj_set_style_bg_color(fill_, lv_color_hex(tile_on_color()), 0);
@@ -139,7 +138,7 @@ struct CoverCard : Card {
              kTileInset, -kTileInset);
 
     pct_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(kTileInk), 0);
     if (fonts.value) lv_obj_set_style_text_font(pct_lbl_, fonts.value, 0);
     lv_obj_center(pct_lbl_);
     lv_obj_set_style_opa(pct_lbl_, LV_OPA_TRANSP, 0);
@@ -157,13 +156,11 @@ struct CoverCard : Card {
   void bind(const CardConfig &cfg) override {
     entity_ = cfg.entity;
     lv_subject_t *subj = &value_;
+    hold_.attach(slider_);
     // HA reports current_position as open percent (0=closed, 100=open); the
     // tile value is the inverse (closed percent).
-    hold_.attach(slider_);
     ha_subscribe(cfg.entity, "current_position", [this, subj](const std::string &s) {
-      float p = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
-      if (std::isnan(p)) p = 0.0f;
-      int open = std::max(0, std::min(100, static_cast<int>(p)));
+      int open = std::max(0, std::min(100, static_cast<int>(ha_float_or(s, 0.0f))));
       hold_.gate([subj, open]() { lv_subject_set_int(subj, open); });
     });
     lv_obj_add_event_cb(slider_, [](lv_event_t *e) {

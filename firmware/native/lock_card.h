@@ -18,8 +18,8 @@ struct LockCard : Card {
   CardFonts fonts_{};
   std::string entity_, title_;
   std::string icon_locked_, icon_unlocked_;
-  uint32_t locked_color_ = 0x2E7D32;
-  uint32_t unlocked_color_ = 0xC62828;
+  uint32_t locked_color_ = kStateGood;
+  uint32_t unlocked_color_ = kStateAlert;
 
   TileSpan default_size() const override { return {2, 2}; }
 
@@ -41,8 +41,8 @@ struct LockCard : Card {
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     icon_locked_ = cfg.icon;
     icon_unlocked_ = cfg.icon_alt;
-    locked_color_ = resolve_color(cfg.active_color, 0x2E7D32);
-    unlocked_color_ = resolve_color(cfg.inactive_color, 0xC62828);
+    locked_color_ = resolve_color(cfg.active_color, kStateGood);
+    unlocked_color_ = resolve_color(cfg.inactive_color, kStateAlert);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);  // tactile feedback on tap (before lock action / confirm)

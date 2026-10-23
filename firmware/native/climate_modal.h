@@ -36,21 +36,20 @@ struct ClimateModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 64, 64);
-    lv_obj_set_style_radius(b, 32, 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(b, 2, 0);
-    lv_obj_set_style_border_color(b, lv_color_hex(0x808080), 0);
+    lv_obj_set_style_border_color(b, lv_color_hex(kStroke), 0);
     lv_obj_align(b, LV_ALIGN_CENTER, dx, 120);
     lv_obj_t *l = lv_label_create(b);
     if (fonts_.medium) lv_obj_set_style_text_font(l, fonts_.medium, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kTileInk), 0);
     lv_label_set_text(l, sym);
     lv_obj_center(l);
     return b;
   }
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     int cw = overlay_.content_w();

@@ -8,6 +8,7 @@
 #include "card_style.h"
 #include "ha.h"
 #include "ha_hold.h"
+#include "slider_glide.h"
 
 namespace tilehaus {
 
@@ -21,9 +22,7 @@ struct LevelsTab {
     lv_obj_t *slider = nullptr;
     lv_obj_t *val = nullptr;      // centered value readout (flashes then fades)
     lv_timer_t *hide = nullptr;   // fades the readout after inactivity
-    int touch = 0;                // 1 while the finger is down
-    int press_value = 0;          // slider value captured at press (tap replay)
-    bool drag_moved = false;      // value changed during the press => real drag
+    SliderGlide glide;            // tap glides, drag tracks the finger 1:1
     std::function<void(int)> send;
     HaHold hold;  // no HA pushes onto the slider mid-drag or while it settles
   };
@@ -50,7 +49,7 @@ struct LevelsTab {
 
     lv_obj_t *cap = lv_label_create(panel);
     if (fonts.body) lv_obj_set_style_text_font(cap, fonts.body, 0);
-    lv_obj_set_style_text_color(cap, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(cap, lv_color_hex(kTileInkDim), 0);
     lv_label_set_text(cap, caption);
     lv_obj_set_style_pad_top(cap, n_ > 1 ? 16 : 0, 0);  // group gap before row
 
@@ -59,32 +58,24 @@ struct LevelsTab {
     lv_obj_set_width(sl, LV_PCT(100));
     lv_obj_set_height(sl, 64);
     lv_slider_set_range(sl, min, max);
-    style_fill_slider(sl, 12);  // tall dimmer fill look (no knob)
-    lv_obj_set_style_anim_duration(sl, kSliderAnimMs, 0);  // glide HA/tap changes
+    style_fill_slider(sl);  // tall dimmer fill look (no knob)
+    // Attached before the callbacks below, so its tap replay has run by the
+    // time the RELEASED handler reads the value to send.
+    row->glide.attach(sl);
 
     // Centered value readout overlaid on the fill (a label child of the slider,
     // so touches fall through); flashes on change, fades via hide_cb.
     row->val = lv_label_create(sl);
     if (fonts.medium) lv_obj_set_style_text_font(row->val, fonts.medium, 0);
-    lv_obj_set_style_text_color(row->val, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(row->val, lv_color_hex(kTileInk), 0);
     lv_obj_center(row->val);
     lv_obj_set_style_opa(row->val, LV_OPA_TRANSP, 0);
     lv_label_set_text(row->val, "");
     row->hide = lv_timer_create(hide_cb, 1500, row);
     lv_timer_pause(row->hide);
 
-    lv_obj_add_event_cb(sl, [](lv_event_t *e) {
-      auto *r = static_cast<Row *>(lv_event_get_user_data(e));
-      r->touch = 1;
-      r->press_value = static_cast<int>(lv_slider_get_value(r->slider));
-      r->drag_moved = false;
-    }, static_cast<lv_event_code_t>(LV_EVENT_PRESSED | LV_EVENT_PREPROCESS), row);
-    lv_obj_add_event_cb(sl, [](lv_event_t *e) {
-      static_cast<Row *>(lv_event_get_user_data(e))->touch = 1;
-    }, static_cast<lv_event_code_t>(LV_EVENT_PRESSING | LV_EVENT_PREPROCESS), row);
     lv_obj_add_event_cb(sl, [](lv_event_t *e) {  // flash the readout on any change
       auto *r = static_cast<Row *>(lv_event_get_user_data(e));
-      if (r->touch == 1) r->drag_moved = true;
       char b[8];
       std::snprintf(b, sizeof(b), "%d",
                     static_cast<int>(lv_slider_get_value(r->slider)));
@@ -96,14 +87,6 @@ struct LevelsTab {
     }, LV_EVENT_VALUE_CHANGED, row);
     lv_obj_add_event_cb(sl, [](lv_event_t *e) {
       auto *r = static_cast<Row *>(lv_event_get_user_data(e));
-      if (!r->drag_moved) {  // a tap: replay the jump as an animated glide
-        int target = static_cast<int>(lv_slider_get_value(r->slider));
-        if (target != r->press_value) {
-          lv_slider_set_value(r->slider, r->press_value, LV_ANIM_OFF);
-          lv_slider_set_value(r->slider, target, LV_ANIM_ON);
-        }
-      }
-      r->touch = 0;
       if (r->send) r->send(static_cast<int>(lv_slider_get_value(r->slider)));
     }, LV_EVENT_RELEASED, row);
 

@@ -32,6 +32,8 @@ export const ICON_CATALOG: readonly IconEntry[] = [
     path: "M11,4H13V16L18.5,10.5L19.92,11.92L12,19.84L4.08,11.92L5.5,10.5L11,16V4Z" },
   { name: "arrow down bold circle", slug: "arrow-down-bold-circle", hex: "F0047", glyph: "\u{F0047}",
     path: "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,17L17,12H14V8H10V12H7L12,17Z" },
+  { name: "arrow left", slug: "arrow-left", hex: "F004D", glyph: "\u{F004D}",
+    path: "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" },
   { name: "arrow left bold circle", slug: "arrow-left-bold-circle", hex: "F004F", glyph: "\u{F004F}",
     path: "M22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12M7,12L12,17V14H16V10H12V7L7,12Z" },
   { name: "arrow right bold circle", slug: "arrow-right-bold-circle", hex: "F0056", glyph: "\u{F0056}",

@@ -2,7 +2,10 @@
 #include "lvgl.h"
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <utility>
+#include "ha.h"
+#include "slider_map.h"
 
 namespace tilehaus {
 
@@ -64,5 +67,15 @@ struct HaHold {
     }
   }
 };
+
+// Follow a light's brightness into a 0..100 slider subject, through `hold`.
+// Shared by the light slider tile and the light modal's brightness tab.
+inline void subscribe_brightness(const std::string &entity, lv_subject_t *subj,
+                                 HaHold &hold) {
+  ha_subscribe(entity, "brightness", [subj, &hold](const std::string &s) {
+    const int v = brightness_to_slider(static_cast<uint8_t>(ha_float_or(s, 0.0f)));
+    hold.gate([subj, v]() { lv_subject_set_int(subj, v); });
+  });
+}
 
 }  // namespace tilehaus

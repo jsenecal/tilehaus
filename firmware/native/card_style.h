@@ -5,6 +5,7 @@
 #include "card_config.h"  // accent_or
 #include "card.h"        // CardFonts
 #include "tile_scale.h"   // text_scale_for
+#include "theme.h"
 
 namespace tilehaus {
 
@@ -44,15 +45,13 @@ inline constexpr int kTileInset = 16;
 inline constexpr uint32_t kSliderAnimMs = 100;
 
 // Shared tile background — the common control look behind every tile.
-inline void style_cell(lv_obj_t *cell, int radius) {
-  lv_obj_set_style_bg_color(cell, lv_color_hex(0x313131), 0);
+inline void style_cell(lv_obj_t *cell) {
+  lv_obj_set_style_bg_color(cell, lv_color_hex(kTileBg), 0);
   lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(cell, radius, 0);
   lv_obj_set_style_border_width(cell, 0, 0);
   lv_obj_set_style_pad_all(cell, kTileInset, 0);
-  lv_obj_set_style_clip_corner(cell, true, 0);
-  // Tiles never scroll internally: clip overflow to the rounded rect instead of
-  // spawning a scrollbar when content sits a few px over the cell.
+  // Tiles never scroll internally: clip overflow to the cell instead of
+  // spawning a scrollbar when content sits a few px over it.
   lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
 }
 
@@ -94,7 +93,7 @@ inline lv_obj_t *add_text_shadow(lv_obj_t *cell, const lv_font_t *font,
                                  const std::string &text, bool wrap,
                                  lv_align_t align, int dx, int dy) {
   lv_obj_t *t = lv_label_create(cell);
-  lv_obj_set_style_text_color(t, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_text_color(t, lv_color_hex(kBlack), 0);
   lv_obj_set_style_text_opa(t, LV_OPA_60, 0);
   if (font) lv_obj_set_style_text_font(t, font, 0);
   if (wrap) {
@@ -116,7 +115,7 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
   if (tile_compact() && align == LV_ALIGN_TOP_LEFT) { align = LV_ALIGN_CENTER; dx = 0; dy = 0; }
   lv_obj_t *sh = add_text_shadow(cell, font, glyph, false, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
-  lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInk), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
   lv_label_set_text(lbl, glyph.c_str());
   lv_obj_align(lbl, align, dx, dy);
@@ -160,7 +159,7 @@ inline lv_obj_t *add_name(lv_obj_t *cell, const CardFonts &fonts,
   const lv_font_t *font = tile_body_font(fonts);
   add_text_shadow(cell, font, title, true, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
-  lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInk), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
   lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(lbl, LV_PCT(100));
@@ -303,22 +302,20 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
     lv_obj_align(l, LV_ALIGN_TOP_RIGHT, -inset + nudge, inset + nudge);
     return l;
   };
-  chevron_glyph(0x000000, LV_OPA_60, 1);            // shadow twin
-  chevron_glyph(0xC8C8C8, LV_OPA_COVER, 0);         // the chevron itself
+  chevron_glyph(kBlack, LV_OPA_60, 1);            // shadow twin
+  chevron_glyph(kTileInkSoft, LV_OPA_COVER, 0);         // the chevron itself
   return b;
 }
 
-// Whole-tile vertical slider styled as a fill: empty track == cell bg so the
-// inset reads seamless, orange indicator, no visible knob.
-inline void style_fill_slider(lv_obj_t *slider, int radius) {
-  lv_obj_set_style_bg_color(slider, lv_color_hex(0x313131), LV_PART_MAIN);
+// Slider styled as a fill: empty track == cell bg so the inset reads
+// seamless, accent indicator, no visible knob.
+inline void style_fill_slider(lv_obj_t *slider) {
+  lv_obj_set_style_bg_color(slider, lv_color_hex(kTileBg), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
-  lv_obj_set_style_radius(slider, radius, LV_PART_MAIN);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);
 
   lv_obj_set_style_bg_color(slider, lv_color_hex(tile_on_color()), LV_PART_INDICATOR);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(slider, radius, LV_PART_INDICATOR);
 
   lv_obj_set_style_opa(slider, LV_OPA_TRANSP, LV_PART_KNOB);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_KNOB);

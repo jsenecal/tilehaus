@@ -59,13 +59,12 @@ struct AlarmModal {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 72);
-    lv_obj_set_style_radius(b, 14, 0);
-    style_button_feedback(b, 0x2A2A2A, on_color);
+    style_button_feedback(b, kControlBg, on_color);
     lv_obj_set_user_data(b, reinterpret_cast<void *>(static_cast<intptr_t>(idx)));
     lv_obj_add_event_cb(b, tap_cb, LV_EVENT_CLICKED, this);
     lv_obj_t *l = lv_label_create(b);
     if (fonts_.body) lv_obj_set_style_text_font(l, fonts_.body, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kTileInk), 0);
     lv_label_set_text(l, action);
     lv_obj_center(l);
     btns_.push_back({b, l, match, service, action, status, needs_code});
@@ -81,7 +80,7 @@ struct AlarmModal {
   }
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     lv_obj_t *c = overlay_.content();
     int cw = overlay_.content_w();
@@ -93,13 +92,13 @@ struct AlarmModal {
 
     int w = cw * 5 / 10;  // 50%
     add_btn(c, "Disarm", "Disarmed", "alarm_control_panel.alarm_disarm",
-            "disarmed", 0x2E7D32, w, true);
+            "disarmed", kStateGood, w, true);
     add_btn(c, "Arm Home", "Armed Home", "alarm_control_panel.alarm_arm_home",
-            "armed_home", 0xC24E1E, w, false);
+            "armed_home", kStateWarm, w, false);
     add_btn(c, "Arm Away", "Armed Away", "alarm_control_panel.alarm_arm_away",
-            "armed_away", 0xC24E1E, w, false);
+            "armed_away", kStateWarm, w, false);
     add_btn(c, "Arm Night", "Armed Night", "alarm_control_panel.alarm_arm_night",
-            "armed_night", 0xC24E1E, w, false);
+            "armed_night", kStateWarm, w, false);
 
     // PIN pad for disarm: submit runs the pending service with the typed code.
     pin_.build("Enter Code", fonts_);

@@ -4,6 +4,8 @@ esphome:
       then:
         - lambda: |-
             tilehaus::app_clock() = id(poc_time);
+            // Square every widget before any UI is built (see theme.h).
+            tilehaus::install_square_theme();
             // Designated initialisers on purpose: this struct used to be
             // filled positionally, where inserting a field mid-struct would
             // silently shift every later font by one with no compiler error.
@@ -15,6 +17,9 @@ esphome:
                 .small = id(font_text_small)->get_lv_font(),
                 .body_tight = id(font_text_body_tight)->get_lv_font(),
                 .clock_xl = id(font_clock_xl)->get_lv_font(),
+                .title = id(font_title)->get_lv_font(),
+                .caption = id(font_caption)->get_lv_font(),
+                .clock_mono = id(font_clock_mono)->get_lv_font(),
             };
             // Boot splash on top of everything; fades out on the first HA state.
             tilehaus::splash_build(poc_fonts);
@@ -49,7 +54,10 @@ esphome:
             tilehaus::deck_store().setup();
             tilehaus::poc_build_cards(id(grid_root),
                 ${grid_unit}, ${grid_pad}, ${grid_gap}, ${grid_subdivisions},
-                ${grid_cols}, ${grid_rows}, ${tile_radius}, poc_fonts);
+                ${grid_cols}, ${grid_rows}, poc_fonts);
+            // Night mode may have been restored before there was a deck to
+            // recolour; bring the freshly built grid into the current mode.
+            tilehaus::apply_theme();
 
 # The main api: block lives in tilehaus.yaml; this merges in via ESPHome's
 # package-config merge (dicts merge key-by-key, so this only adds `services`

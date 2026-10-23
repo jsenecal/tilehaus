@@ -10,6 +10,7 @@
 #include "clock.h"
 #include "ha.h"
 #include "tile_scale.h"
+#include "theme.h"
 #include "weather_glyph.h"
 #include "forecast_helpers.h"
 #include "esphome/core/time.h"
@@ -51,7 +52,7 @@ struct HeaderCard : Card {
   static lv_obj_t *text(lv_obj_t *parent, const lv_font_t *font,
                         const char *initial) {
     lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kInk), 0);
     if (font) lv_obj_set_style_text_font(l, font, 0);
     lv_label_set_text(l, initial);
     return l;
@@ -74,6 +75,8 @@ struct HeaderCard : Card {
     // Gap between the (grown) greeting/subtitle block and the weather+clock
     // cluster, so the scrolling subtitle never runs into the weather icon.
     lv_obj_set_style_pad_column(cell, 28, 0);
+    // The heavy greeting needs the full row height; keep only the side inset.
+    lv_obj_set_style_pad_ver(cell, 0, 0);
 
     // Left: greeting line + subtitle, both sourced from HA. Start hidden until
     // the subscription delivers text (or stays hidden if no subtitle entity).
@@ -81,9 +84,11 @@ struct HeaderCard : Card {
     // Fill the width between the left edge and the right (clock/weather) cluster
     // so the subtitle has a definite width to scroll within.
     lv_obj_set_flex_grow(left, 1);
-    greet_ = text(left, fonts.medium, "");
-    sub_ = text(left, fonts.body, "");
-    lv_obj_set_style_text_color(sub_, lv_color_hex(0xB0B0B0), 0);
+    greet_ = text(left, fonts.title ? fonts.title : fonts.medium, "");
+    lv_obj_set_style_text_letter_space(greet_, -1, 0);
+    sub_ = text(left, fonts.caption ? fonts.caption : fonts.body, "");
+    lv_obj_set_style_text_color(sub_, lv_color_hex(kInkMuted), 0);
+    lv_obj_set_style_text_letter_space(sub_, 2, 0);
     // Marquee the subtitle back and forth (left→right→left) when it overflows
     // the available width; short subtitles just sit still.
     lv_obj_set_width(sub_, lv_pct(100));
@@ -112,25 +117,21 @@ struct HeaderCard : Card {
       lv_label_bind_text(wtemp_, &temp_, nullptr);
       if (cfg.show_hilo) {
         hilo_ = text(tcol, fonts.small ? fonts.small : fonts.body, "");
-        lv_obj_set_style_text_color(hilo_, lv_color_hex(0xC8C8C8), 0);
+        lv_obj_set_style_text_color(hilo_, lv_color_hex(kInkMuted), 0);
       }
     }
 
     if (cfg.show_clock) {
-      // This card's default size is 10x2; dropped into a one-row slot the 55px
-      // clock's ~64px line height plus a 22px date overran the 72px tile and
-      // sliced the date in half. The clock stays stacked over the date either
-      // way — that is what a clock should look like — and both drop a rung when
-      // the slot is short: 34px over 15px is ~58px, comfortably inside 72px.
-      const bool full =
-          header_clock_full_size(tile_metrics().px_h - 2 * kTileInset);
+      // A 30px mono clock over a 14px mono date (~58px) fits even the
+      // one-row slot, so the clock no longer steps down a rung by height.
       lv_obj_t *tx = flex_box(right, LV_FLEX_FLOW_COLUMN);
       lv_obj_set_flex_align(tx, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END,
                             LV_FLEX_ALIGN_END);
-      clock_ = text(tx, full ? fonts.value : fonts.medium, "--:--");
-      date_ = text(tx, full ? fonts.body
-                            : (fonts.small ? fonts.small : fonts.body), "");
-      lv_obj_set_style_text_color(date_, lv_color_hex(0xB0B0B0), 0);
+      clock_ = text(tx, fonts.clock_mono ? fonts.clock_mono : fonts.medium,
+                    "--:--");
+      date_ = text(tx, fonts.caption ? fonts.caption : fonts.small, "");
+      lv_obj_set_style_text_color(date_, lv_color_hex(kInkMuted), 0);
+      lv_obj_set_style_text_letter_space(date_, 1, 0);
       update_clock();
       lv_timer_create(tick_cb, 1000, this);
     }
@@ -147,7 +148,9 @@ struct HeaderCard : Card {
     if (!cfg.title.empty()) {
       ha_subscribe(cfg.title, nullptr, [this](const std::string &s) {
         bool valid = !s.empty() && s != "unknown" && s != "unavailable";
-        lv_label_set_text(sub_, valid ? s.c_str() : "");
+        std::string up = valid ? s : std::string();
+      ascii_upper(up.data());
+      lv_label_set_text(sub_, up.c_str());
         if (valid) lv_obj_clear_flag(sub_, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(sub_, LV_OBJ_FLAG_HIDDEN);
       });
@@ -209,7 +212,8 @@ struct HeaderCard : Card {
     lv_label_set_text(clock_, hm);
 
     char ds[24];
-    now.strftime(ds, sizeof(ds), "%a %b %e");
+    now.strftime(ds, sizeof(ds), "%a %e %b");
+    ascii_upper(ds);
     lv_label_set_text(date_, ds);
   }
 };

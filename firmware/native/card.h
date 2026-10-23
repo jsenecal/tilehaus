@@ -19,6 +19,9 @@ struct CardFonts {
   // secondary-text font above.
   const lv_font_t *body_tight = nullptr;  // font_text_body_tight (narrow tiles)
   const lv_font_t *clock_xl = nullptr;    // font_clock_xl (screensaver clock)
+  const lv_font_t *title = nullptr;       // font_title (page titles)
+  const lv_font_t *caption = nullptr;     // font_caption (mono captions)
+  const lv_font_t *clock_mono = nullptr;  // font_clock_mono (header clock)
 };
 
 struct Card {

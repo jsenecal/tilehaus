@@ -72,31 +72,29 @@ struct ClimateArc {
     lv_arc_set_value(arc_, 40);
     lv_obj_set_style_arc_width(arc_, 18, LV_PART_MAIN);
     lv_obj_set_style_arc_width(arc_, 18, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(arc_, lv_color_hex(0x3A3A3A), LV_PART_MAIN);
-    lv_obj_set_style_arc_color(arc_, lv_color_hex(0xB5451B), LV_PART_INDICATOR);
-    lv_obj_set_style_arc_rounded(arc_, true, LV_PART_MAIN);
-    lv_obj_set_style_arc_rounded(arc_, true, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(arc_, lv_color_hex(kArcTrack), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(arc_, lv_color_hex(kHeatAccent), LV_PART_INDICATOR);
     // White circular knob (HA look).
-    lv_obj_set_style_bg_color(arc_, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+    lv_obj_set_style_bg_color(arc_, lv_color_hex(kTileInk), LV_PART_KNOB);
     lv_obj_set_style_pad_all(arc_, 6, LV_PART_KNOB);
     lv_obj_add_event_cb(arc_, changed_cb, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(arc_, released_cb, LV_EVENT_RELEASED, this);
 
     action_lbl_ = lv_label_create(parent);
     if (fonts.body) lv_obj_set_style_text_font(action_lbl_, fonts.body, 0);
-    lv_obj_set_style_text_color(action_lbl_, lv_color_hex(0xC8C8C8), 0);
+    lv_obj_set_style_text_color(action_lbl_, lv_color_hex(kTileInkSoft), 0);
     lv_obj_align(action_lbl_, LV_ALIGN_CENTER, 0, -72);
     lv_label_set_text(action_lbl_, "");
 
     target_lbl_ = lv_label_create(parent);
     if (fonts.value) lv_obj_set_style_text_font(target_lbl_, fonts.value, 0);
-    lv_obj_set_style_text_color(target_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(target_lbl_, lv_color_hex(kTileInk), 0);
     lv_obj_align(target_lbl_, LV_ALIGN_CENTER, 0, -6);
     set_target_text(target_lbl_, 40);
 
     current_lbl_ = lv_label_create(parent);
     if (fonts.body) lv_obj_set_style_text_font(current_lbl_, fonts.body, 0);
-    lv_obj_set_style_text_color(current_lbl_, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(current_lbl_, lv_color_hex(kTileInkDim), 0);
     lv_obj_align(current_lbl_, LV_ALIGN_CENTER, 0, 50);
     lv_label_set_text(current_lbl_, "");
   }
@@ -115,10 +113,10 @@ struct ClimateArc {
     ha_subscribe(entity_, "hvac_action", [this](const std::string &s) {
       const char *t;
       uint32_t col;
-      if (s == "heating") { t = "Heating"; col = 0xE1662E; }        // warm
-      else if (s == "cooling") { t = "Cooling"; col = 0x3B9BE3; }   // cool
-      else if (s == "idle") { t = "Idle"; col = 0xC8C8C8; }         // dim
-      else { t = "Off"; col = 0x808080; }                          // dimmer
+      if (s == "heating") { t = "Heating"; col = kHeatingInk; }        // warm
+      else if (s == "cooling") { t = "Cooling"; col = kCoolingInk; }   // cool
+      else if (s == "idle") { t = "Idle"; col = kTileInkSoft; }         // dim
+      else { t = "Off"; col = kStroke; }                          // dimmer
       lv_label_set_text(action_lbl_, t);
       lv_obj_set_style_text_color(action_lbl_, lv_color_hex(col), 0);
     });

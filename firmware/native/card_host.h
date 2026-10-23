@@ -27,8 +27,7 @@ inline std::vector<std::unique_ptr<Card>> &live_cards() {
 // stay alive) and binding only the cards it just created.
 inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
                        int unit_px, int pad_px, int gap_px, int subdivisions,
-                       int base_cols, int base_rows, int radius,
-                       const CardFonts &fonts,
+                       int base_cols, int base_rows, const CardFonts &fonts,
                        int override_cols = 0, int override_rows = 0) {
   auto &cards = live_cards();
   const size_t start = cards.size();
@@ -46,7 +45,7 @@ inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
     lv_obj_t *cell = lv_obj_create(container);
     std::unique_ptr<Card> card = make_card(cfg.type);
     if (card->wants_chrome()) {
-      style_cell(cell, radius);
+      style_cell(cell);
     } else {
       lv_obj_remove_style_all(cell);
       lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, 0);
@@ -80,11 +79,10 @@ inline void build_page(lv_obj_t *container, const std::vector<CardConfig> &deck,
 // Builds `deck` into `root`. Assumes `root` has already been emptied.
 inline void build_deck(lv_obj_t *root, const std::vector<CardConfig> &deck,
                        int unit_px, int pad_px, int gap_px, int subdivisions,
-                       int base_cols, int base_rows, int radius,
-                       const CardFonts &fonts) {
+                       int base_cols, int base_rows, const CardFonts &fonts) {
   live_cards().clear();
   build_page(root, deck, unit_px, pad_px, gap_px, subdivisions, base_cols,
-             base_rows, radius, fonts);
+             base_rows, fonts);
 }
 
 // Boot entry: build the stored deck, or show the "Awaiting Configuration"
@@ -96,7 +94,7 @@ inline void build_deck(lv_obj_t *root, const std::vector<CardConfig> &deck,
 // fallback (that is now the awaiting screen).
 inline void poc_build_cards(lv_obj_t *root, int unit_px, int pad_px, int gap_px,
                             int subdivisions, int base_cols, int base_rows,
-                            int radius, const CardFonts &fonts) {
+                            const CardFonts &fonts) {
   app_grid_root() = root;
   DeckStore &store = deck_store();
   std::vector<CardConfig> deck;
@@ -132,7 +130,7 @@ inline void poc_build_cards(lv_obj_t *root, int unit_px, int pad_px, int gap_px,
     std::vector<CardConfig> subset;
     for (const auto &c : deck) if (c.page == static_cast<int>(p)) subset.push_back(c);
     build_page(page, subset, unit_px, pad_px, gap_px, subdivisions, base_cols,
-               base_rows, radius, fonts, grid_cols, grid_rows);
+               base_rows, fonts, grid_cols, grid_rows);
     nav.containers.push_back(page);
   }
   // Back navigation is a placeable "Back" tile (CardType::Back), not an overlay;

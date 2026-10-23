@@ -9,6 +9,7 @@
 #include "card_style.h"
 #include "ha.h"
 #include "ha_hold.h"
+#include "slider_glide.h"
 #include "slider_map.h"
 #include "detail_modal.h"
 
@@ -37,10 +38,8 @@ struct LightSliderCard : Card {
   std::unique_ptr<DetailModal> detail_;
   std::string icon_on_;   // filled glyph when > 0
   std::string icon_off_;  // outline glyph at 0 (empty = no swap)
-  int touch_phase_ = 0;   // 0 idle, 1 pressing, 2 releasing
+  SliderGlide glide_;  // tap glides, drag tracks the finger; owns touch phase
   HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
-  int press_value_ = 0;   // slider value captured when the press began
-  bool drag_moved_ = false;  // value changed *during* a press => real drag
   bool is_number_ = false;   // number entity vs light brightness
   int nmin_ = 0, nmax_ = 100, ncur_ = 0;  // number range + last pushed value
   bool follow_color_ = false;  // fill colour tracks the light's own colour
@@ -107,7 +106,7 @@ struct LightSliderCard : Card {
     if (nmax_ <= nmin_) nmax_ = nmin_ + 1;
     lv_slider_set_range(slider_, nmin_, nmax_);
     int v = ncur_ < nmin_ ? nmin_ : (ncur_ > nmax_ ? nmax_ : ncur_);
-    if (touch_phase_ == 0) lv_subject_set_int(&value_, v);
+    if (glide_.touch_phase == 0) lv_subject_set_int(&value_, v);
   }
 
   void build(lv_obj_t *cell, const CardConfig &cfg,
@@ -127,36 +126,8 @@ struct LightSliderCard : Card {
     lv_slider_set_range(slider_, is_number_ ? nmin_ : 0, is_number_ ? nmax_ : 100);
     lv_obj_set_size(slider_, LV_PCT(100), LV_PCT(100));
     lv_obj_align(slider_, LV_ALIGN_CENTER, 0, 0);
-    style_fill_slider(slider_, 10);
-    lv_obj_set_style_anim_duration(slider_, kSliderAnimMs, 0);
-
-    lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
-      auto *self = static_cast<LightSliderCard *>(lv_event_get_user_data(e));
-      self->touch_phase_ = 1;
-      self->press_value_ = static_cast<int>(lv_slider_get_value(self->slider_));
-      self->drag_moved_ = false;
-    }, static_cast<lv_event_code_t>(LV_EVENT_PRESSED | LV_EVENT_PREPROCESS), this);
-    lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
-      static_cast<LightSliderCard *>(lv_event_get_user_data(e))->touch_phase_ = 1;
-    }, static_cast<lv_event_code_t>(LV_EVENT_PRESSING | LV_EVENT_PREPROCESS), this);
-    lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
-      static_cast<LightSliderCard *>(lv_event_get_user_data(e))->touch_phase_ = 2;
-    }, static_cast<lv_event_code_t>(LV_EVENT_RELEASED | LV_EVENT_PREPROCESS), this);
-    lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
-      auto *self = static_cast<LightSliderCard *>(lv_event_get_user_data(e));
-      if (self->touch_phase_ == 1) self->drag_moved_ = true;  // moved while pressed
-    }, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_add_event_cb(slider_, [](lv_event_t *e) {
-      auto *self = static_cast<LightSliderCard *>(lv_event_get_user_data(e));
-      if (!self->drag_moved_) {  // a tap: replay the jump as an animated glide
-        int target = static_cast<int>(lv_slider_get_value(self->slider_));
-        if (target != self->press_value_) {
-          lv_slider_set_value(self->slider_, self->press_value_, LV_ANIM_OFF);
-          lv_slider_set_value(self->slider_, target, LV_ANIM_ON);
-        }
-      }
-      self->touch_phase_ = 0;
-    }, LV_EVENT_RELEASED, this);
+    style_fill_slider(slider_);
+    glide_.attach(slider_);  // tap glides, drag tracks the finger 1:1
 
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon, LV_ALIGN_TOP_LEFT,
                          kTileInset, kTileInset);
@@ -168,7 +139,7 @@ struct LightSliderCard : Card {
     // Centered transient readout: large, transparent until a change flashes it
     // visible; auto-fades out via hide_timer_.
     pct_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(kTileInk), 0);
     if (fonts.value) lv_obj_set_style_text_font(pct_lbl_, fonts.value, 0);
     lv_obj_center(pct_lbl_);
     lv_obj_set_style_opa(pct_lbl_, LV_OPA_TRANSP, 0);
@@ -206,13 +177,7 @@ struct LightSliderCard : Card {
       }, LV_EVENT_RELEASED, this);
       return;
     }
-    lv_subject_t *subj = &value_;
-    ha_subscribe(entity_, "brightness", [this, subj](const std::string &s) {
-      float b = s.empty() ? 0.0f : static_cast<float>(atof(s.c_str()));
-      if (std::isnan(b)) b = 0.0f;
-      const int v = brightness_to_slider(static_cast<uint8_t>(b));
-      hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
-    });
+    subscribe_brightness(entity_, &value_, hold_);
     if (follow_color_) {
       ha_subscribe(entity_, "rgb_color", [this](const std::string &s) {
         int c[3];

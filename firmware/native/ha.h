@@ -1,4 +1,6 @@
 #pragma once
+#include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <string>
 #include <cstdio>
@@ -6,6 +8,14 @@
 #include "esphome/components/api/api_pb2.h"
 
 namespace tilehaus {
+
+// An HA state/attribute string as a float, or `dflt` when it is empty or not
+// a number (atof yields 0 for junk; NaN is caught explicitly).
+inline float ha_float_or(const std::string &s, float dflt) {
+  if (s.empty()) return dflt;
+  const float v = static_cast<float>(std::atof(s.c_str()));
+  return std::isnan(v) ? dflt : v;
+}
 
 // One-shot "first HA state has arrived" signal. HA pushes initial states right
 // after it connects, so the first time any subscription fires is the moment the

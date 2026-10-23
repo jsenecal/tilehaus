@@ -94,7 +94,7 @@ inline uint32_t accent_or(uint32_t builtin) {
 // Tiles whose active colour *means* something keep their own: a lock's green
 // locked / red unlocked, an alarm's red armed, a fan's blue running. Recolouring
 // those to the accent would throw away the signal.
-inline constexpr uint32_t kTileOnBuiltin = 0xFF8C00;
+inline constexpr uint32_t kTileOnBuiltin = 0xB5E853;
 inline uint32_t tile_on_color() { return accent_or(kTileOnBuiltin); }
 
 }  // namespace tilehaus

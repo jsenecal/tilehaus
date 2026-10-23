@@ -25,7 +25,7 @@ struct OptionSelectModal {
       : entity_(entity), title_(title), fonts_(fonts) {}
 
   void build() {
-    overlay_.build(title_, fonts_.icon, fonts_.body);
+    overlay_.build(title_, fonts_);
     overlay_.on_close_ = [this]() { hide(); };
     list_.build(overlay_.content(), fonts_, entity_, "options", entity_, nullptr,
                 "select.select_option", entity_, "option");
@@ -59,7 +59,7 @@ struct OptionSelectCard : Card {
 
     val_lbl_ = lv_label_create(cell);
     if (fonts.body) lv_obj_set_style_text_font(val_lbl_, fonts.body, 0);
-    lv_obj_set_style_text_color(val_lbl_, lv_color_hex(0xC8C8C8), 0);
+    lv_obj_set_style_text_color(val_lbl_, lv_color_hex(kTileInkSoft), 0);
     lv_label_set_long_mode(val_lbl_, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(val_lbl_, LV_PCT(80));
     lv_obj_set_style_text_align(val_lbl_, LV_TEXT_ALIGN_CENTER, 0);
