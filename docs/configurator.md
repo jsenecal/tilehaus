@@ -78,7 +78,8 @@ you've already typed.
 Every tile also has:
 
 - **Width / Height** — size in grid cells.
-- **Icon / Icon (alt)** — pick from the panel's built-in icon set. Icon (alt)
+- **Icon / Icon (alt)** — pick from the panel's built-in icon set (the picker
+  works without an internet connection). Icon (alt)
   is used for the tile's alternate state (light off, cover open, unlocked,
   etc.) where the card type supports it; blank falls back to the primary
   icon.
@@ -109,6 +110,36 @@ to allow requests from the configurator's origin. Add the panel's origin to
 The **Accent** color picker in the toolbar sets a deck-wide accent used by
 the panel's built-in card colors. It previews live in the configurator page
 itself. The reset button (⟲) clears it back to the built-in default (amber).
+
+## Undo and backups
+
+- **Undo / Redo** (or <kbd>Ctrl</kbd>+<kbd>Z</kbd> and
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) step through your edits since
+  the page loaded. A burst of typing or a colour drag counts as one step.
+  Inside a text field, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the text instead.
+  Undo also brings back a deck you just reset — press Save to put it back on
+  the panel.
+- **Export** downloads the deck as JSON (`tilehaus-office-2026-10-23.json`).
+  It is the same spec `scripts/deck_cli.js push` takes.
+- **Import** loads a JSON file into the editor. It is checked first, so a
+  file the panel would reject is refused with the reason. Nothing reaches the
+  panel until you press Save, and Undo reverts the import. Use Export on one
+  panel and Import on another to copy a layout.
+- Closing the tab with unsaved changes asks for confirmation.
+
+## Unlocking
+
+The panel only accepts saves while its **Configurator** switch is on in Home
+Assistant. While it is off, **Save** and **Reset** are replaced by a
+*Locked* notice; turn the switch on and they come back within a few seconds
+(or click the notice to check right away). You can keep editing while it is
+locked — nothing is lost.
+
+Your first Save claims the panel for this browser. Until the switch goes off,
+other devices see *In use from another device* in place of Save. The switch
+turns itself off after 30 minutes without use; editing in an open configurator
+counts as use once you have saved. See
+[Config API](config-api.md#unlocking-the-panel-for-writes) for the details.
 
 ## Save = reboot-to-apply
 

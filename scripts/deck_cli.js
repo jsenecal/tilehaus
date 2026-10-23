@@ -5,9 +5,17 @@
 //   node scripts/deck_cli.js status                --device <ip>
 //   node scripts/deck_cli.js push   <spec.json>    --device <ip>
 //   node scripts/deck_cli.js reset                 --device <ip>
+//   node scripts/deck_cli.js session               --device <ip>
 // Reuses the tested codec in web/model/deck.ts, so encoding matches the firmware.
+//
+// Writes need the panel's Configurator switch on in Home Assistant. The first
+// write claims a session; its key is cached per device in
+// $XDG_CONFIG_HOME/tilehaus/sessions.json (~/.config by default) and reused
+// until the switch goes off. --key <hex> overrides the cache.
 
 const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const { loadTypeScriptModule } = require("./load_typescript_module");
 
 const { encodeDeck, decodeDeckDocument } = loadTypeScriptModule("web/model/deck.ts");
@@ -19,6 +27,7 @@ function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--device") out.device = argv[++i];
+    else if (argv[i] === "--key") out.key = argv[++i];
     else out._.push(argv[i]);
   }
   out.device = out.device || DEFAULT_DEVICE;
@@ -26,6 +35,57 @@ function parseArgs(argv) {
 }
 
 const url = (device) => `http://${device}/api/v1/config`;
+const sessionUrl = (device) => `http://${device}/api/v1/session`;
+
+const LOCKED_HELP = "panel is locked: turn on its Configurator switch in Home Assistant, then re-run";
+const TAKEN_HELP = "another client holds this panel's session: turn the Configurator switch off and on in Home Assistant to take over";
+
+const sessionsFile = () =>
+  path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "tilehaus", "sessions.json");
+
+function readSessions() {
+  try { return JSON.parse(fs.readFileSync(sessionsFile(), "utf8")); } catch { return {}; }
+}
+
+function cacheKey(device, key) {
+  const all = readSessions();
+  if (key) all[device] = key; else delete all[device];
+  fs.mkdirSync(path.dirname(sessionsFile()), { recursive: true });
+  fs.writeFileSync(sessionsFile(), JSON.stringify(all, null, 2) + "\n", { mode: 0o600 });
+}
+
+// POST a claim; returns the key or throws with the reason.
+async function claim(device) {
+  const res = await fetch(sessionUrl(device), { method: "POST" });
+  if (res.status === 201) {
+    const { key } = await res.json();
+    if (!key) throw new Error("claim returned no key");
+    cacheKey(device, key);
+    console.log("claimed the configurator session");
+    return key;
+  }
+  if (res.status === 423) throw new Error(LOCKED_HELP);
+  if (res.status === 409) throw new Error(TAKEN_HELP);
+  throw new Error(`claim failed: ${res.status}`);
+}
+
+// Send a write with the session key, claiming one if needed. A cached key the
+// panel no longer honours (401) is dropped and the claim retried once.
+async function write(args, init) {
+  const send = (key) => fetch(url(args.device), {
+    ...init, headers: { ...init.headers, Authorization: `Bearer ${key}` },
+  });
+  let key = args.key || readSessions()[args.device] || await claim(args.device);
+  let res = await send(key);
+  if (res.status === 401 && !args.key) {
+    cacheKey(args.device, null);
+    key = await claim(args.device);
+    res = await send(key);
+  }
+  if (res.status === 423) { if (!args.key) cacheKey(args.device, null); throw new Error(LOCKED_HELP); }
+  if (res.status === 401) throw new Error(TAKEN_HELP);
+  return res;
+}
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Read a spec file ({cards,pages?,gridCols?,gridRows?,accent?} or a bare cards array)
@@ -98,7 +158,7 @@ async function main() {
     if (!specFile) throw new Error("usage: push <spec.json> --device <ip>");
     const bin = encodeSpec(specFile);
     const current = await getState(args.device);
-    const res = await fetch(url(args.device), {
+    const res = await write(args, {
       method: "PUT",
       headers: { "Content-Type": MEDIA_TYPE, "If-Match": current.etag },
       body: Buffer.from(bin),
@@ -119,7 +179,7 @@ async function main() {
 
   if (cmd === "reset") {
     const current = await getState(args.device);
-    const res = await fetch(url(args.device), { method: "DELETE", headers: { "If-Match": current.etag } });
+    const res = await write(args, { method: "DELETE", headers: { "If-Match": current.etag } });
     if (res.status === 204) {
       console.log("cleared; panel rebooting to the awaiting-config screen…");
       await waitForReboot(args.device).catch(() => {});
@@ -130,7 +190,17 @@ async function main() {
     process.exit(1);
   }
 
-  console.error("usage: deck_cli.js <build <spec.json> <out.bin> | status | push <spec.json> | reset> [--device <ip>]");
+  if (cmd === "session") {
+    const key = args.key || readSessions()[args.device];
+    const res = await fetch(sessionUrl(args.device), { headers: key ? { Authorization: `Bearer ${key}` } : {} });
+    if (!res.ok) throw new Error(`session check failed: ${res.status}`);
+    const s = await res.json();
+    const who = s.state === "claimed" ? (s.mine ? " (this machine)" : " (another client)") : "";
+    console.log(`${s.state}${who}   idle timeout ${s.timeoutMinutes || "none"} min`);
+    return;
+  }
+
+  console.error("usage: deck_cli.js <build <spec.json> <out.bin> | status | push <spec.json> | reset | session> [--device <host>] [--key <hex>]");
   process.exit(1);
 }
 

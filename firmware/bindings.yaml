@@ -39,6 +39,11 @@ esphome:
               id(sens_current_page).publish_state(name);
             };
             tilehaus::screensaver_build(poc_fonts);
+            // Restore any configurator session the panel had before this boot.
+            tilehaus::config_status_hook() = [](const std::string &s) {
+              id(sens_configurator_status).publish_state(s);
+            };
+            tilehaus::config_session_setup(${configurator_timeout} * 60u * 1000u);
             // Load any persisted deck config before the first build so the
             // panel boots straight into the saved deck (else default_deck()).
             tilehaus::deck_store().setup();
@@ -67,3 +72,4 @@ interval:
       - lambda: |-
           tilehaus::start_deck_server();
           tilehaus::apply_pending_reboot();
+          tilehaus::config_session_tick();

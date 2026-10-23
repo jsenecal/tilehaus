@@ -1,11 +1,13 @@
 import { ICON_CATALOG, glyphToEntry, type IconEntry } from "./icon_catalog";
+import { iconSvg } from "./icon_svg";
 
 export interface IconPicker {
   element: HTMLElement;
 }
 
 // A filter-as-you-type picker over the bundled MDI glyphs. Stores the glyph
-// string (blank = none); previews via the @mdi/font CDN classes in index.html.
+// string (blank = none); previews draw the bundled SVG paths, so the picker
+// works with no internet connection.
 export function createIconPicker(
   currentGlyph: string,
   onSelect: (glyph: string) => void,
@@ -19,7 +21,7 @@ export function createIconPicker(
   field.className = "icon-picker-field";
 
   const preview = document.createElement("span");
-  preview.className = "icon-picker-preview mdi";
+  preview.className = "icon-picker-preview";
 
   const input = document.createElement("input");
   input.type = "text";
@@ -42,12 +44,13 @@ export function createIconPicker(
   const rows: Row[] = [];
   let highlighted = -1;
 
-  function makeRow(glyph: string, slug: string, label: string, haystack: string): Row {
+  function makeRow(glyph: string, slug: string, path: string, label: string, haystack: string): Row {
     const el = document.createElement("div");
     el.className = "icon-option";
     const g = document.createElement("span");
-    g.className = "icon-option-glyph mdi" + (slug === "" ? " icon-option-glyph--none" : " mdi-" + slug);
+    g.className = "icon-option-glyph" + (slug === "" ? " icon-option-glyph--none" : "");
     if (slug === "") g.textContent = "∅";
+    else g.append(iconSvg(path));
     const name = document.createElement("span");
     name.className = "icon-option-label";
     name.textContent = label;
@@ -60,9 +63,9 @@ export function createIconPicker(
     return row;
   }
 
-  rows.push(makeRow("", "", "— none —", ""));
+  rows.push(makeRow("", "", "", "— none —", ""));
   for (const entry of ICON_CATALOG as readonly IconEntry[]) {
-    rows.push(makeRow(entry.glyph, entry.slug, entry.name, entry.slug + " " + entry.name));
+    rows.push(makeRow(entry.glyph, entry.slug, entry.path, entry.name, entry.slug + " " + entry.name));
   }
 
   const emptyEl = document.createElement("div");
@@ -78,8 +81,9 @@ export function createIconPicker(
   function setCurrent(glyph: string): void {
     current = glyph;
     const entry = glyph === "" ? undefined : glyphToEntry(glyph);
-    preview.className = "icon-picker-preview mdi" + (entry ? " mdi-" + entry.slug : " icon-picker-preview--none");
+    preview.className = "icon-picker-preview" + (entry ? "" : " icon-picker-preview--none");
     preview.textContent = entry ? "" : glyph === "" ? "∅" : "?";
+    if (entry) preview.append(iconSvg(entry.path));
     input.value = entry ? entry.name : glyph === "" ? "" : "(unknown glyph)";
     for (const row of rows) row.el.classList.toggle("is-active", row.glyph === glyph);
   }

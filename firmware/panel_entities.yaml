@@ -177,6 +177,28 @@ light:
             tilehaus::set_accent(false, 0);
           }
 
+switch:
+  # Opens the configurator for writing. While on, the first browser or CLI to
+  # claim a session gets a random key and is the only client that can save or
+  # reset; turning it off revokes that key. It turns itself off after
+  # ${configurator_timeout} minutes without configurator use.
+  #
+  # The native lock owns this state, persisted with the key so a session
+  # carries across the reboot every save causes. restore_mode DISABLED stops
+  # ESPHome from also restoring the switch: its default (ALWAYS_OFF) would turn
+  # it off at every boot and revoke the session it just restored.
+  - platform: template
+    name: "Configurator"
+    id: sw_configurator
+    entity_category: config
+    icon: mdi:lock-open-variant
+    restore_mode: DISABLED
+    lambda: "return tilehaus::config_session_is_open();"
+    turn_on_action:
+      - lambda: "tilehaus::config_session_set_open(true);"
+    turn_off_action:
+      - lambda: "tilehaus::config_session_set_open(false);"
+
 button:
   - platform: template
     name: "Wake"
@@ -201,6 +223,13 @@ binary_sensor:
       return lv_display_get_inactive_time(nullptr) < (uint32_t) dim_s * 1000u;
 
 text_sensor:
+  # "Locked", "Open", or "In use by <ip>" — who holds the configurator session.
+  - platform: template
+    name: "Configurator status"
+    id: sens_configurator_status
+    entity_category: diagnostic
+    icon: mdi:shield-account
+
   - platform: template
     name: "Current page"
     id: sens_current_page

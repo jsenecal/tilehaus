@@ -6,16 +6,11 @@
     <title>Tilehaus Deck Configurator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Web fonts are a nicety: loaded without blocking first paint, so a LAN
+         with no internet renders at once in the system fallbacks. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <!-- MDI webfont for icon-picker previews. Pin to the bundled TTF version
-         (common/assets/fonts/materialdesignicons-webfont-<ver>.ttf). -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link
-      href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css"
-      rel="stylesheet"
+      rel="stylesheet" media="print" onload="this.media='all'"
     />
     <style>
       :root {
@@ -93,7 +88,8 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       }
       .toolbar .spacer { flex: 1 1 auto; }
-      .add-group { display: flex; gap: 0.4rem; align-items: center; }
+      .add-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+      .toolbar .actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
       .accent-picker { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-dim); }
       .accent-picker input[type="color"] { width: 30px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--input); cursor: pointer; }
       .accent-picker button { padding: 0.35rem 0.5rem; }
@@ -158,6 +154,22 @@
       .status[data-state="warn"] .dot { background: var(--warn); }
       .status[data-state="err"] { color: var(--err); border-color: rgba(255, 106, 106, 0.4); }
       .status[data-state="err"] .dot { background: var(--err); }
+
+      /* ---- Inline MDI icons (see web/icon_svg.ts) ---- */
+      svg.icon { display: block; width: 1em; height: 1em; fill: currentColor; flex: none; }
+
+      /* ---- Lock notice: takes Save's place while writes are refused ---- */
+      .toolbar button.lock-notice {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        padding: 0.5rem 0.9rem; border-radius: var(--radius-sm);
+        border: 1px solid rgba(245, 181, 61, 0.45); background: rgba(245, 181, 61, 0.08);
+        color: var(--warn); box-shadow: none;
+      }
+      .toolbar button.lock-notice .icon { width: 1.1rem; height: 1.1rem; }
+      .toolbar button.lock-notice[data-state="taken"] {
+        border-color: rgba(255, 106, 106, 0.45); background: rgba(255, 106, 106, 0.08); color: var(--err);
+      }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
       /* ---- Panes ---- */
@@ -315,7 +327,7 @@
         padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.85rem; color: var(--text-dim);
       }
       .icon-option-glyph {
-        flex: 0 0 auto; width: 1.5rem; text-align: center; font-size: 1.25rem; color: var(--accent-strong);
+        flex: 0 0 auto; width: 1.5rem; display: grid; place-items: center; font-size: 1.25rem; color: var(--accent-strong);
       }
       .icon-option-glyph--none { color: var(--text-faint); font-size: 1rem; }
       .icon-option-label { flex: 1 1 auto; }

@@ -1,11 +1,15 @@
 import { type DeckCard } from "./model/deck";
 import { CARD_TYPES } from "./card_types";
 import { addCard, addPage, autoArrange, deletePage, removeCard, renamePage, updateCard, type EditorState } from "./editor_state";
-import { createDeckClient, type DeckClient, type SaveResult } from "./deck_client";
+import { createDeckClient, type DeckClient, type SaveResult, type SessionInfo } from "./deck_client";
 import { createGridPane } from "./grid_view";
 import { createHaClient, type HaClient } from "./ha_client";
 import { createIconPicker } from "./icon_picker";
 import { iconGlyphForEntity } from "./icon_from_entity";
+import { UI_ICON_PATHS } from "./icon_catalog";
+import { iconSvg } from "./icon_svg";
+import { createHistory, type DeckSnapshot } from "./history";
+import { BackupError, backupFileName, exportSpec, parseSpec } from "./backup";
 import { cardFieldDefs, cardFlagDefs, fieldValue, flagValue, matchEntities, patchForField, patchForFlag } from "./card_fields";
 import { gridLimits } from "./model/grid_layout";
 
@@ -18,7 +22,13 @@ function colorInputValue(color: number): string {
 
 export interface EditorView {
   render(): void;
+  refreshSession(): Promise<void>;
 }
+
+// While this browser holds the session, editing counts as use: check in with
+// the panel at most this often so a long edit doesn't hit the idle timeout
+// before Save.
+const SESSION_HEARTBEAT_MS = 5 * 60 * 1000;
 
 export function createEditorView(
   root: HTMLElement,
@@ -29,6 +39,134 @@ export function createEditorView(
   let status = "Ready";
   let statusState: StatusState = "idle";
   let busy = false;
+  let session: SessionInfo | null = null;
+
+  // ---- Undo, and what's unsaved ----
+  const history = createHistory();
+  const snapshot = (): DeckSnapshot => ({
+    cards: state.cards, pages: state.pages, accent: state.accent,
+    gridCols: state.gridCols, gridRows: state.gridRows,
+  });
+  const serialized = (): string => JSON.stringify(snapshot());
+  let savedDeck: string | null = null;  // the deck as the panel has it; null until first render
+  let undoBtn: HTMLButtonElement | null = null;
+  let redoBtn: HTMLButtonElement | null = null;
+
+  function syncHistory(): void {
+    history.checkpoint(snapshot());
+    if (undoBtn !== null) undoBtn.disabled = busy || !history.canUndo();
+    if (redoBtn !== null) redoBtn.disabled = busy || !history.canRedo();
+  }
+
+  function restore(deck: DeckSnapshot): void {
+    state.cards = deck.cards;
+    state.pages = deck.pages;
+    state.accent = deck.accent;
+    state.gridCols = deck.gridCols;
+    state.gridRows = deck.gridRows;
+    if (state.currentPage >= state.pages.length) state.currentPage = 0;
+    if (state.selected !== null && state.selected >= state.cards.length) state.selected = null;
+  }
+
+  function onUndo(): void {
+    const deck = history.undo();
+    if (deck === null) return;
+    restore(deck);
+    render();
+  }
+  function onRedo(): void {
+    const deck = history.redo();
+    if (deck === null) return;
+    restore(deck);
+    render();
+  }
+
+  // Field edits update the state without re-rendering (to keep focus), so
+  // record after every input event too. Root listeners run after the field's.
+  root.addEventListener("input", syncHistory);
+  root.addEventListener("change", syncHistory);
+
+  // Text fields keep the browser's own undo; everywhere else Ctrl/Cmd+Z is ours.
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const t = e.target;
+    if (t instanceof HTMLInputElement && t.type !== "checkbox" && t.type !== "color") return;
+    if (t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+    const key = e.key.toLowerCase();
+    if (key === "z" && !e.shiftKey) { e.preventDefault(); onUndo(); }
+    else if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); onRedo(); }
+  });
+
+  window.addEventListener("beforeunload", (e) => {
+    if (savedDeck !== null && serialized() !== savedDeck) e.preventDefault();
+  });
+
+  // ---- Backup ----
+  function onExport(): void {
+    const blob = new Blob([exportSpec(snapshot())], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = backupFileName(window.location.hostname, new Date());
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); }, 0);
+    setStatus(`Exported ${a.download}`, "ok");
+  }
+
+  const importInput = document.createElement("input");
+  importInput.type = "file";
+  importInput.accept = ".json,application/json";
+  importInput.onchange = () => {
+    const file = importInput.files?.[0];
+    importInput.value = "";  // choosing the same file again still fires
+    if (file === undefined) return;
+    void file.text().then((text) => {
+      let deck: DeckSnapshot;
+      try {
+        deck = parseSpec(text);
+      } catch (error) {
+        setStatus(error instanceof BackupError ? `Not imported: ${error.message}` : `Not imported: ${String(error)}`, "err");
+        return;
+      }
+      restore(deck);
+      state.currentPage = 0;
+      state.selected = null;
+      setStatus(`Imported ${file.name} — press Save to send it to the panel (Undo reverts)`, "warn");
+    });
+  };
+  let lastCheckIn = 0;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  const BLOCKED_POLL_MS = 4000;
+
+  // Ask the panel who may write. Failures leave the last known state: the
+  // panel is often mid-reboot right after a save.
+  async function refreshSession(): Promise<void> {
+    lastCheckIn = Date.now();
+    try {
+      session = await client.session();
+    } catch {
+      schedulePoll();
+      return;
+    }
+    render();
+    schedulePoll();
+  }
+
+  // While Save is replaced by the lock notice, keep asking. A check without a
+  // key is not "use", so this never holds a session open.
+  function schedulePoll(): void {
+    if (pollTimer !== null) clearTimeout(pollTimer);
+    pollTimer = null;
+    const s = session;
+    const blocked = s === null || s.state === "locked" || (s.state === "claimed" && !s.mine);
+    if (blocked) pollTimer = setTimeout(() => { void refreshSession(); }, BLOCKED_POLL_MS);
+  }
+
+  // Every edit re-renders, so render() is where editing is noticed.
+  function keepSessionAlive(): void {
+    if (session?.mine === true && !busy && Date.now() - lastCheckIn >= SESSION_HEARTBEAT_MS) {
+      void refreshSession();
+    }
+  }
 
   function setStatus(text: string, next: StatusState): void {
     status = text;
@@ -50,15 +188,21 @@ export function createEditorView(
       if (state.selected !== null && state.selected >= state.cards.length) {
         state.selected = state.cards.length > 0 ? state.cards.length - 1 : null;
       }
+      savedDeck = serialized();
       setStatus("Applied — panel updated", "ok");
     } else if (result.status === "conflict") {
       state.etag = result.etag;
       setStatus("Changed on the device — your edits are kept, press Save again", "warn");
+    } else if (result.status === "locked") {
+      setStatus("Locked — turn on the Configurator switch in Home Assistant, then Save again. Your edits are kept.", "warn");
+    } else if (result.status === "taken") {
+      setStatus("Another device is configuring this panel. Turn the Configurator switch off and on in Home Assistant to take over.", "err");
     } else {
       setStatus(`Error: ${result.message}`, "err");
     }
     busy = false;
     render();
+    void refreshSession();
   }
 
   function onSave(): void {
@@ -379,6 +523,38 @@ export function createEditorView(
     return bar;
   }
 
+  // Save and Reset only exist while this browser may write. Locked, or held by
+  // another device, the slot shows why instead; clicking it checks again.
+  function renderSaveArea(): HTMLElement[] {
+    const s = session;
+    const blocked = s !== null && (s.state === "locked" || (s.state === "claimed" && !s.mine));
+    if (blocked) {
+      const locked = s.state === "locked";
+      const notice = el("button", "lock-notice");
+      notice.type = "button";
+      notice.dataset["state"] = locked ? "locked" : "taken";
+      notice.title = "Click to check again";
+      notice.onclick = () => { void refreshSession(); };
+      notice.append(
+        iconSvg(UI_ICON_PATHS[locked ? "lock" : "account-lock"] ?? ""),
+        el("span", "lock-text",
+          locked ? "Locked · turn on Configurator in Home Assistant" : "In use from another device"),
+      );
+      return [notice];
+    }
+
+    const saveBtn = el("button", "primary", "Save");
+    saveBtn.disabled = busy;
+    saveBtn.onclick = onSave;
+    if (s?.state === "open") saveBtn.title = "Saving claims this panel for this browser";
+    else if (s?.mine === true && s.timeoutMinutes > 0)
+      saveBtn.title = `Your session · locks after ${s.timeoutMinutes} min without use`;
+    const resetBtn = el("button", "ghost", "Reset");
+    resetBtn.disabled = busy;
+    resetBtn.onclick = onReset;
+    return [saveBtn, resetBtn];
+  }
+
   function renderToolbar(): HTMLElement {
     const bar = el("div", "toolbar");
 
@@ -387,6 +563,14 @@ export function createEditorView(
     const addBtn = el("button", undefined, "+ Add tile");
     addBtn.onclick = () => { addCard(state, Number(picker.value)); render(); };
     addGroup.append(picker, addBtn);
+
+    undoBtn = el("button", "ghost", "Undo");
+    undoBtn.title = "Undo (Ctrl+Z)";
+    undoBtn.onclick = onUndo;
+    redoBtn = el("button", "ghost", "Redo");
+    redoBtn.title = "Redo (Ctrl+Shift+Z)";
+    redoBtn.onclick = onRedo;
+    addGroup.append(undoBtn, redoBtn);
 
     const arrangeBtn = el("button", "ghost", "Auto-arrange");
     arrangeBtn.title = "Repack tiles to the top-left, clearing gaps";
@@ -433,14 +617,18 @@ export function createEditorView(
     pill.dataset["state"] = statusState;
     pill.append(el("span", "dot"), document.createTextNode(status));
 
-    const saveBtn = el("button", "primary", "Save");
-    saveBtn.disabled = busy;
-    saveBtn.onclick = onSave;
-    const resetBtn = el("button", "ghost", "Reset");
-    resetBtn.disabled = busy;
-    resetBtn.onclick = onReset;
+    const exportBtn = el("button", "ghost", "Export");
+    exportBtn.title = "Download this deck as a JSON backup (also pushable with deck_cli.js)";
+    exportBtn.onclick = onExport;
+    const importBtn = el("button", "ghost", "Import");
+    importBtn.title = "Load a JSON backup into the editor; nothing reaches the panel until Save";
+    importBtn.disabled = busy;
+    importBtn.onclick = () => { importInput.click(); };
 
-    bar.append(addGroup, spacer, pill, saveBtn, resetBtn);
+    // One group, so backup, status and Save wrap together rather than apart.
+    const actions = el("div", "actions");
+    actions.append(exportBtn, importBtn, pill, ...renderSaveArea());
+    bar.append(addGroup, spacer, actions);
     return bar;
   }
 
@@ -466,10 +654,13 @@ export function createEditorView(
   }
 
   function render(): void {
+    if (savedDeck === null) savedDeck = serialized();  // first render: the deck as loaded
+    keepSessionAlive();
     applyAccent();
     root.textContent = "";
     root.append(renderPageBar(), renderHaBar(), renderToolbar(), createGridPane(state, render), renderFormPane());
+    syncHistory();  // after the toolbar exists, so Undo/Redo get their state
   }
 
-  return { render };
+  return { render, refreshSession };
 }
