@@ -1,7 +1,7 @@
 import { type DeckCard } from "./model/deck";
 import { CARD_TYPES } from "./card_types";
 import { addCard, addPage, autoArrange, deletePage, removeCard, renamePage, updateCard, type EditorState } from "./editor_state";
-import { createDeckClient, type DeckClient, type SaveResult } from "./deck_client";
+import { createDeckClient, type DeckClient, type SaveResult, type SessionInfo } from "./deck_client";
 import { createGridPane } from "./grid_view";
 import { createHaClient, type HaClient } from "./ha_client";
 import { createIconPicker } from "./icon_picker";
@@ -18,7 +18,13 @@ function colorInputValue(color: number): string {
 
 export interface EditorView {
   render(): void;
+  refreshSession(): Promise<void>;
 }
+
+// While this browser holds the session, editing counts as use: check in with
+// the panel at most this often so a long edit doesn't hit the idle timeout
+// before Save.
+const SESSION_HEARTBEAT_MS = 5 * 60 * 1000;
 
 export function createEditorView(
   root: HTMLElement,
@@ -29,6 +35,41 @@ export function createEditorView(
   let status = "Ready";
   let statusState: StatusState = "idle";
   let busy = false;
+  let session: SessionInfo | null = null;
+  let lastCheckIn = 0;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  const BLOCKED_POLL_MS = 4000;
+
+  // Ask the panel who may write. Failures leave the last known state: the
+  // panel is often mid-reboot right after a save.
+  async function refreshSession(): Promise<void> {
+    lastCheckIn = Date.now();
+    try {
+      session = await client.session();
+    } catch {
+      schedulePoll();
+      return;
+    }
+    render();
+    schedulePoll();
+  }
+
+  // While Save is replaced by the lock notice, keep asking. A check without a
+  // key is not "use", so this never holds a session open.
+  function schedulePoll(): void {
+    if (pollTimer !== null) clearTimeout(pollTimer);
+    pollTimer = null;
+    const s = session;
+    const blocked = s === null || s.state === "locked" || (s.state === "claimed" && !s.mine);
+    if (blocked) pollTimer = setTimeout(() => { void refreshSession(); }, BLOCKED_POLL_MS);
+  }
+
+  // Every edit re-renders, so render() is where editing is noticed.
+  function keepSessionAlive(): void {
+    if (session?.mine === true && !busy && Date.now() - lastCheckIn >= SESSION_HEARTBEAT_MS) {
+      void refreshSession();
+    }
+  }
 
   function setStatus(text: string, next: StatusState): void {
     status = text;
@@ -54,11 +95,16 @@ export function createEditorView(
     } else if (result.status === "conflict") {
       state.etag = result.etag;
       setStatus("Changed on the device — your edits are kept, press Save again", "warn");
+    } else if (result.status === "locked") {
+      setStatus("Locked — turn on the Configurator switch in Home Assistant, then Save again. Your edits are kept.", "warn");
+    } else if (result.status === "taken") {
+      setStatus("Another device is configuring this panel. Turn the Configurator switch off and on in Home Assistant to take over.", "err");
     } else {
       setStatus(`Error: ${result.message}`, "err");
     }
     busy = false;
     render();
+    void refreshSession();
   }
 
   function onSave(): void {
@@ -379,6 +425,38 @@ export function createEditorView(
     return bar;
   }
 
+  // Save and Reset only exist while this browser may write. Locked, or held by
+  // another device, the slot shows why instead; clicking it checks again.
+  function renderSaveArea(): HTMLElement[] {
+    const s = session;
+    const blocked = s !== null && (s.state === "locked" || (s.state === "claimed" && !s.mine));
+    if (blocked) {
+      const locked = s.state === "locked";
+      const notice = el("button", "lock-notice");
+      notice.type = "button";
+      notice.dataset["state"] = locked ? "locked" : "taken";
+      notice.title = "Click to check again";
+      notice.onclick = () => { void refreshSession(); };
+      notice.append(
+        el("span", "mdi " + (locked ? "mdi-lock" : "mdi-account-lock")),
+        el("span", "lock-text",
+          locked ? "Locked · turn on Configurator in Home Assistant" : "In use from another device"),
+      );
+      return [notice];
+    }
+
+    const saveBtn = el("button", "primary", "Save");
+    saveBtn.disabled = busy;
+    saveBtn.onclick = onSave;
+    if (s?.state === "open") saveBtn.title = "Saving claims this panel for this browser";
+    else if (s?.mine === true && s.timeoutMinutes > 0)
+      saveBtn.title = `Your session · locks after ${s.timeoutMinutes} min without use`;
+    const resetBtn = el("button", "ghost", "Reset");
+    resetBtn.disabled = busy;
+    resetBtn.onclick = onReset;
+    return [saveBtn, resetBtn];
+  }
+
   function renderToolbar(): HTMLElement {
     const bar = el("div", "toolbar");
 
@@ -433,14 +511,7 @@ export function createEditorView(
     pill.dataset["state"] = statusState;
     pill.append(el("span", "dot"), document.createTextNode(status));
 
-    const saveBtn = el("button", "primary", "Save");
-    saveBtn.disabled = busy;
-    saveBtn.onclick = onSave;
-    const resetBtn = el("button", "ghost", "Reset");
-    resetBtn.disabled = busy;
-    resetBtn.onclick = onReset;
-
-    bar.append(addGroup, spacer, pill, saveBtn, resetBtn);
+    bar.append(addGroup, spacer, pill, ...renderSaveArea());
     return bar;
   }
 
@@ -466,10 +537,11 @@ export function createEditorView(
   }
 
   function render(): void {
+    keepSessionAlive();
     applyAccent();
     root.textContent = "";
     root.append(renderPageBar(), renderHaBar(), renderToolbar(), createGridPane(state, render), renderFormPane());
   }
 
-  return { render };
+  return { render, refreshSession };
 }

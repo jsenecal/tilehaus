@@ -35,6 +35,7 @@ async function main(): Promise<void> {
   }
   window.addEventListener("resize", () => { view.render(); });
   view.render();
+  void view.refreshSession();
 }
 
 void main();

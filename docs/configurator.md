@@ -110,6 +110,20 @@ The **Accent** color picker in the toolbar sets a deck-wide accent used by
 the panel's built-in card colors. It previews live in the configurator page
 itself. The reset button (⟲) clears it back to the built-in default (amber).
 
+## Unlocking
+
+The panel only accepts saves while its **Configurator** switch is on in Home
+Assistant. While it is off, **Save** and **Reset** are replaced by a
+*Locked* notice; turn the switch on and they come back within a few seconds
+(or click the notice to check right away). You can keep editing while it is
+locked — nothing is lost.
+
+Your first Save claims the panel for this browser. Until the switch goes off,
+other devices see *In use from another device* in place of Save. The switch
+turns itself off after 30 minutes without use; editing in an open configurator
+counts as use once you have saved. See
+[Config API](config-api.md#unlocking-the-panel-for-writes) for the details.
+
 ## Save = reboot-to-apply
 
 **Save** validates the current deck, writes it to the device (`PUT

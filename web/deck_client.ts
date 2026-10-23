@@ -6,6 +6,17 @@ import { DISPLAY_W_DEFAULT, DISPLAY_H_DEFAULT } from "./model/grid_layout";
 
 export const DECK_MEDIA_TYPE = "application/vnd.tilehaus.deck";
 const CONFIG_URL = "/api/v1/config";
+const SESSION_URL = "/api/v1/session";
+// The session key is per panel, and the configurator is served by the panel, so
+// this origin-scoped key never mixes two panels up.
+export const SESSION_KEY_STORAGE = "tilehaus.config.key";
+
+/** Who may write: "locked" until the HA Configurator switch is on. */
+export interface SessionInfo {
+  state: "locked" | "open" | "claimed";
+  mine: boolean;           // this browser holds the claimed key
+  timeoutMinutes: number;  // idle minutes before the switch turns itself off
+}
 
 export interface LoadResult {
   cards: DeckCard[];
@@ -21,6 +32,8 @@ export interface LoadResult {
 export type SaveResult =
   | { status: "applied"; etag: string; cards: DeckCard[]; accent: number; pages: string[]; gridCols: number; gridRows: number }
   | { status: "conflict"; etag: string }
+  | { status: "locked" }   // the HA Configurator switch is off
+  | { status: "taken" }    // another client holds the session
   | { status: "error"; message: string };
 
 export interface DeckClientOptions {
@@ -28,12 +41,14 @@ export interface DeckClientOptions {
   sleep?: (ms: number) => Promise<void>;
   pollIntervalMs?: number;
   rebootTimeoutMs?: number;
+  storage?: Pick<Storage, "getItem" | "setItem" | "removeItem">;
 }
 
 export interface DeckClient {
   load(): Promise<LoadResult>;
   save(cards: DeckCard[], etag: string, accent?: number, pages?: string[], gridCols?: number, gridRows?: number): Promise<SaveResult>;
   reset(etag: string): Promise<SaveResult>;
+  session(): Promise<SessionInfo>;
 }
 
 export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
@@ -41,6 +56,45 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const pollIntervalMs = options.pollIntervalMs ?? 2000;
   const rebootTimeoutMs = options.rebootTimeoutMs ?? 60000;
+  const storage = options.storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
+
+  const readKey = (): string => {
+    try { return storage?.getItem(SESSION_KEY_STORAGE) ?? ""; } catch { return ""; }
+  };
+  const writeKey = (key: string): void => {
+    try {
+      if (key === "") storage?.removeItem(SESSION_KEY_STORAGE);
+      else storage?.setItem(SESSION_KEY_STORAGE, key);
+    } catch { /* storage unavailable: the key lives for this page only */ }
+  };
+  let key = readKey();
+  const setKey = (next: string): void => { key = next; writeKey(next); };
+  const authHeader = (): Record<string, string> => (key !== "" ? { Authorization: `Bearer ${key}` } : {});
+
+  async function session(): Promise<SessionInfo> {
+    const response = await doFetch(SESSION_URL, { method: "GET", headers: authHeader() });
+    if (!response.ok) throw new Error(`session check failed: ${response.status}`);
+    const body = await response.json() as Partial<SessionInfo>;
+    const state = body.state === "open" || body.state === "claimed" ? body.state : "locked";
+    // A key the panel no longer honours is dead: the switch was cycled.
+    if (key !== "" && body.mine !== true) setKey("");
+    return { state, mine: body.mine === true, timeoutMinutes: Number(body.timeoutMinutes) || 0 };
+  }
+
+  // Claim the open panel. Only called on a write, so opening the page to look
+  // never takes the session from whoever is about to save.
+  async function claim(): Promise<"ok" | "locked" | "taken" | string> {
+    const response = await doFetch(SESSION_URL, { method: "POST" });
+    if (response.status === 201) {
+      const body = await response.json() as { key?: unknown };
+      if (typeof body.key !== "string" || body.key === "") return "claim returned no key";
+      setKey(body.key);
+      return "ok";
+    }
+    if (response.status === 423) return "locked";
+    if (response.status === 409) return "taken";
+    return `claim failed: ${response.status}`;
+  }
 
   async function load(): Promise<LoadResult> {
     const response = await doFetch(CONFIG_URL, { method: "GET" });
@@ -77,18 +131,44 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     throw new Error("panel did not come back after reboot");
   }
 
+  function send(method: "PUT" | "DELETE", body: Uint8Array | null, etag: string): Promise<Response> {
+    const headers: Record<string, string> = { "If-Match": etag, ...authHeader() };
+    if (body !== null) headers["Content-Type"] = DECK_MEDIA_TYPE;
+    return doFetch(CONFIG_URL, {
+      method,
+      headers,
+      ...(body !== null ? { body: body as BodyInit } : {}),
+    });
+  }
+
   async function mutate(method: "PUT" | "DELETE", body: Uint8Array | null, etag: string): Promise<SaveResult> {
     let response: Response;
     try {
-      const headers: Record<string, string> = { "If-Match": etag };
-      if (body !== null) headers["Content-Type"] = DECK_MEDIA_TYPE;
-      response = await doFetch(CONFIG_URL, {
-        method,
-        headers,
-        ...(body !== null ? { body: body as BodyInit } : {}),
-      });
+      if (key === "") {
+        const claimed = await claim();
+        if (claimed === "locked" || claimed === "taken") return { status: claimed };
+        if (claimed !== "ok") return { status: "error", message: claimed };
+      }
+      response = await send(method, body, etag);
+      // A stored key from an earlier session that has since been revoked: the
+      // panel may have been reopened, so claim afresh once and retry.
+      if (response.status === 401) {
+        setKey("");
+        const claimed = await claim();
+        if (claimed === "locked" || claimed === "taken") return { status: claimed };
+        if (claimed !== "ok") return { status: "error", message: claimed };
+        response = await send(method, body, etag);
+      }
     } catch (error) {
       return { status: "error", message: String(error) };
+    }
+    if (response.status === 423) {
+      setKey("");
+      return { status: "locked" };
+    }
+    if (response.status === 401) {
+      setKey("");
+      return { status: "taken" };
     }
     if (response.status === 204) {
       try {
@@ -124,5 +204,5 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     return mutate("DELETE", null, etag);
   }
 
-  return { load, save, reset };
+  return { load, save, reset, session };
 }

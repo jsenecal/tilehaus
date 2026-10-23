@@ -63,6 +63,11 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
 - `PUT` (`Content-Type: application/vnd.tilehaus.deck` + `If-Match: "<gen>"`) →
   `204`, then the panel **reboots to apply**.
 - `DELETE` (`If-Match`) → `204`, reboots to the awaiting-config screen.
+- Writes need the panel's **Configurator** switch on in HA. The first client to
+  `POST /api/v1/session` gets a random key; PUT/DELETE then need
+  `Authorization: Bearer <key>` (`423` locked, `401` wrong key). The switch and
+  key persist across reboots and the switch turns itself off after 30 min idle.
+  `deck_cli.js` claims and caches the key itself (`~/.config/tilehaus/`).
 
 Config is applied by **reboot** — there is no live in-place rebuild (HA state
 subscriptions can't be torn down at runtime).

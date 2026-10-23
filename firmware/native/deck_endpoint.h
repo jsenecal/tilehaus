@@ -7,10 +7,12 @@
 #include <vector>
 
 #include <esp_http_server.h>
+#include <lwip/sockets.h>
 
 #include "lvgl.h"
 #include "esphome/core/application.h"
 #include "card_config.h"
+#include "config_session.h"
 #include "deck_document.h"
 #include "deck_store.h"
 #include "deck_ui_endpoint.h"
@@ -58,7 +60,115 @@ inline bool parse_etag(const char *value, uint32_t *out) {
   return true;
 }
 
+// The client's address, for the HA status text. With IPv6 enabled, IPv4
+// clients reach a dual-stack server as v4-mapped IPv6 (::ffff:a.b.c.d); those
+// print as plain v4.
+inline void peer_ip(httpd_req_t *req, char *out, size_t n) {
+  out[0] = '\0';
+  sockaddr_storage addr{};
+  socklen_t len = sizeof(addr);
+  if (getpeername(httpd_req_to_sockfd(req), reinterpret_cast<sockaddr *>(&addr), &len) != 0) return;
+  if (addr.ss_family == AF_INET) {
+    inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in *>(&addr)->sin_addr, out, n);
+  }
+#if LWIP_IPV6  // off in this panel's build; kept for boards that enable it
+  else if (addr.ss_family == AF_INET6) {
+    const uint8_t *b = reinterpret_cast<sockaddr_in6 *>(&addr)->sin6_addr.s6_addr;
+    static const uint8_t kMapped[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
+    if (std::memcmp(b, kMapped, sizeof(kMapped)) == 0) {
+      inet_ntop(AF_INET, b + 12, out, n);
+    } else {
+      inet_ntop(AF_INET6, b, out, n);
+    }
+  }
+#endif
+}
+
+// The raw Authorization value, or false when absent or too long to be ours.
+inline bool read_authorization(httpd_req_t *req, char (&buf)[64]) {
+  const size_t len = httpd_req_get_hdr_value_len(req, "Authorization");
+  if (len == 0 || len >= sizeof(buf)) return false;
+  return httpd_req_get_hdr_value_str(req, "Authorization", buf, sizeof(buf)) == ESP_OK;
+}
+
+// Gate for every write. Sends the refusal itself and returns false; on true
+// the caller carries on. Runs before the body is read: httpd discards an
+// unread body once the handler returns.
+inline bool require_session(httpd_req_t *req) {
+  char auth[64];
+  const bool has = read_authorization(req, auth);
+  switch (config_session_authorize(has ? auth : nullptr)) {
+    case AuthResult::Ok:
+      return true;
+    case AuthResult::Locked:
+      httpd_resp_set_status(req, "423 Locked");
+      httpd_resp_sendstr(req, "The configurator is locked. Turn on the Configurator switch in Home Assistant.");
+      return false;
+    case AuthResult::Unauthorized:
+      break;
+  }
+  httpd_resp_set_status(req, "401 Unauthorized");
+  httpd_resp_set_hdr(req, "WWW-Authenticate", "Bearer");
+  httpd_resp_sendstr(req, config_session_state() == LockState::Claimed
+                              ? "Another session is configuring this panel."
+                              : "Claim a session first: POST /api/v1/session.");
+  return false;
+}
+
 }  // namespace deck_endpoint_detail
+
+// GET /api/v1/session — whether the panel is locked, open or claimed, and
+// whether the caller's key (if any) is the claimed one. With a valid key this
+// counts as use, so a configurator that checks in keeps its session alive.
+inline esp_err_t session_get_handler(httpd_req_t *req) {
+  using namespace deck_endpoint_detail;
+  char auth[64];
+  const bool has = read_authorization(req, auth);
+  const bool mine = has && config_session_authorize(auth) == AuthResult::Ok;
+  const char *state = "locked";
+  switch (config_session_state()) {
+    case LockState::Locked: state = "locked"; break;
+    case LockState::Open: state = "open"; break;
+    case LockState::Claimed: state = "claimed"; break;
+  }
+  char body[96];
+  std::snprintf(body, sizeof(body), "{\"state\":\"%s\",\"mine\":%s,\"timeoutMinutes\":%lu}",
+                state, mine ? "true" : "false",
+                static_cast<unsigned long>(config_session_timeout_ms() / 60000u));
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  httpd_resp_sendstr(req, body);
+  return ESP_OK;
+}
+
+// POST /api/v1/session — claim the open panel. The first caller gets the key;
+// everyone after gets 409 until the switch is turned off and on again.
+inline esp_err_t session_post_handler(httpd_req_t *req) {
+  using namespace deck_endpoint_detail;
+  char ip[kClaimantLen];
+  peer_ip(req, ip, sizeof(ip));
+  char key[kConfigKeyHexLen + 1];
+  switch (config_session_claim(ip, key)) {
+    case ClaimResult::Granted: {
+      char body[64];
+      std::snprintf(body, sizeof(body), "{\"key\":\"%s\"}", key);
+      httpd_resp_set_status(req, "201 Created");
+      httpd_resp_set_type(req, "application/json");
+      httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+      httpd_resp_sendstr(req, body);
+      return ESP_OK;
+    }
+    case ClaimResult::Locked:
+      httpd_resp_set_status(req, "423 Locked");
+      httpd_resp_sendstr(req, "The configurator is locked. Turn on the Configurator switch in Home Assistant.");
+      return ESP_OK;
+    case ClaimResult::AlreadyClaimed:
+      break;
+  }
+  httpd_resp_set_status(req, "409 Conflict");
+  httpd_resp_sendstr(req, "Another session is configuring this panel.");
+  return ESP_OK;
+}
 
 // GET /api/v1/config — current stored document + ETag, or 204 when empty.
 inline esp_err_t deck_get_handler(httpd_req_t *req) {
@@ -86,11 +196,12 @@ inline esp_err_t deck_get_handler(httpd_req_t *req) {
 }
 
 // PUT /api/v1/config — validate + persist a deck document, then flag a live
-// apply. Binary media type + If-Match generation, mirroring the shipping
-// panel-config write endpoint.
+// apply. Needs the session key (see require_session), the binary media type
+// and an If-Match generation.
 inline esp_err_t deck_put_handler(httpd_req_t *req) {
   using namespace deck_endpoint_detail;
   char etag[16];  // must outlive the httpd_resp_send() in the branches below
+  if (!require_session(req)) return ESP_OK;
 
   // Content-Type must be the deck media type.
   {
@@ -174,6 +285,7 @@ inline esp_err_t deck_put_handler(httpd_req_t *req) {
 inline esp_err_t deck_delete_handler(httpd_req_t *req) {
   using namespace deck_endpoint_detail;
   char etag[16];
+  if (!require_session(req)) return ESP_OK;
 
   uint32_t expected = 0;
   {
@@ -216,6 +328,8 @@ inline void start_deck_server(uint16_t port = 80) {
   // The default 4 KB task stack is too tight for the deck handlers (body buffer
   // + document decode). Give it headroom so a request cannot overflow it.
   config.stack_size = 8192;
+  // The default cap is 8 URI handlers and this server registers 7.
+  config.max_uri_handlers = 12;
   if (httpd_start(&deck_httpd(), &config) != ESP_OK) {
     deck_httpd() = nullptr;
     return;
@@ -237,6 +351,18 @@ inline void start_deck_server(uint16_t port = 80) {
   delete_uri.method = HTTP_DELETE;
   delete_uri.handler = deck_delete_handler;
   httpd_register_uri_handler(deck_httpd(), &delete_uri);
+
+  httpd_uri_t session_get_uri = {};
+  session_get_uri.uri = "/api/v1/session";
+  session_get_uri.method = HTTP_GET;
+  session_get_uri.handler = session_get_handler;
+  httpd_register_uri_handler(deck_httpd(), &session_get_uri);
+
+  httpd_uri_t session_post_uri = {};
+  session_post_uri.uri = "/api/v1/session";
+  session_post_uri.method = HTTP_POST;
+  session_post_uri.handler = session_post_handler;
+  httpd_register_uri_handler(deck_httpd(), &session_post_uri);
 
   register_deck_ui_endpoints(deck_httpd());
 }

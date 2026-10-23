@@ -9,6 +9,7 @@ substitutions:
   grid_pad: "16"            # outer padding around the grid in px
   grid_subdivisions: "2"    # sub-cells per normal unit (2 = half-units)
   tile_radius: "10"         # tile corner radius in px
+  configurator_timeout: "30"  # minutes without use before the Configurator switch turns off
   mdi_font_file: "assets/materialdesignicons-webfont-7.4.47.ttf"
 
 esphome:

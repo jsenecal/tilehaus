@@ -15,9 +15,54 @@ type stores). It's compact, versioned, and decoded/encoded with the same
 codec on both the web configurator and the firmware, so what you push is
 exactly what the panel renders.
 
+## Unlocking the panel for writes
+
+Reading is always open. Writing (`PUT` and `DELETE`) needs the panel unlocked
+from Home Assistant, and only one client can write at a time:
+
+1. Turn on the panel's **Configurator** switch in Home Assistant (a config
+   entity on the device page, e.g. `switch.tilehaus_office_configurator`).
+2. The first client to claim a session (`POST /api/v1/session`) gets a random
+   128-bit key. The configurator and `deck_cli.js` claim automatically on
+   their first save.
+3. Every write must send that key as `Authorization: Bearer <key>`. Other
+   clients get `409` on a claim and `401` on a write.
+4. The session lasts until the switch goes off. Turn it off by hand to revoke
+   the key, or let it time out after **30 minutes without configurator use**
+   (a claim, a write, or a session check with the key). The timeout is the
+   `configurator_timeout` substitution, in minutes; `0` disables it.
+
+The switch and the key survive reboots, so a save (which reboots the panel)
+does not end the session. The idle timer restarts at boot.
+
+The **Configurator status** sensor shows `Locked`, `Open`, or
+`In use by <ip>`, so you can see which device holds the session.
+
+!!! warning
+    The API is plain HTTP. The lock stops other devices on your network and
+    accidental pushes from writing, but someone capturing your Wi-Fi traffic
+    could read the key while a session is open. Leave the switch off when you
+    are not configuring.
+
+### `GET /api/v1/session`
+
+```json
+{"state": "claimed", "mine": true, "timeoutMinutes": 30}
+```
+
+`state` is `locked`, `open` (unlocked, nobody has claimed it) or `claimed`.
+`mine` is true when the request's `Authorization` header carries the claimed
+key; a check with a valid key also counts as use and restarts the idle timer.
+
+### `POST /api/v1/session`
+
+- **201 Created** — `{"key": "<32 hex chars>"}`. Keep it; it is not shown again.
+- **409 Conflict** — another client already holds the session.
+- **423 Locked** — the Configurator switch is off.
+
 ## Endpoints
 
-All three verbs live at `/api/v1/config`.
+The config itself lives at `/api/v1/config`.
 
 ### `GET /api/v1/config`
 
@@ -40,7 +85,9 @@ Response headers on every GET:
 
 Writes a new document.
 
-- Request headers: `Content-Type: application/vnd.tilehaus.deck`, `If-Match:
+- Request headers: `Authorization: Bearer <key>` (see
+  [Unlocking the panel](#unlocking-the-panel-for-writes)),
+  `Content-Type: application/vnd.tilehaus.deck`, `If-Match:
   "<generation>"` (required — the generation you last read via `GET`).
 - **204 No Content** on success, with a new `ETag`. The panel then reboots to
   apply the new deck.
@@ -48,10 +95,12 @@ Writes a new document.
   generation (someone else changed it first) — re-`GET` and retry.
 - **400/415/428** on a malformed body, wrong content type, or a missing/bad
   `If-Match`.
+- **401 Unauthorized** without the session key; **423 Locked** while the
+  Configurator switch is off. Both are checked before anything else.
 
 ### `DELETE /api/v1/config`
 
-Clears the stored deck (guarded by `If-Match`, same rules as `PUT`).
+Clears the stored deck (needs the session key and `If-Match`, same rules as `PUT`).
 
 - **204 No Content** on success. The panel reboots to the "Awaiting
   Configuration" screen.
@@ -87,10 +136,17 @@ node scripts/deck_cli.js <status|push <spec.json>|reset|build <spec.json> <out.b
 - `push <spec.json>` — encode a deck spec and PUT it (using the current
   ETag), then poll until the panel is back up.
 - `reset` — DELETE the stored config.
+- `session` — show whether the panel is locked, open or claimed, and whether
+  this machine holds the session.
 - `build <spec.json> <out.bin>` — encode a spec to a `.bin` file offline
   (with a round-trip decode check), without talking to a device.
 
 `--device <ip>` targets a specific panel; it defaults to `192.168.252.221`.
+
+`push` and `reset` need the Configurator switch on. The first one claims the
+session and caches its key per device in `~/.config/tilehaus/sessions.json`
+(or under `$XDG_CONFIG_HOME`), so later pushes reuse it until the switch goes
+off. `--key <hex>` uses a key you already have instead.
 
 ### Deck JSON shape
 
