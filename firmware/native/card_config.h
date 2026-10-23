@@ -9,7 +9,8 @@ enum class CardType {
   Presence, Weather, Scene, Button, Lock, Header, Climate, Wled, DoorWindow,
   NumberSlider, OptionSelect, Fan, Alarm, WeatherForecast,
   Camera,  // reserved (20): card removed; keeps Page/Back at 21/22
-  Page, Back
+  Page, Back,
+  Action  // 23: script / automation / scene / button, or an HA event
 };
 
 struct CardConfig {

@@ -51,6 +51,7 @@ inline std::unique_ptr<Card> make_card(CardType type) {
     // tile falls through to the Blank default below.
     case CardType::Page: return std::unique_ptr<Card>(new PageCard());
     case CardType::Back: return std::unique_ptr<Card>(new BackCard());
+    case CardType::Action: return std::unique_ptr<Card>(new ActionCard());
     default: return std::unique_ptr<Card>(new BlankCard());
   }
 }

@@ -114,4 +114,12 @@ export function runDeckCodecTests(): void {
     assert(doc.gridCols === 10 && doc.gridRows === 6, "v5 defaults to 10x6");
     assert(doc.pages.length === 2, "v5 pages still decode");
   }
+
+  // --- Action (23) is the highest type; 24 is not one ---
+  {
+    const action: DeckCard = { ...BASIC[1]!, type: 23, entity: "", entity2: "doorbell" };
+    const doc = decodeDeckDocument(encodeDeck([action]));
+    assert(doc.cards[0]!.type === 23 && doc.cards[0]!.entity2 === "doorbell", "Action round-trips");
+    throws(() => encodeDeck([{ ...action, type: 24 }]), "type 24 rejected");
+  }
 }

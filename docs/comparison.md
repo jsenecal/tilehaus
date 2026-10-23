@@ -17,15 +17,16 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 22 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 23 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
 |---|:-:|:-:|---|
 | Lights (brightness / switch / temperature / full control) | ✓ | ✓ | Tilehaus: **Light (slider)** + **Light (control)** with a colour/temperature modal and follow-colour tinting |
 | Switches / plugs | ✓ | ✓ | Tilehaus: **Toggle** |
-| Scenes / scripts / buttons | ✓ | ◑ | Tilehaus: **Scene** (`scene.turn_on`) + **Button** (`button.press`); no generic script/automation action card |
-| Webhook / Trigger / Push / Local action | ✓ | ✗ | — |
+| Scenes / scripts / buttons | ✓ | ✓ | Tilehaus: **Action** runs a script (tinting while it runs), triggers an automation, activates a scene or presses a button; **Scene** and **Button** remain |
+| Trigger (fire an HA event) | ✓ | ✓ | Tilehaus: an **Action** tile with no entity fires `esphome.tilehaus_action` |
+| Webhook / Push / Local action | ✓ | ✗ | — |
 | Option select | ✓ | ✓ | |
 | Sensor | ✓ | ✓ | |
 | Local sensor (on-device) | ✓ | ✗ | |

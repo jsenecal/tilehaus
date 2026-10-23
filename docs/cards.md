@@ -39,6 +39,28 @@ editor.
 | 20 | Camera | **Reserved — removed.** Not offered in the configurator's type list. A deck that somehow stores this value renders as a Blank tile instead. | — |
 | 21 | Page | Navigation tile: tap opens another page. Can optionally track an entity for an on/off tint, like Toggle. | Tracked entity (Entity, optional), Target page (Entity 2, picked from existing pages) |
 | 22 | Back | Navigation tile that pops back to the previous page. Every new page starts with one so it's never a dead end. | Title only — no Entity field |
+| 23 | Action | Momentary tile, like Scene. The entity's domain picks what a tap does: runs a `script` (and tints while it runs), triggers an `automation`, activates a `scene`, presses a `button`/`input_button`, or turns anything else on. With no entity it fires an `esphome.tilehaus_action` event — see [Action events](#action-events). | Script, automation, scene or button (Entity, optional), Event name (Entity 2) |
+
+## Action events
+
+An Action tile with no entity fires a Home Assistant event instead of calling
+a service, so a tap can drive any automation without a helper entity. The
+event is `esphome.tilehaus_action`, with:
+
+| Field | Value |
+|---|---|
+| `action` | The tile's **Event name**, or its Title when that is blank |
+| `panel` | The panel's ESPHome name, e.g. `tilehaus-office` |
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: esphome.tilehaus_action
+    event_data:
+      action: doorbell_chime
+```
+
+Add `panel: tilehaus-office` to `event_data` to react to one panel only.
 
 ## Weather helpers
 
@@ -170,7 +192,7 @@ flags are type-specific:
 
 | Flag | Applies to | Effect |
 |------|-----------|--------|
-| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22) | Shows only the icon, no name text. |
+| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23) | Shows only the icon, no name text. |
 | **Detail chevron** | Toggle, Light (slider), Cover, Number slider, Fan (2, 3, 5, 15, 17) | Adds a corner button opening the entity's detail popup. |
 | **Follow colour** | Light (slider), Light (control) (3, 4) | Tints the tile (and its modal/sliders) to the light's actual color instead of the fixed active colour. |
 | **Show weather** | Header (11) | Shows the weather glyph + temperature; off = text-only header. |
