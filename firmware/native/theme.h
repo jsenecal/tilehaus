@@ -61,123 +61,6 @@ inline lv_obj_t *add_ink_bar(lv_obj_t *parent, int w, int h) {
   return bar;
 }
 
-// Corner brackets: a light tile (lime when on, a pale follow colour) gets dark
-// L-shaped marks in its four corners, where rounded corners used to be. Drawn
-// in the post pass so they sit above the tile's content, and decided per frame
-// from the tile's current fill, so they come and go with state (and ride the
-// colour transition) without any card having to know about them.
-inline constexpr int kCornerArm = 6;     // length of each bracket arm
-inline constexpr int kCornerThick = 2;   // stroke weight
-
-inline bool &night_mode();
-
-// Bracket corners, as bits: which of a box's corners get a mark.
-enum : uint8_t { kCornerTL = 1, kCornerTR = 2, kCornerBL = 4, kCornerBR = 8,
-                 kCornersTop = 3, kCornersBottom = 12, kCornersAll = 15 };
-
-inline void draw_corner_marks(lv_layer_t *layer, const lv_area_t &a,
-                              uint8_t corners) {
-  auto rect = [&](int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
-    fill_rect(layer, lv_area_t{x1, y1, x2, y2}, kInk);
-  };
-  const int32_t L = kCornerArm - 1, T = kCornerThick - 1;
-  if (corners & kCornerTL) {  // ┌
-    rect(a.x1, a.y1, a.x1 + L, a.y1 + T);
-    rect(a.x1, a.y1, a.x1 + T, a.y1 + L);
-  }
-  if (corners & kCornerTR) {  // ┐
-    rect(a.x2 - L, a.y1, a.x2, a.y1 + T);
-    rect(a.x2 - T, a.y1, a.x2, a.y1 + L);
-  }
-  if (corners & kCornerBL) {  // └
-    rect(a.x1, a.y2 - T, a.x1 + L, a.y2);
-    rect(a.x1, a.y2 - L, a.x1 + T, a.y2);
-  }
-  if (corners & kCornerBR) {  // ┘
-    rect(a.x2 - L, a.y2 - T, a.x2, a.y2);
-    rect(a.x2 - T, a.y2 - L, a.x2, a.y2);
-  }
-}
-
-// The fill of `part` right now, if it is opaque and light enough to mark.
-inline bool part_is_light(lv_obj_t *obj, lv_part_t part) {
-  uint32_t rgb;
-  if (!opaque_bg(obj, part, &rgb)) return false;
-  if (lv_obj_get_style_opa(obj, part) < LV_OPA_50) return false;
-  return needs_dark_ink(rgb);
-}
-
-// Tiles, buttons, option tiles: marks while the object's own fill is light.
-inline void corner_marks_draw_cb(lv_event_t *e) {
-  if (night_mode()) return;  // a day-page detail; night keeps plain tiles
-  lv_obj_t *obj = lv_event_get_target_obj(e);
-  if (!part_is_light(obj, LV_PART_MAIN)) return;
-  lv_area_t a;
-  lv_obj_get_coords(obj, &a);
-  draw_corner_marks(lv_event_get_layer(e), a, kCornersAll);
-}
-
-// Idempotent: a tile can reach this through more than one shared style (an
-// action tile is both a cell and a flashing button).
-inline void add_corner_marks(lv_obj_t *obj) {
-  lv_obj_remove_event_cb(obj, corner_marks_draw_cb);
-  lv_obj_add_event_cb(obj, corner_marks_draw_cb, LV_EVENT_DRAW_POST, nullptr);
-}
-
-// A tile whose light part is a child panel (the cover tile's shade, hanging
-// from the top): mark the tile's corners that the panel covers, while light.
-inline void fill_marks_draw_cb(lv_event_t *e) {
-  if (night_mode()) return;
-  lv_obj_t *cell = lv_event_get_target_obj(e);
-  auto *fill = static_cast<lv_obj_t *>(lv_event_get_user_data(e));
-  if (!fill || lv_obj_has_flag(fill, LV_OBJ_FLAG_HIDDEN)) return;
-  if (!part_is_light(fill, LV_PART_MAIN)) return;
-  lv_area_t a, f;
-  lv_obj_get_coords(cell, &a);
-  lv_obj_get_coords(fill, &f);
-  auto covers = [&](int32_t x, int32_t y) {
-    return x >= f.x1 && x <= f.x2 && y >= f.y1 && y <= f.y2;
-  };
-  uint8_t corners = 0;
-  if (covers(a.x1, a.y1)) corners |= kCornerTL;
-  if (covers(a.x2, a.y1)) corners |= kCornerTR;
-  if (covers(a.x1, a.y2)) corners |= kCornerBL;
-  if (covers(a.x2, a.y2)) corners |= kCornerBR;
-  if (corners) draw_corner_marks(lv_event_get_layer(e), a, corners);
-}
-
-inline void add_fill_corner_marks(lv_obj_t *cell, lv_obj_t *fill) {
-  lv_obj_add_event_cb(cell, fill_marks_draw_cb, LV_EVENT_DRAW_POST, fill);
-}
-
-// Fill sliders: the light part is the fill (indicator), which only reaches
-// some corners. A vertical fill grows from the bottom: the bottom corners sit
-// on the fill once there is any, the top corners only when it is full; a
-// horizontal one grows from the left. Corners the fill doesn't reach are
-// judged on the track instead.
-inline void slider_marks_draw_cb(lv_event_t *e) {
-  if (night_mode()) return;
-  lv_obj_t *s = lv_event_get_target_obj(e);
-  const int32_t v = lv_slider_get_value(s);
-  const bool any = v > lv_slider_get_min_value(s);
-  const bool full = v >= lv_slider_get_max_value(s);
-  const bool fill_light = part_is_light(s, LV_PART_INDICATOR);
-  const bool track_light = part_is_light(s, LV_PART_MAIN);
-  lv_area_t a;
-  lv_obj_get_coords(s, &a);
-  const bool vertical = lv_area_get_height(&a) > lv_area_get_width(&a);
-  const uint8_t near = vertical ? kCornersBottom : (kCornerTL | kCornerBL);
-  const uint8_t far = kCornersAll & ~near;
-  uint8_t corners = 0;
-  if (any ? fill_light : track_light) corners |= near;
-  if (full ? fill_light : track_light) corners |= far;
-  if (corners) draw_corner_marks(lv_event_get_layer(e), a, corners);
-}
-
-inline void add_slider_corner_marks(lv_obj_t *slider) {
-  lv_obj_add_event_cb(slider, slider_marks_draw_cb, LV_EVENT_DRAW_POST, nullptr);
-}
-
 // No rounded corners anywhere. LVGL's default theme rounds what it styles —
 // slider tracks and knobs, arc ends, dropdown lists, buttons, plain objects —
 // so this theme sits on top of it and squares every part of every widget as
@@ -307,10 +190,6 @@ inline void apply_theme() {
     retheme(scr, true);
   }
   retheme(lv_layer_top());
-  // Corner brackets are drawn per frame from night_mode(), not stored in any
-  // style, so recolouring alone would not repaint them.
-  lv_obj_invalidate(lv_layer_top());
-  if (lv_obj_t *scr = lv_screen_active()) lv_obj_invalidate(scr);
 }
 
 inline void set_night_mode(bool on) {

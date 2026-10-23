@@ -101,7 +101,6 @@ struct CoverCard : Card {
     lv_obj_align(fill_, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_SCROLLABLE);
-    add_fill_corner_marks(cell, fill_);  // tile corners the shade reaches
 
     // Transparent full-tile slider for input (only fill_ is drawn). Vertical so
     // dragging up increases the closed percent (shade comes down).

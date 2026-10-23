@@ -118,7 +118,6 @@ struct CoverModal {
     lv_obj_align(fill_, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(fill_, LV_OBJ_FLAG_SCROLLABLE);
-    add_fill_corner_marks(win, fill_);  // window corners the shade reaches
 
     val_ = lv_label_create(win);
     if (fonts_.value) lv_obj_set_style_text_font(val_, fonts_.value, 0);
