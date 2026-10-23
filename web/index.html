@@ -88,7 +88,8 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       }
       .toolbar .spacer { flex: 1 1 auto; }
-      .add-group { display: flex; gap: 0.4rem; align-items: center; }
+      .add-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+      .toolbar .actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
       .accent-picker { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-dim); }
       .accent-picker input[type="color"] { width: 30px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--input); cursor: pointer; }
       .accent-picker button { padding: 0.35rem 0.5rem; }

@@ -111,6 +111,22 @@ The **Accent** color picker in the toolbar sets a deck-wide accent used by
 the panel's built-in card colors. It previews live in the configurator page
 itself. The reset button (⟲) clears it back to the built-in default (amber).
 
+## Undo and backups
+
+- **Undo / Redo** (or <kbd>Ctrl</kbd>+<kbd>Z</kbd> and
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) step through your edits since
+  the page loaded. A burst of typing or a colour drag counts as one step.
+  Inside a text field, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the text instead.
+  Undo also brings back a deck you just reset — press Save to put it back on
+  the panel.
+- **Export** downloads the deck as JSON (`tilehaus-office-2026-10-23.json`).
+  It is the same spec `scripts/deck_cli.js push` takes.
+- **Import** loads a JSON file into the editor. It is checked first, so a
+  file the panel would reject is refused with the reason. Nothing reaches the
+  panel until you press Save, and Undo reverts the import. Use Export on one
+  panel and Import on another to copy a layout.
+- Closing the tab with unsaved changes asks for confirmation.
+
 ## Unlocking
 
 The panel only accepts saves while its **Configurator** switch is on in Home

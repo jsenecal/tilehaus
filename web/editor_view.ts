@@ -8,6 +8,8 @@ import { createIconPicker } from "./icon_picker";
 import { iconGlyphForEntity } from "./icon_from_entity";
 import { UI_ICON_PATHS } from "./icon_catalog";
 import { iconSvg } from "./icon_svg";
+import { createHistory, type DeckSnapshot } from "./history";
+import { BackupError, backupFileName, exportSpec, parseSpec } from "./backup";
 import { cardFieldDefs, cardFlagDefs, fieldValue, flagValue, matchEntities, patchForField, patchForFlag } from "./card_fields";
 import { gridLimits } from "./model/grid_layout";
 
@@ -38,6 +40,99 @@ export function createEditorView(
   let statusState: StatusState = "idle";
   let busy = false;
   let session: SessionInfo | null = null;
+
+  // ---- Undo, and what's unsaved ----
+  const history = createHistory();
+  const snapshot = (): DeckSnapshot => ({
+    cards: state.cards, pages: state.pages, accent: state.accent,
+    gridCols: state.gridCols, gridRows: state.gridRows,
+  });
+  const serialized = (): string => JSON.stringify(snapshot());
+  let savedDeck: string | null = null;  // the deck as the panel has it; null until first render
+  let undoBtn: HTMLButtonElement | null = null;
+  let redoBtn: HTMLButtonElement | null = null;
+
+  function syncHistory(): void {
+    history.checkpoint(snapshot());
+    if (undoBtn !== null) undoBtn.disabled = busy || !history.canUndo();
+    if (redoBtn !== null) redoBtn.disabled = busy || !history.canRedo();
+  }
+
+  function restore(deck: DeckSnapshot): void {
+    state.cards = deck.cards;
+    state.pages = deck.pages;
+    state.accent = deck.accent;
+    state.gridCols = deck.gridCols;
+    state.gridRows = deck.gridRows;
+    if (state.currentPage >= state.pages.length) state.currentPage = 0;
+    if (state.selected !== null && state.selected >= state.cards.length) state.selected = null;
+  }
+
+  function onUndo(): void {
+    const deck = history.undo();
+    if (deck === null) return;
+    restore(deck);
+    render();
+  }
+  function onRedo(): void {
+    const deck = history.redo();
+    if (deck === null) return;
+    restore(deck);
+    render();
+  }
+
+  // Field edits update the state without re-rendering (to keep focus), so
+  // record after every input event too. Root listeners run after the field's.
+  root.addEventListener("input", syncHistory);
+  root.addEventListener("change", syncHistory);
+
+  // Text fields keep the browser's own undo; everywhere else Ctrl/Cmd+Z is ours.
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const t = e.target;
+    if (t instanceof HTMLInputElement && t.type !== "checkbox" && t.type !== "color") return;
+    if (t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+    const key = e.key.toLowerCase();
+    if (key === "z" && !e.shiftKey) { e.preventDefault(); onUndo(); }
+    else if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); onRedo(); }
+  });
+
+  window.addEventListener("beforeunload", (e) => {
+    if (savedDeck !== null && serialized() !== savedDeck) e.preventDefault();
+  });
+
+  // ---- Backup ----
+  function onExport(): void {
+    const blob = new Blob([exportSpec(snapshot())], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = backupFileName(window.location.hostname, new Date());
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); }, 0);
+    setStatus(`Exported ${a.download}`, "ok");
+  }
+
+  const importInput = document.createElement("input");
+  importInput.type = "file";
+  importInput.accept = ".json,application/json";
+  importInput.onchange = () => {
+    const file = importInput.files?.[0];
+    importInput.value = "";  // choosing the same file again still fires
+    if (file === undefined) return;
+    void file.text().then((text) => {
+      let deck: DeckSnapshot;
+      try {
+        deck = parseSpec(text);
+      } catch (error) {
+        setStatus(error instanceof BackupError ? `Not imported: ${error.message}` : `Not imported: ${String(error)}`, "err");
+        return;
+      }
+      restore(deck);
+      state.currentPage = 0;
+      state.selected = null;
+      setStatus(`Imported ${file.name} — press Save to send it to the panel (Undo reverts)`, "warn");
+    });
+  };
   let lastCheckIn = 0;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   const BLOCKED_POLL_MS = 4000;
@@ -93,6 +188,7 @@ export function createEditorView(
       if (state.selected !== null && state.selected >= state.cards.length) {
         state.selected = state.cards.length > 0 ? state.cards.length - 1 : null;
       }
+      savedDeck = serialized();
       setStatus("Applied — panel updated", "ok");
     } else if (result.status === "conflict") {
       state.etag = result.etag;
@@ -468,6 +564,14 @@ export function createEditorView(
     addBtn.onclick = () => { addCard(state, Number(picker.value)); render(); };
     addGroup.append(picker, addBtn);
 
+    undoBtn = el("button", "ghost", "Undo");
+    undoBtn.title = "Undo (Ctrl+Z)";
+    undoBtn.onclick = onUndo;
+    redoBtn = el("button", "ghost", "Redo");
+    redoBtn.title = "Redo (Ctrl+Shift+Z)";
+    redoBtn.onclick = onRedo;
+    addGroup.append(undoBtn, redoBtn);
+
     const arrangeBtn = el("button", "ghost", "Auto-arrange");
     arrangeBtn.title = "Repack tiles to the top-left, clearing gaps";
     arrangeBtn.onclick = () => { autoArrange(state); render(); };
@@ -513,7 +617,18 @@ export function createEditorView(
     pill.dataset["state"] = statusState;
     pill.append(el("span", "dot"), document.createTextNode(status));
 
-    bar.append(addGroup, spacer, pill, ...renderSaveArea());
+    const exportBtn = el("button", "ghost", "Export");
+    exportBtn.title = "Download this deck as a JSON backup (also pushable with deck_cli.js)";
+    exportBtn.onclick = onExport;
+    const importBtn = el("button", "ghost", "Import");
+    importBtn.title = "Load a JSON backup into the editor; nothing reaches the panel until Save";
+    importBtn.disabled = busy;
+    importBtn.onclick = () => { importInput.click(); };
+
+    // One group, so backup, status and Save wrap together rather than apart.
+    const actions = el("div", "actions");
+    actions.append(exportBtn, importBtn, pill, ...renderSaveArea());
+    bar.append(addGroup, spacer, actions);
     return bar;
   }
 
@@ -539,10 +654,12 @@ export function createEditorView(
   }
 
   function render(): void {
+    if (savedDeck === null) savedDeck = serialized();  // first render: the deck as loaded
     keepSessionAlive();
     applyAccent();
     root.textContent = "";
     root.append(renderPageBar(), renderHaBar(), renderToolbar(), createGridPane(state, render), renderFormPane());
+    syncHistory();  // after the toolbar exists, so Undo/Redo get their state
   }
 
   return { render, refreshSession };
