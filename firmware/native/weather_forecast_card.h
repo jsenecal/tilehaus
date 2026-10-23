@@ -80,8 +80,8 @@ struct WeatherForecastCard : Card {
       // line fixes the height but overruns the width without this.
       const lv_font_t *tf = stack_hilo_ ? fonts_.body
                                         : (fonts_.small ? fonts_.small : fonts_.body);
-      add_label(col, tf, 0xC8C8C8, f[0].c_str());   // weekday
-      add_label(col, fonts_.icon, 0xFFFFFF, weather_glyph(f[1]));  // condition
+      add_label(col, tf, kTileInkSoft, f[0].c_str());   // weekday
+      add_label(col, fonts_.icon, kTileInk, weather_glyph(f[1]));  // condition
       char hi[16], lo[16];
       std::snprintf(hi, sizeof(hi), "%s\xC2\xB0", f[2].c_str());
       // On one line the low carries the separator so the pair reads "22°/20°"
@@ -89,8 +89,8 @@ struct WeatherForecastCard : Card {
       std::snprintf(lo, sizeof(lo), "%s%s\xC2\xB0", stack_hilo_ ? "" : "/",
                     f[3].c_str());
       if (stack_hilo_) {
-        add_label(col, tf, 0xFFFFFF, hi);  // high
-        add_label(col, tf, 0x909090, lo);  // low
+        add_label(col, tf, kTileInk, hi);  // high
+        add_label(col, tf, kTileInkFaint, lo);  // low
       } else {
         // Short tile: the pair shares a line, saving a whole row. Kept as two
         // labels rather than one string so the high stays white and the low
@@ -104,8 +104,8 @@ struct WeatherForecastCard : Card {
         lv_obj_set_flex_align(hl, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_column(hl, 0, 0);
-        add_label(hl, tf, 0xFFFFFF, hi);   // "22°"
-        add_label(hl, tf, 0x909090, lo);   // "/20°" — slash carried by the low
+        add_label(hl, tf, kTileInk, hi);   // "22°"
+        add_label(hl, tf, kTileInkFaint, lo);   // "/20°" — slash carried by the low
       }
     }
   }

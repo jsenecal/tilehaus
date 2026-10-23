@@ -55,7 +55,7 @@ struct ClimateDropdown {
 
     lv_obj_t *cap = lv_label_create(box);
     if (fonts.body) lv_obj_set_style_text_font(cap, fonts.body, 0);
-    lv_obj_set_style_text_color(cap, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(cap, lv_color_hex(kTileInkDim), 0);
     lv_label_set_text(cap, caption);
 
     dd_ = lv_dropdown_create(box);
@@ -72,10 +72,10 @@ struct ClimateDropdown {
     if (fonts.body) lv_obj_set_style_text_font(dd_, fonts.body, 0);
     lv_obj_set_style_bg_color(dd_, lv_color_hex(kControlBg), 0);
     lv_obj_set_style_bg_opa(dd_, LV_OPA_COVER, 0);
-    lv_obj_set_style_text_color(dd_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(dd_, lv_color_hex(kTileInk), 0);
     lv_obj_set_style_text_align(dd_, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_set_style_border_width(dd_, 1, 0);
-    lv_obj_set_style_border_color(dd_, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_color(dd_, lv_color_hex(kHairline), 0);
     lv_obj_set_style_pad_ver(dd_, 16, 0);
     lv_obj_set_style_pad_right(dd_, 16, 0);
     // Leave room on the left for the icon that sits inside the button.
@@ -88,7 +88,7 @@ struct ClimateDropdown {
     if (!icons_.empty()) {
       icon_lbl_ = lv_label_create(dd_);
       if (fonts.icon) lv_obj_set_style_text_font(icon_lbl_, fonts.icon, 0);
-      lv_obj_set_style_text_color(icon_lbl_, lv_color_hex(0x808080), 0);
+      lv_obj_set_style_text_color(icon_lbl_, lv_color_hex(kStroke), 0);
       lv_label_set_text(icon_lbl_, icons_[0].c_str());
       lv_obj_align(icon_lbl_, LV_ALIGN_LEFT_MID, -60, 0);
     }
@@ -97,8 +97,8 @@ struct ClimateDropdown {
     lv_obj_t *list = lv_dropdown_get_list(dd_);
     if (list) {
       lv_obj_set_style_bg_color(list, lv_color_hex(kControlBg), 0);
-      lv_obj_set_style_text_color(list, lv_color_hex(0xFFFFFF), 0);
-      lv_obj_set_style_border_color(list, lv_color_hex(0x444444), 0);
+      lv_obj_set_style_text_color(list, lv_color_hex(kTileInk), 0);
+      lv_obj_set_style_border_color(list, lv_color_hex(kHairline), 0);
       // Clip children to the rounded rect so the option highlight doesn't paint
       // a square corner over the list's rounded top-left.
       if (fonts.body) lv_obj_set_style_text_font(list, fonts.body, 0);
@@ -106,7 +106,7 @@ struct ClimateDropdown {
       // Highlight the pressed/selected option in the HA rust tone.
       lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
                               LV_PART_SELECTED | LV_STATE_CHECKED);
-      lv_obj_set_style_bg_color(list, lv_color_hex(0xB5451B),
+      lv_obj_set_style_bg_color(list, lv_color_hex(kHeatAccent),
                                 LV_PART_SELECTED | LV_STATE_CHECKED);
     }
   }

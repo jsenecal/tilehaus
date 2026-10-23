@@ -20,7 +20,7 @@ struct AlarmCard : Card {
   lv_obj_t *state_lbl_ = nullptr;
   CardFonts fonts_{};
   std::string entity_, title_, icon_on_, icon_off_;
-  uint32_t on_color_ = 0xB23B3B;  // red while armed
+  uint32_t on_color_ = kStateArmed;  // red while armed
   uint32_t off_color_ = kTileBg;
   std::unique_ptr<AlarmModal> modal_;
 
@@ -56,12 +56,12 @@ struct AlarmCard : Card {
     icon_off_ = cfg.icon_alt.empty() ? cfg.icon : cfg.icon_alt;
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
-    on_color_ = resolve_color(cfg.active_color, 0xB23B3B);
+    on_color_ = resolve_color(cfg.active_color, kStateArmed);
     off_color_ = resolve_color(cfg.inactive_color, kTileBg);
 
     state_lbl_ = lv_label_create(cell);
     if (fonts.body) lv_obj_set_style_text_font(state_lbl_, fonts.body, 0);
-    lv_obj_set_style_text_color(state_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(state_lbl_, lv_color_hex(kTileInk), 0);
     lv_obj_center(state_lbl_);
     lv_label_set_text(state_lbl_, "");
 

@@ -43,17 +43,17 @@ struct TemperatureTab {
     lv_obj_align(slider_, LV_ALIGN_CENTER, 0, 0);
     // Track: warm -> cool horizontal gradient; indicator hidden; visible knob.
     lv_obj_set_style_bg_opa(slider_, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(slider_, lv_color_hex(0xFF8C2A), LV_PART_MAIN);
-    lv_obj_set_style_bg_grad_color(slider_, lv_color_hex(0xCFE0FF), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(slider_, lv_color_hex(kKelvinWarmEnd), LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_color(slider_, lv_color_hex(kKelvinCoolEnd), LV_PART_MAIN);
     lv_obj_set_style_bg_grad_dir(slider_, LV_GRAD_DIR_HOR, LV_PART_MAIN);
     lv_obj_set_style_opa(slider_, LV_OPA_TRANSP, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(slider_, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+    lv_obj_set_style_bg_color(slider_, lv_color_hex(kTileInk), LV_PART_KNOB);
     lv_obj_set_style_bg_opa(slider_, LV_OPA_COVER, LV_PART_KNOB);
     lv_obj_set_style_pad_all(slider_, 6, LV_PART_KNOB);
     glide_.attach(slider_);
 
     lbl_ = lv_label_create(panel);
-    lv_obj_set_style_text_color(lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(lbl_, lv_color_hex(kTileInk), 0);
     if (fonts.value) lv_obj_set_style_text_font(lbl_, fonts.value, 0);
     // Fixed width + centered text so the readout stays centered over the slider
     // as its content changes.

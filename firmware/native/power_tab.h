@@ -36,7 +36,7 @@ struct PowerTab {
     style_button_feedback(btn_, toggle_color(false), toggle_color(true));
     lv_obj_t *g = lv_label_create(btn_);
     if (fonts.icon) lv_obj_set_style_text_font(g, fonts.icon, 0);
-    lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(kTileInk), 0);
     lv_label_set_text(g, "\U000F0425");  // mdi-power
     lv_obj_center(g);
     lv_obj_add_event_cb(btn_, [](lv_event_t *e) {

@@ -49,7 +49,7 @@ struct LevelsTab {
 
     lv_obj_t *cap = lv_label_create(panel);
     if (fonts.body) lv_obj_set_style_text_font(cap, fonts.body, 0);
-    lv_obj_set_style_text_color(cap, lv_color_hex(0xB0B0B0), 0);
+    lv_obj_set_style_text_color(cap, lv_color_hex(kTileInkDim), 0);
     lv_label_set_text(cap, caption);
     lv_obj_set_style_pad_top(cap, n_ > 1 ? 16 : 0, 0);  // group gap before row
 
@@ -67,7 +67,7 @@ struct LevelsTab {
     // so touches fall through); flashes on change, fades via hide_cb.
     row->val = lv_label_create(sl);
     if (fonts.medium) lv_obj_set_style_text_font(row->val, fonts.medium, 0);
-    lv_obj_set_style_text_color(row->val, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(row->val, lv_color_hex(kTileInk), 0);
     lv_obj_center(row->val);
     lv_obj_set_style_opa(row->val, LV_OPA_TRANSP, 0);
     lv_label_set_text(row->val, "");

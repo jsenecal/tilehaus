@@ -72,7 +72,7 @@ struct TabbedModal {
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, user_data);
     lv_obj_t *g = lv_label_create(b);
     if (icon_font) lv_obj_set_style_text_font(g, icon_font, 0);
-    lv_obj_set_style_text_color(g, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(kTileInk), 0);
     lv_label_set_text(g, glyph);
     lv_obj_center(g);
     return b;

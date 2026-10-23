@@ -39,7 +39,7 @@ inline void splash_build(const CardFonts &fonts) {
   s.overlay = lv_obj_create(lv_layer_top());  // above the page and any modal
   lv_obj_remove_style_all(s.overlay);
   lv_obj_set_size(s.overlay, LV_PCT(100), LV_PCT(100));
-  lv_obj_set_style_bg_color(s.overlay, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_color(s.overlay, lv_color_hex(kBlack), 0);
   lv_obj_set_style_bg_opa(s.overlay, LV_OPA_COVER, 0);
   lv_obj_clear_flag(s.overlay, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(s.overlay, LV_OBJ_FLAG_CLICKABLE);  // swallow taps while up
@@ -54,9 +54,9 @@ inline void splash_build(const CardFonts &fonts) {
   lv_obj_set_style_pad_row(box, 16, 0);
   lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
 
-  s.icon = splash_label(box, fonts.icon, 0xFFFFFF);
-  s.title = splash_label(box, fonts.medium, 0xFFFFFF);
-  s.sub = splash_label(box, fonts.body, 0xB0B0B0);
+  s.icon = splash_label(box, fonts.icon, kTileInk);
+  s.title = splash_label(box, fonts.medium, kTileInk);
+  s.sub = splash_label(box, fonts.body, kTileInkDim);
 }
 
 // Update any of the three lines; pass nullptr to leave a line unchanged.

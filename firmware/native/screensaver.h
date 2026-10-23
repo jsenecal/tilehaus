@@ -47,7 +47,7 @@ inline void screensaver_build(const CardFonts &fonts) {
   s.overlay = lv_obj_create(lv_layer_top());
   lv_obj_remove_style_all(s.overlay);
   lv_obj_set_size(s.overlay, LV_PCT(100), LV_PCT(100));
-  lv_obj_set_style_bg_color(s.overlay, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_color(s.overlay, lv_color_hex(kBlack), 0);
   lv_obj_set_style_bg_opa(s.overlay, LV_OPA_COVER, 0);
   lv_obj_clear_flag(s.overlay, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(s.overlay, LV_FLEX_FLOW_COLUMN);
@@ -75,12 +75,12 @@ inline void screensaver_build(const CardFonts &fonts) {
   // clock_xl, not value: fonts.value is 55px, sized to fill a tile's value slot,
   // which reads tiny across a 1024x600 screen.
   if (fonts.clock_xl) lv_obj_set_style_text_font(s.time_lbl, fonts.clock_xl, 0);
-  lv_obj_set_style_text_color(s.time_lbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(s.time_lbl, lv_color_hex(kTileInk), 0);
   lv_label_set_text(s.time_lbl, "--:--");
 
   s.date_lbl = lv_label_create(stack);
   if (fonts.medium) lv_obj_set_style_text_font(s.date_lbl, fonts.medium, 0);
-  lv_obj_set_style_text_color(s.date_lbl, lv_color_hex(0xB0B0B0), 0);
+  lv_obj_set_style_text_color(s.date_lbl, lv_color_hex(kTileInkDim), 0);
   lv_label_set_text(s.date_lbl, "");
 
   lv_obj_add_flag(s.overlay, LV_OBJ_FLAG_HIDDEN);

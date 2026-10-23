@@ -134,7 +134,7 @@ struct OptionListTab {
       // which is what made the start of each scroll stall.
       lv_obj_set_style_bg_color(r, lv_color_hex(kPressedBg), LV_STATE_PRESSED);
       lv_obj_set_style_bg_color(r, lv_color_hex(tile_on_color()), LV_STATE_CHECKED);
-      lv_obj_set_style_text_color(r, lv_color_hex(0xFFFFFF), 0);  // white, as on tiles
+      lv_obj_set_style_text_color(r, lv_color_hex(kTileInk), 0);  // white, as on tiles
       lv_obj_set_user_data(r,
                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
       lv_obj_add_event_cb(r, tap_cb, LV_EVENT_CLICKED, this);

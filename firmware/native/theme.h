@@ -101,9 +101,9 @@ inline void ink_page_text(lv_obj_t *obj, bool on_light) {
   if (opaque_bg(obj, LV_PART_MAIN, &bg)) on_light = needs_dark_ink(bg);
   if (on_light && lv_obj_check_type(obj, &lv_label_class)) {
     const uint32_t col = style_rgb(lv_obj_get_style_text_color(obj, LV_PART_MAIN));
-    if (col == 0xFFFFFF) {
+    if (col == kTileInk) {
       lv_obj_set_style_text_color(obj, lv_color_hex(kInk), 0);
-    } else if (col == 0x000000) {
+    } else if (col == kBlack) {
       lv_obj_set_style_text_opa(obj, LV_OPA_TRANSP, 0);
     } else if (needs_dark_ink(col)) {
       lv_obj_set_style_text_color(obj, lv_color_hex(kInkMuted), 0);

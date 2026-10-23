@@ -139,7 +139,7 @@ struct LightSliderCard : Card {
     // Centered transient readout: large, transparent until a change flashes it
     // visible; auto-fades out via hide_timer_.
     pct_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(pct_lbl_, lv_color_hex(kTileInk), 0);
     if (fonts.value) lv_obj_set_style_text_font(pct_lbl_, fonts.value, 0);
     lv_obj_center(pct_lbl_);
     lv_obj_set_style_opa(pct_lbl_, LV_OPA_TRANSP, 0);

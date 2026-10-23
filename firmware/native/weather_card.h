@@ -57,7 +57,7 @@ struct WeatherCard : Card {
                          cfg.icon.empty() ? "\U000F0590" : cfg.icon);
 
     temp_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(temp_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(temp_lbl_, lv_color_hex(kTileInk), 0);
     const lv_font_t *temp_font = fonts.medium ? fonts.medium : fonts.body;
     if (temp_font) lv_obj_set_style_text_font(temp_lbl_, temp_font, 0);
     lv_obj_align(temp_lbl_, LV_ALIGN_TOP_RIGHT, 0, 0);
@@ -66,7 +66,7 @@ struct WeatherCard : Card {
 
     // Condition name as the tile label (bottom), High/Low just above it.
     cond_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(cond_lbl_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(cond_lbl_, lv_color_hex(kTileInk), 0);
     if (fonts.body) lv_obj_set_style_text_font(cond_lbl_, fonts.body, 0);
     lv_label_set_long_mode(cond_lbl_, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(cond_lbl_, LV_PCT(100));
@@ -75,7 +75,7 @@ struct WeatherCard : Card {
 
     // High/Low sits directly under the current temp, smaller and dimmer.
     hilo_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(hilo_lbl_, lv_color_hex(0xC8C8C8), 0);
+    lv_obj_set_style_text_color(hilo_lbl_, lv_color_hex(kTileInkSoft), 0);
     if (fonts.body) lv_obj_set_style_text_font(hilo_lbl_, fonts.body, 0);
     lv_label_set_text(hilo_lbl_, "");
     lv_obj_align(hilo_lbl_, LV_ALIGN_TOP_RIGHT, 0, 42);

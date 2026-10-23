@@ -43,7 +43,7 @@ struct BrightnessTab {
     const int32_t w = lv_area_get_width(&a);
     const int32_t y = a.y2 - fill + kGripInset;
     fill_rect(lv_event_get_layer(e),
-              lv_area_t{a.x1 + w / 4, y, a.x2 - w / 4, y + kGripH - 1}, 0xFFFFFF);
+              lv_area_t{a.x1 + w / 4, y, a.x2 - w / 4, y + kGripH - 1}, kTileInk);
   }
 
   static void relabel_cb(lv_observer_t *o, lv_subject_t *s) {
@@ -59,7 +59,7 @@ struct BrightnessTab {
     // The % readout sits above the slider, on the page; the slider takes the
     // rest of the height below it.
     lbl_ = lv_label_create(panel);
-    lv_obj_set_style_text_color(lbl_, lv_color_hex(0xFFFFFF), 0);  // inked on the page
+    lv_obj_set_style_text_color(lbl_, lv_color_hex(kTileInk), 0);  // inked on the page
     if (fonts.value) lv_obj_set_style_text_font(lbl_, fonts.value, 0);
     lv_obj_align(lbl_, LV_ALIGN_TOP_MID, 0, 0);
     const int lbl_h = fonts.value ? lv_font_get_line_height(fonts.value) : 66;

@@ -21,7 +21,7 @@ inline std::vector<CardConfig> default_deck() {
     {CardType::Presence, "binary_sensor.office_presence_sensor_occupancy",
      "Presence", 2, 2, "",
      "\U000F0D91", "\U000F1435",   // mdi-motion-sensor / motion-sensor-off
-     0x2E7D32, -1, false},         // active=green, inactive=default, label shown
+     kStateGood, -1, false},         // active=green, inactive=default, label shown
     {CardType::Weather, "weather.forecast_home", "Weather", 2, 2,
      "input_number.forecast_home_temp_high", ""},  // entity2 = forecast high helper
     // [test slot] LightSlider on the desk lamp to demo follow_color on a

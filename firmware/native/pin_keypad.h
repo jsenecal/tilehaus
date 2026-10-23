@@ -57,7 +57,7 @@ struct PinPad {
     }, LV_EVENT_CLICKED, this);
     lv_obj_t *l = lv_label_create(b);
     if (font) lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(kTileInk), 0);
     lv_label_set_text(l, label);
     lv_obj_center(l);
   }
@@ -75,7 +75,7 @@ struct PinPad {
 
     disp_ = lv_label_create(c);
     if (fonts.value) lv_obj_set_style_text_font(disp_, fonts.value, 0);
-    lv_obj_set_style_text_color(disp_, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(disp_, lv_color_hex(kTileInk), 0);
     lv_label_set_text(disp_, " ");
 
     lv_obj_t *grid = lv_obj_create(c);

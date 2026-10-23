@@ -93,7 +93,7 @@ inline lv_obj_t *add_text_shadow(lv_obj_t *cell, const lv_font_t *font,
                                  const std::string &text, bool wrap,
                                  lv_align_t align, int dx, int dy) {
   lv_obj_t *t = lv_label_create(cell);
-  lv_obj_set_style_text_color(t, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_text_color(t, lv_color_hex(kBlack), 0);
   lv_obj_set_style_text_opa(t, LV_OPA_60, 0);
   if (font) lv_obj_set_style_text_font(t, font, 0);
   if (wrap) {
@@ -115,7 +115,7 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
   if (tile_compact() && align == LV_ALIGN_TOP_LEFT) { align = LV_ALIGN_CENTER; dx = 0; dy = 0; }
   lv_obj_t *sh = add_text_shadow(cell, font, glyph, false, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
-  lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInk), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
   lv_label_set_text(lbl, glyph.c_str());
   lv_obj_align(lbl, align, dx, dy);
@@ -159,7 +159,7 @@ inline lv_obj_t *add_name(lv_obj_t *cell, const CardFonts &fonts,
   const lv_font_t *font = tile_body_font(fonts);
   add_text_shadow(cell, font, title, true, align, dx, dy);
   lv_obj_t *lbl = lv_label_create(cell);
-  lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInk), 0);
   if (font) lv_obj_set_style_text_font(lbl, font, 0);
   lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(lbl, LV_PCT(100));
@@ -302,8 +302,8 @@ inline lv_obj_t *add_detail_chevron(lv_obj_t *cell, const lv_font_t *icon_font,
     lv_obj_align(l, LV_ALIGN_TOP_RIGHT, -inset + nudge, inset + nudge);
     return l;
   };
-  chevron_glyph(0x000000, LV_OPA_60, 1);            // shadow twin
-  chevron_glyph(0xC8C8C8, LV_OPA_COVER, 0);         // the chevron itself
+  chevron_glyph(kBlack, LV_OPA_60, 1);            // shadow twin
+  chevron_glyph(kTileInkSoft, LV_OPA_COVER, 0);         // the chevron itself
   return b;
 }
 

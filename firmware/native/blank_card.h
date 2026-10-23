@@ -42,7 +42,7 @@ struct BlankCard : Card {
       }
       return;
     }
-    const uint32_t ink = cfg.transparent ? kInk : 0xFFFFFF;
+    const uint32_t ink = cfg.transparent ? kInk : kTileInk;
 
     // Icon and title sit inline in a content-sized row; the row is then aligned
     // within the tile per cfg.align.
