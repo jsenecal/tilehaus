@@ -115,11 +115,13 @@ export function runDeckCodecTests(): void {
     assert(doc.pages.length === 2, "v5 pages still decode");
   }
 
-  // --- Action (23) is the highest type; 24 is not one ---
+  // --- Action (23) and Timer (24); 25 is not a type ---
   {
     const action: DeckCard = { ...BASIC[1]!, type: 23, entity: "", entity2: "doorbell" };
-    const doc = decodeDeckDocument(encodeDeck([action]));
+    const timer: DeckCard = { ...BASIC[1]!, type: 24, entity: "timer.pasta", col: 6 };
+    const doc = decodeDeckDocument(encodeDeck([action, timer]));
     assert(doc.cards[0]!.type === 23 && doc.cards[0]!.entity2 === "doorbell", "Action round-trips");
-    throws(() => encodeDeck([{ ...action, type: 24 }]), "type 24 rejected");
+    assert(doc.cards[1]!.type === 24 && doc.cards[1]!.entity === "timer.pasta", "Timer round-trips");
+    throws(() => encodeDeck([{ ...action, type: 25 }]), "type 25 rejected");
   }
 }

@@ -19,6 +19,7 @@
 #include "weather_forecast_card.h"
 #include "page_card.h"
 #include "back_card.h"
+#include "timer_card.h"
 
 namespace tilehaus {
 
@@ -52,6 +53,7 @@ inline std::unique_ptr<Card> make_card(CardType type) {
     case CardType::Page: return std::unique_ptr<Card>(new PageCard());
     case CardType::Back: return std::unique_ptr<Card>(new BackCard());
     case CardType::Action: return std::unique_ptr<Card>(new ActionCard());
+    case CardType::Timer: return std::unique_ptr<Card>(new TimerCard());
     default: return std::unique_ptr<Card>(new BlankCard());
   }
 }

@@ -29,6 +29,7 @@ export const CARD_TYPES: readonly CardTypeOption[] = [
   { value: 21, label: "Page" },
   { value: 22, label: "Back" },
   { value: 23, label: "Action" },
+  { value: 24, label: "Timer" },
 ];
 
 export function cardTypeLabel(value: number): string {

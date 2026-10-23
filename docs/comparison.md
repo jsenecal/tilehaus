@@ -17,7 +17,7 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 23 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 24 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
@@ -44,6 +44,7 @@ Grouped by capability:
 | Weather forecast | ✓ | ✓ | |
 | Date & time / World clock / Timezone / Calendar | ✓ | ◑ | Tilehaus has a composite **Header** (greeting + weather + clock/date) but no standalone clock/world-clock/timezone/calendar cards |
 | Camera / image | ✓ | ✗ | Deliberately removed from Tilehaus (full-res JPEG decode froze the UI) — type 20 stays reserved |
+| Timer | ✓ | ✓ | Tilehaus: **Timer** countdown ring; tap to start/pause, hold to cancel |
 | Media player | ✓ | ✗ | No media card (art, transport, volume, progress) |
 | Internal switches / relays | ✓ | ✗ | On-panel relays not exposed |
 | Screen lock | ✓ | ✗ | |

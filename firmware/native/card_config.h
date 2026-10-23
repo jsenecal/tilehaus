@@ -10,7 +10,8 @@ enum class CardType {
   NumberSlider, OptionSelect, Fan, Alarm, WeatherForecast,
   Camera,  // reserved (20): card removed; keeps Page/Back at 21/22
   Page, Back,
-  Action  // 23: script / automation / scene / button, or an HA event
+  Action,  // 23: script / automation / scene / button, or an HA event
+  Timer    // 24: a timer entity as a countdown ring
 };
 
 struct CardConfig {

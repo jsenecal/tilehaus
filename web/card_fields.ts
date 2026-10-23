@@ -35,6 +35,10 @@ export function cardFieldDefs(type: number): FieldDef[] {
     { key: "entity2", label: "Event name",                          entity: false, hint: "With no entity: sent as the event's `action` value, for an automation to match. Blank = use the Title." },
     { key: "title",   label: "Title",                               entity: false, hint: "Name shown on the tile." },
   ];
+  if (type === 24) return [ // Timer
+    { key: "entity", label: "Timer entity", entity: true,  hint: "A timer helper, e.g. timer.pasta. Tap starts, pauses or resumes it; a long press cancels." },
+    { key: "title",  label: "Title",        entity: false, hint: "Name shown under the ring. Blank = no label (the ring grows to fill the tile)." },
+  ];
   if (type === 7) return [ // Weather
     { key: "entity",  label: "Weather entity",       entity: true,  hint: "Weather entity this tile displays." },
     { key: "entity2", label: "Forecast-high helper", entity: true,  hint: "input_number holding today's forecast high (optional)." },
@@ -61,7 +65,7 @@ export interface FlagDef {
 }
 
 // Card type numbers (frozen wire enum, see card_types.ts).
-const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23]);
+const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24]);
 const DETAIL_TYPES = new Set([2, 3, 5, 15, 17]);
 const FOLLOW_COLOR_TYPES = new Set([3, 4]);
 const HEADER_TYPE = 11;
