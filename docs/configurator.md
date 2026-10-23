@@ -78,7 +78,8 @@ you've already typed.
 Every tile also has:
 
 - **Width / Height** — size in grid cells.
-- **Icon / Icon (alt)** — pick from the panel's built-in icon set. Icon (alt)
+- **Icon / Icon (alt)** — pick from the panel's built-in icon set (the picker
+  works without an internet connection). Icon (alt)
   is used for the tile's alternate state (light off, cover open, unlocked,
   etc.) where the card type supports it; blank falls back to the primary
   icon.

@@ -6,6 +6,8 @@ import { createGridPane } from "./grid_view";
 import { createHaClient, type HaClient } from "./ha_client";
 import { createIconPicker } from "./icon_picker";
 import { iconGlyphForEntity } from "./icon_from_entity";
+import { UI_ICON_PATHS } from "./icon_catalog";
+import { iconSvg } from "./icon_svg";
 import { cardFieldDefs, cardFlagDefs, fieldValue, flagValue, matchEntities, patchForField, patchForFlag } from "./card_fields";
 import { gridLimits } from "./model/grid_layout";
 
@@ -438,7 +440,7 @@ export function createEditorView(
       notice.title = "Click to check again";
       notice.onclick = () => { void refreshSession(); };
       notice.append(
-        el("span", "mdi " + (locked ? "mdi-lock" : "mdi-account-lock")),
+        iconSvg(UI_ICON_PATHS[locked ? "lock" : "account-lock"] ?? ""),
         el("span", "lock-text",
           locked ? "Locked · turn on Configurator in Home Assistant" : "In use from another device"),
       );

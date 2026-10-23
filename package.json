@@ -15,8 +15,9 @@
     "docs:serve": "zensical serve"
   },
   "devDependencies": {
+    "@mdi/js": "7.4.47",
+    "@types/node": "^24.0.0",
     "esbuild": "^0.28.0",
-    "typescript": "^7.0.0",
-    "@types/node": "^24.0.0"
+    "typescript": "^7.0.0"
   }
 }
