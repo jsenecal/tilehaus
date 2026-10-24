@@ -30,6 +30,7 @@ inline constexpr uint32_t kStateGood = 0x2E7D32;   // locked, disarmed
 inline constexpr uint32_t kStateAlert = 0xC62828;  // unlocked, a destructive confirm
 inline constexpr uint32_t kStateWarm = 0xC24E1E;   // heating, armed home/away/night
 inline constexpr uint32_t kStateArmed = 0xB23B3B;  // the alarm tile while armed
+inline constexpr uint32_t kStateWarn = 0xD99A1E;   // a garage door left open
 inline constexpr uint32_t kFanOn = 0x2C6E8A;       // cool teal while a fan runs
 inline constexpr uint32_t kWledOn = 0x5A3E8A;      // WLED violet while on
 

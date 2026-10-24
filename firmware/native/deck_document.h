@@ -17,7 +17,7 @@ inline constexpr size_t kDeckMaxCardCount = 128;
 // and its host tests can assert a max-size deck still fits without dragging in
 // the esphome preferences header.
 inline constexpr size_t kDeckMaxDocumentBytes = 16384;
-inline constexpr uint8_t kDeckMaxType = 24;
+inline constexpr uint8_t kDeckMaxType = 25;
 inline constexpr int32_t kDeckAccentDefault = -1;  // -1 = use built-in card colours
 inline constexpr int kDeckGridColsDefault = 10;
 inline constexpr int kDeckGridRowsDefault = 6;

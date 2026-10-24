@@ -11,7 +11,8 @@ enum class CardType {
   Camera,  // reserved (20): card removed; keeps Page/Back at 21/22
   Page, Back,
   Action,  // 23: script / automation / scene / button, or an HA event
-  Timer    // 24: a timer entity as a countdown ring
+  Timer,   // 24: a timer entity as a countdown ring
+  Garage   // 25: a garage door or gate, with a confirm step
 };
 
 struct CardConfig {

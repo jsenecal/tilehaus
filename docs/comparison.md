@@ -17,7 +17,7 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 24 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 25 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
@@ -35,7 +35,7 @@ Grouped by capability:
 | Slider (number / input_number) | ✓ | ✓ | Tilehaus: **Number slider** |
 | Fans | ✓ | ✓ | Tilehaus: **Fan** with a speed/preset modal |
 | Cover / blinds | ✓ | ✓ | Tilehaus: **Cover** with a position modal |
-| Garage door / Gate | ✓ | ✗ | No dedicated garage/gate card (Cover only) |
+| Garage door / Gate | ✓ | ✓ | Tilehaus: **Garage door / gate** — confirm before open/close, tap to stop, open-time caption and an amber overdue tint |
 | Vacuum / Lawn mower | ✓ | ✗ | — |
 | Lock | ✓ | ✓ | |
 | Alarm | ✓ | ✓ | Tilehaus: **Alarm** with an on-screen PIN keypad |
