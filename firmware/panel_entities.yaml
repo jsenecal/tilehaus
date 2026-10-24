@@ -238,6 +238,44 @@ binary_sensor:
       if (dim_s <= 0) return true;   // never dims, so always "in use"
       return lv_display_get_inactive_time(nullptr) < (uint32_t) dim_s * 1000u;
 
+text:
+  # The guest network a Wi-Fi share tile shows as a QR code. Here rather than
+  # in the deck, because the deck is readable by anyone on the network. Both
+  # survive reboots and reflashes (NVS). The password field is masked in the
+  # HA UI, but its value is still the entity's state: exclude it from the
+  # recorder if that matters to you.
+  - platform: template
+    name: "Guest Wi-Fi name"
+    id: cfg_guest_ssid
+    entity_category: config
+    icon: mdi:wifi
+    mode: text
+    min_length: 0
+    max_length: 32
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    on_value:
+      - lambda: |-
+          tilehaus::guest_wifi().ssid = x;
+          tilehaus::guest_wifi().changed();
+
+  - platform: template
+    name: "Guest Wi-Fi password"
+    id: cfg_guest_password
+    entity_category: config
+    icon: mdi:form-textbox-password
+    mode: password
+    min_length: 0
+    max_length: 63
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    on_value:
+      - lambda: |-
+          tilehaus::guest_wifi().password = x;
+          tilehaus::guest_wifi().changed();
+
 text_sensor:
   # "Locked", "Open", or "In use by <ip>" — who holds the configurator session.
   - platform: template

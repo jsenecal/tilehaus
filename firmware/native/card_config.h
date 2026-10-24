@@ -14,7 +14,8 @@ enum class CardType {
   Timer,   // 24: a timer entity as a countdown ring
   Garage,  // 25: a garage door or gate, with a confirm step
   Gauge,   // 26: a numeric sensor as a dial
-  Clock    // 27: the panel's time, or a world clock
+  Clock,   // 27: the panel's time, or a world clock
+  Wifi     // 28: the guest network as a QR code
 };
 
 struct CardConfig {

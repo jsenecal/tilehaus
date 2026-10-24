@@ -23,6 +23,7 @@
 #include "garage_card.h"
 #include "gauge_card.h"
 #include "clock_card.h"
+#include "wifi_card.h"
 
 namespace tilehaus {
 
@@ -60,6 +61,7 @@ inline std::unique_ptr<Card> make_card(CardType type) {
     case CardType::Garage: return std::unique_ptr<Card>(new GarageCard());
     case CardType::Gauge: return std::unique_ptr<Card>(new GaugeCard());
     case CardType::Clock: return std::unique_ptr<Card>(new ClockCard());
+    case CardType::Wifi: return std::unique_ptr<Card>(new WifiCard());
     default: return std::unique_ptr<Card>(new BlankCard());
   }
 }

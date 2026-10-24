@@ -17,7 +17,7 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 27 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 28 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
@@ -48,6 +48,7 @@ Grouped by capability:
 | Media player | ✓ | ✗ | No media card (art, transport, volume, progress) |
 | Internal switches / relays | ✓ | ✗ | On-panel relays not exposed |
 | Screen lock | ✓ | ✗ | |
+| Wi-Fi sharing (guest QR) | ✓ | ✓ | Tilehaus: **Wi-Fi share** — the network is set from Home Assistant, never stored in the deck; tap for a full-screen code with the password in text |
 | Subpages / navigation | ✓ | ✓ | Tilehaus: **Page** + **Back** tiles for multi-page navigation |
 | Section header / spacer | ◑ | ✓ | Tilehaus: **Header** and **Blank** (transparent/section) tiles |
 | WLED | ✗ | ✓ | Tilehaus has a dedicated **WLED** card + modal |
