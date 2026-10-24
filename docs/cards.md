@@ -43,6 +43,7 @@ editor.
 | 24 | Timer | A `timer` helper as a countdown ring: the ring shows the share of the duration left, and the tile tints while it runs. Tap starts, pauses or resumes; a long press cancels. On a 3×3 or larger tile the state (Running, Paused, Ready) is also shown top-left. The panel counts down between Home Assistant updates, from the timer's end time. | Timer entity (Entity) |
 | 25 | Garage door / gate | A `cover` with one big action. Tap asks before opening or closing it; while it moves, a tap stops it. A caption reads `OPEN · 14 MIN`, `CLOSING` and so on, and after 10 minutes open the tile turns amber (the Active colour). Gates get gate icons from their device class. The minutes count from when the panel saw the door open, so a door already open at boot shows just `OPEN`. | Garage door or gate (Entity) |
 | 26 | Gauge | A numeric sensor as a 240° dial with its value inside: battery, humidity, CO₂, power. The dial fills with the accent, or red past the warning threshold. On a 3×3 or larger tile a caption shows the range, or LOW / HIGH while warning. | Sensor (Entity), Range (Entity 2): `min..max`, optionally `<n` or `>n`, e.g. `0..100 <20`. Blank = a range for the unit (`%` 0–100, `°C` 0–40, `ppm` 400–2000 warning above 1000, `W` 0–3000, `kW` 0–10). |
+| 27 | Clock | The panel's own time, or a city's for a world clock. A caption shows the date (`FRI 24 OCT`), or for a world clock the day there and its offset from here (`FRI · +13 H`), with a sun or moon for day or night there. Keeps time on the panel, so it runs without Home Assistant once the clock has synced. | Time zone (Entity 2): picked from a city list in the configurator, stored as a POSIX TZ rule (e.g. `JST-9`); blank = the panel's own time. No Entity field |
 
 ## Action events
 
@@ -195,7 +196,7 @@ flags are type-specific:
 
 | Flag | Applies to | Effect |
 |------|-----------|--------|
-| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action, Timer, Garage door / gate, Gauge (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26) | Shows only the icon, no name text. |
+| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action, Timer, Garage door / gate, Gauge, Clock (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27) | Shows only the icon, no name text. |
 | **Detail chevron** | Toggle, Light (slider), Cover, Number slider, Fan (2, 3, 5, 15, 17) | Adds a corner button opening the entity's detail popup. |
 | **Follow colour** | Light (slider), Light (control) (3, 4) | Tints the tile (and its modal/sliders) to the light's actual color instead of the fixed active colour. |
 | **Show weather** | Header (11) | Shows the weather glyph + temperature; off = text-only header. |

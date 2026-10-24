@@ -32,6 +32,7 @@ export const CARD_TYPES: readonly CardTypeOption[] = [
   { value: 24, label: "Timer" },
   { value: 25, label: "Garage door / gate" },
   { value: 26, label: "Gauge" },
+  { value: 27, label: "Clock" },
 ];
 
 export function cardTypeLabel(value: number): string {

@@ -115,7 +115,7 @@ export function runDeckCodecTests(): void {
     assert(doc.pages.length === 2, "v5 pages still decode");
   }
 
-  // --- Action (23), Timer (24), Garage (25) and Gauge (26); 27 is not a type ---
+  // --- Action (23) to Clock (27); 28 is not a type ---
   {
     const action: DeckCard = { ...BASIC[1]!, type: 23, entity: "", entity2: "doorbell" };
     const timer: DeckCard = { ...BASIC[1]!, type: 24, entity: "timer.pasta", col: 6 };
@@ -124,6 +124,7 @@ export function runDeckCodecTests(): void {
     assert(doc.cards[1]!.type === 24 && doc.cards[1]!.entity === "timer.pasta", "Timer round-trips");
     assert(decodeDeckDocument(encodeDeck([{ ...action, type: 25 }])).cards[0]!.type === 25, "Garage round-trips");
     assert(decodeDeckDocument(encodeDeck([{ ...action, type: 26, entity2: "0..100 <20" }])).cards[0]!.entity2 === "0..100 <20", "Gauge round-trips");
-    throws(() => encodeDeck([{ ...action, type: 27 }]), "type 27 rejected");
+    assert(decodeDeckDocument(encodeDeck([{ ...action, type: 27, entity2: "JST-9" }])).cards[0]!.entity2 === "JST-9", "Clock round-trips");
+    throws(() => encodeDeck([{ ...action, type: 28 }]), "type 28 rejected");
   }
 }

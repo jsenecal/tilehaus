@@ -13,7 +13,8 @@ enum class CardType {
   Action,  // 23: script / automation / scene / button, or an HA event
   Timer,   // 24: a timer entity as a countdown ring
   Garage,  // 25: a garage door or gate, with a confirm step
-  Gauge    // 26: a numeric sensor as a dial
+  Gauge,   // 26: a numeric sensor as a dial
+  Clock    // 27: the panel's time, or a world clock
 };
 
 struct CardConfig {
