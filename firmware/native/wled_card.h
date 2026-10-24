@@ -26,9 +26,7 @@ struct WledCard : Card {
   static void recolor_cb(lv_observer_t *o, lv_subject_t *s) {
     auto *self = static_cast<WledCard *>(lv_observer_get_user_data(o));
     bool on = lv_subject_get_int(s) != 0;
-    lv_obj_set_style_bg_color(
-        self->cell_, lv_color_hex(on ? self->active_color_ : self->idle_color_),
-        0);
+    paint_cell(self->cell_, on ? self->active_color_ : self->idle_color_);
     set_icon_glyph(self->icon_lbl_, on ? self->icon_on_ : self->icon_off_);
   }
 

@@ -60,9 +60,8 @@ struct LightControlCard : Card {
 
   void apply_color() {
     bool on = lv_subject_get_int(&on_) != 0;
-    // The white icon/name stay legible on a light follow-colour tint via the
-    // soft drop shadow baked into add_icon/add_name (uniform across all tiles).
-    lv_obj_set_style_bg_color(cell_, lv_color_hex(on ? on_tint() : off_color_), 0);
+    // A pale follow-colour tint gets dark text, like any bright tile.
+    paint_cell(cell_, on ? on_tint() : off_color_);
     set_icon_glyph(icon_lbl_, on ? icon_on_ : icon_off_);
   }
 

@@ -24,6 +24,10 @@ inline constexpr uint32_t kTileInkSoft = 0xC8C8C8;   // secondary values (hi/lo,
 inline constexpr uint32_t kTileInkDim = 0xB0B0B0;    // captions in modals and overlays
 inline constexpr uint32_t kTileInkFaint = 0x909090;  // tertiary (a forecast low)
 inline constexpr uint32_t kBlack = 0x000000;         // overlays, scrims, text twins
+// Text and glyphs on a bright fill (a lime tile, a pale follow colour). Kept
+// apart from the page's kInk so night mode, which recolours page ink by value,
+// never touches a tile.
+inline constexpr uint32_t kTileInkOnLight = 0x1A1A1A;
 
 // State tints: each card's built-in active/inactive colour.
 inline constexpr uint32_t kStateGood = 0x2E7D32;   // locked, disarmed

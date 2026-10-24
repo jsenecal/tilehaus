@@ -129,7 +129,7 @@ struct GarageCard : Card {
     // Caption ink: dark or white on the amber fill; on charcoal, amber while
     // open (the warning before the tint) and dim otherwise.
     uint32_t ink = kTileInkDim;
-    if (overdue) ink = needs_dark_ink(warn_color_) ? kTileBg : kTileInk;
+    if (overdue) ink = needs_dark_ink(warn_color_) ? kTileInkOnLight : kTileInk;
     else if (door_.phase == DoorPhase::Open) ink = warn_color_;
     lv_obj_set_style_text_color(cap_lbl_, lv_color_hex(ink), 0);
     lv_label_set_text(cap_lbl_, door_.caption(now).c_str());

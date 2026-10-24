@@ -27,9 +27,7 @@ struct ClimateCard : Card {
   static void recolor_cb(lv_observer_t *o, lv_subject_t *s) {
     auto *self = static_cast<ClimateCard *>(lv_observer_get_user_data(o));
     bool heating = lv_subject_get_int(s) != 0;
-    lv_obj_set_style_bg_color(
-        self->cell_,
-        lv_color_hex(heating ? self->warm_color_ : self->idle_color_), 0);
+    paint_cell(self->cell_, heating ? self->warm_color_ : self->idle_color_);
   }
 
   void build(lv_obj_t *cell, const CardConfig &cfg,

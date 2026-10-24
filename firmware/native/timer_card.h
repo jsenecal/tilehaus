@@ -144,7 +144,7 @@ struct TimerCard : Card {
 
     // Ink that reads on the current fill: dark on lime, white on charcoal.
     const uint32_t fill = active_ ? on_color_ : off_color_;
-    const uint32_t ink = needs_dark_ink(fill) ? kTileBg : kTileInk;
+    const uint32_t ink = needs_dark_ink(fill) ? kTileInkOnLight : kTileInk;
     lv_obj_set_style_arc_color(arc_, lv_color_hex(ink), LV_PART_INDICATOR);
     lv_obj_set_style_text_color(time_lbl_, lv_color_hex(ink), 0);
     if (state_lbl_) {
