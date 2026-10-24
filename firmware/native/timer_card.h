@@ -15,6 +15,11 @@ namespace tilehaus {
 // of the duration left and the tile tints while the timer runs. Tap starts,
 // pauses or resumes; a long press cancels.
 //
+// Two layouts, by tile size. A roomy tile (3x3 and up on the 7" panel) has the
+// state as a mono caption top-left, the ring in the middle and the name
+// bottom-left. A small tile drops the caption: the ring sits at the top with
+// the name under it.
+//
 // HA pushes `remaining` only on state changes, so while the timer runs a 1s
 // LVGL timer recomputes it from `finishes_at` and the panel clock
 // (timer_state.h, host-tested).
@@ -22,6 +27,7 @@ struct TimerCard : Card {
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *arc_ = nullptr;
   lv_obj_t *time_lbl_ = nullptr;
+  lv_obj_t *state_lbl_ = nullptr;  // roomy layout: "RUNNING" caption
   CardFonts fonts_{};
   int ring_ = 0;
   std::string entity_, state_, duration_, remaining_, finishes_at_;
@@ -40,16 +46,23 @@ struct TimerCard : Card {
     on_color_ = resolve_color(cfg_active_color_, tile_on_color());
     off_color_ = resolve_color(cfg.inactive_color, kTileBg);
 
-    // The ring fills the content area above the name line.
     const TileMetrics m = tile_metrics();
     const int content_w = m.px_w > 0 ? m.px_w - 2 * kTileInset : 120;
     const int content_h = m.px_h > 0 ? m.px_h - 2 * kTileInset : 120;
-    const int name_h = cfg.hide_label || cfg.title.empty() ? 0 : 30;
-    ring_ = std::max(48, std::min(content_w, content_h - name_h));
+    const bool named = !cfg.hide_label && !cfg.title.empty();
+    const bool roomy = content_w >= 180 && content_h >= 180;
+
+    constexpr int kCaptionH = 22, kNameH = 34, kGap = 8;
+    ring_ = roomy ? std::min(content_w, content_h - kCaptionH - kNameH - 2 * kGap)
+                  : std::min(content_w, content_h - (named ? 30 : 0));
+    ring_ = std::max(48, ring_);
 
     arc_ = lv_arc_create(cell);
     lv_obj_set_size(arc_, ring_, ring_);
-    lv_obj_align(arc_, LV_ALIGN_TOP_MID, 0, 0);
+    // Roomy: centred in the band between the caption and the name. Small: at
+    // the top, above the name.
+    if (roomy) lv_obj_align(arc_, LV_ALIGN_CENTER, 0, (kCaptionH - kNameH) / 2);
+    else lv_obj_align(arc_, LV_ALIGN_TOP_MID, 0, 0);
     lv_arc_set_rotation(arc_, 270);  // start at 12 o'clock
     lv_arc_set_bg_angles(arc_, 0, 360);
     lv_arc_set_range(arc_, 0, 1000);
@@ -65,8 +78,14 @@ struct TimerCard : Card {
 
     time_lbl_ = lv_label_create(arc_);
     lv_obj_center(time_lbl_);
-
+    if (roomy) {
+      state_lbl_ = lv_label_create(cell);
+      if (fonts.caption) lv_obj_set_style_text_font(state_lbl_, fonts.caption, 0);
+      lv_obj_set_style_text_letter_space(state_lbl_, 2, 0);
+      lv_obj_align(state_lbl_, LV_ALIGN_TOP_LEFT, 0, 0);
+    }
     add_name(cell, fonts, cfg.title, cfg.hide_label);
+
     lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
     style_press_dip(cell);
     render();
@@ -101,6 +120,16 @@ struct TimerCard : Card {
   }
 
  private:
+  static const char *state_caption(TimerPhase p) {
+    switch (p) {
+      case TimerPhase::Active: return "RUNNING";
+      case TimerPhase::Paused: return "PAUSED";
+      case TimerPhase::Idle: return "READY";
+      case TimerPhase::Unknown: break;
+    }
+    return "";
+  }
+
   static int64_t now_s() {
     if (app_clock() == nullptr) return -1;
     const esphome::ESPTime t = app_clock()->now();
@@ -118,6 +147,13 @@ struct TimerCard : Card {
     const uint32_t ink = needs_dark_ink(fill) ? kTileBg : kTileInk;
     lv_obj_set_style_arc_color(arc_, lv_color_hex(ink), LV_PART_INDICATOR);
     lv_obj_set_style_text_color(time_lbl_, lv_color_hex(ink), 0);
+    if (state_lbl_) {
+      // The caption is the quiet line: ink at reduced strength reads as muted
+      // on both the lime and the charcoal fill.
+      lv_obj_set_style_text_color(state_lbl_, lv_color_hex(ink), 0);
+      lv_obj_set_style_text_opa(state_lbl_, LV_OPA_70, 0);
+      lv_label_set_text(state_lbl_, state_caption(v.phase));
+    }
     // Paused reads as held: the countdown dims until it runs again.
     lv_obj_set_style_text_opa(time_lbl_, v.phase == TimerPhase::Paused ? LV_OPA_60 : LV_OPA_COVER, 0);
     lv_arc_set_value(arc_, v.ring_permille());
@@ -125,11 +161,11 @@ struct TimerCard : Card {
     const std::string text = format_countdown(v.remaining_s);
     if (text != shown_) {
       shown_ = text;
-      // The countdown must fit inside the ring: step the font down for long text.
-      const bool big = ring_ >= 140;
-      const bool long_text = text.size() > 5;
-      const lv_font_t *f = big ? (long_text ? fonts_.body : fonts_.medium)
-                               : (long_text ? fonts_.small : fonts_.body);
+      // The largest face that fits inside the ring, a step down for h:mm:ss.
+      const lv_font_t *steps[] = {fonts_.value, fonts_.medium, fonts_.body, fonts_.small};
+      int i = ring_ >= 200 ? 0 : ring_ >= 120 ? 1 : 2;
+      if (text.size() > 5) ++i;
+      const lv_font_t *f = steps[i];
       if (f != nullptr) lv_obj_set_style_text_font(time_lbl_, f, 0);
       lv_label_set_text(time_lbl_, text.c_str());
     }

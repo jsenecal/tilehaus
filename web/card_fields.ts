@@ -37,7 +37,7 @@ export function cardFieldDefs(type: number): FieldDef[] {
   ];
   if (type === 24) return [ // Timer
     { key: "entity", label: "Timer entity", entity: true,  hint: "A timer helper, e.g. timer.pasta. Tap starts, pauses or resumes it; a long press cancels." },
-    { key: "title",  label: "Title",        entity: false, hint: "Name shown under the ring. Blank = no label (the ring grows to fill the tile)." },
+    { key: "title",  label: "Title",        entity: false, hint: "Name shown under the ring. On a 3x3 or larger tile the timer's state is shown top-left as well." },
   ];
   if (type === 7) return [ // Weather
     { key: "entity",  label: "Weather entity",       entity: true,  hint: "Weather entity this tile displays." },

@@ -40,7 +40,7 @@ editor.
 | 21 | Page | Navigation tile: tap opens another page. Can optionally track an entity for an on/off tint, like Toggle. | Tracked entity (Entity, optional), Target page (Entity 2, picked from existing pages) |
 | 22 | Back | Navigation tile that pops back to the previous page. Every new page starts with one so it's never a dead end. | Title only — no Entity field |
 | 23 | Action | Momentary tile, like Scene. The entity's domain picks what a tap does: runs a `script` (and tints while it runs), triggers an `automation`, activates a `scene`, presses a `button`/`input_button`, or turns anything else on. With no entity it fires an `esphome.tilehaus_action` event — see [Action events](#action-events). | Script, automation, scene or button (Entity, optional), Event name (Entity 2) |
-| 24 | Timer | A `timer` helper as a countdown ring: the ring shows the share of the duration left, and the tile tints while it runs. Tap starts, pauses or resumes; a long press cancels. The panel counts down between Home Assistant updates, from the timer's end time. | Timer entity (Entity) |
+| 24 | Timer | A `timer` helper as a countdown ring: the ring shows the share of the duration left, and the tile tints while it runs. Tap starts, pauses or resumes; a long press cancels. On a 3×3 or larger tile the state (Running, Paused, Ready) is also shown top-left. The panel counts down between Home Assistant updates, from the timer's end time. | Timer entity (Entity) |
 
 ## Action events
 
