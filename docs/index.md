@@ -23,7 +23,7 @@ reboots into it.
   cloud round-trip for the display itself.
 - **Browser-based configurator** — served by the device; no separate install,
   just open its IP address.
-- **22 card types** — toggles, sliders, covers, climate, locks, alarms,
+- **28 card types** — toggles, sliders, covers, climate, locks, alarms,
   weather, scenes, navigation tiles, and more. See the
   [card reference](cards.md).
 - **Multi-page decks** — organize tiles across pages, with dedicated
@@ -44,6 +44,8 @@ reboots into it.
 - Building and flashing firmware? See [Flashing](flashing.md).
 - Using the browser configurator? See [Configurator](configurator.md).
 - Looking up what a card type does? See [Card reference](cards.md).
+- Setting brightness, timeouts, night mode or presence wake? See
+  [Panel settings](panel-settings.md).
 - Scripting layouts or integrating with the device API? See
   [Config API](config-api.md).
 - Coming from EspControl, or weighing the two? See

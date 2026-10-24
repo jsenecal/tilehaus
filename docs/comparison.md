@@ -64,7 +64,7 @@ Grouped by capability:
 | Apply changes | ✓ (without reflashing) | ◑ (reboot-to-apply) | Tilehaus reboots to apply a new config; there is no live in-place rebuild |
 | Backup & restore / copy to another panel | ✓ | ✓ | Tilehaus: **Export**/**Import** a JSON backup in the configurator (the same spec `deck_cli.js` pushes), plus undo/redo while editing |
 | Saved-config migration & compatibility contract | ✓ | ◑ | Tilehaus versions the DECK format (v5/v6) but has a leaner migration story |
-| Display scheduling (idle / night / presence) | ✓ | ◑ | Tilehaus: return-home, dim and sleep timeouts, all Home Assistant entities, so schedules and presence are HA automations; no built-in schedule or presence wake yet |
+| Display scheduling (idle / night / presence) | ✓ | ✓ | Tilehaus: return-home, dim and sleep timeouts and presence wake built in; night schedules are Home Assistant automations on the **Night mode** switch (see [Panel settings](panel-settings.md)) |
 | Screensaver / brightness / sleep | ✓ | ✓ | Tilehaus: awake/dim/sleep brightness levels and a full-screen clock screensaver, set from Home Assistant |
 | Protecting the configuration | ◑ (PIN for the touchscreen) | ✓ | Tilehaus: writes need a **Configurator** switch turned on in Home Assistant; the first client to claim it is the only one that can save, and it locks itself after 30 minutes idle. No touchscreen PIN yet |
 | Appearance settings (icons, labels, active colour, rotation, temp units, clock) | ✓ | ◑ | Tilehaus: per-tile icons/labels/colours, a deck accent colour (overridable live from a Home Assistant colour light) and hi/lo temps; no rotation/temp-unit UI |

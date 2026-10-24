@@ -93,5 +93,53 @@ int main() {
     IdleTargets c = idle_targets(cfg, 70000, 2, false);
     assert(c.go_home && c.brightness_pct == 0 && c.screensaver);
   }
+  // Presence holds dim and sleep (and so the screensaver), but not return-home.
+  {
+    IdleConfig cfg; cfg.page_s = 15; cfg.dim_s = 30; cfg.sleep_s = 60;
+    cfg.brightness = 80; cfg.screensaver_enabled = true;
+    IdleTargets p = idle_targets(cfg, 999999, 2, false, true);
+    assert(p.go_home);
+    assert(p.brightness_pct == 80);
+    assert(!p.screensaver);
+    IdleTargets q = idle_targets(cfg, 999999, 2, false, false);
+    assert(q.brightness_pct == 0 && q.screensaver);
+  }
+  // Only "on" is presence; a dropped sensor must not keep the screen lit.
+  {
+    using tilehaus::presence_state_on;
+    assert(presence_state_on("on"));
+    assert(!presence_state_on("off"));
+    assert(!presence_state_on("unavailable"));
+    assert(!presence_state_on("unknown"));
+    assert(!presence_state_on(""));
+  }
+  // Only a touch on a dark screen or the screensaver is a wake. A tap on a lit
+  // or dimmed screen must not arm the input guard, or fast taps get dropped.
+  {
+    using tilehaus::touch_is_wake;
+    assert(touch_is_wake(0, false));
+    assert(touch_is_wake(100, true));
+    assert(!touch_is_wake(100, false));
+    assert(!touch_is_wake(25, false));
+    assert(!touch_is_wake(-1, false));
+  }
+  // Wake dimmed: a dark-screen wake comes up at the dim level until the next
+  // touch, and only when it is on and the dim level is a usable one.
+  {
+    IdleConfig cfg; cfg.dim_s = 30; cfg.sleep_s = 60;
+    cfg.brightness = 90; cfg.dim_brightness = 20; cfg.wake_dimmed = true;
+    assert(idle_targets(cfg, 0, 0, false, false, true).brightness_pct == 20);
+    assert(idle_targets(cfg, 0, 0, false, false, false).brightness_pct == 90);
+    // Still sleeps on schedule.
+    assert(idle_targets(cfg, 60000, 0, false, false, true).brightness_pct == 0);
+    cfg.wake_dimmed = false;
+    assert(idle_targets(cfg, 0, 0, false, false, true).brightness_pct == 90);
+    // A dim level of 0 would leave an awake screen dark and untouchable.
+    cfg.wake_dimmed = true; cfg.dim_brightness = 0;
+    assert(idle_targets(cfg, 0, 0, false, false, true).brightness_pct == 90);
+    // A dim level at or above the awake one is no dimmer.
+    cfg.dim_brightness = 95;
+    assert(idle_targets(cfg, 0, 0, false, false, true).brightness_pct == 90);
+  }
   return 0;
 }

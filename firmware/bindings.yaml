@@ -49,6 +49,8 @@ esphome:
               id(sens_configurator_status).publish_state(s);
             };
             tilehaus::config_session_setup(${configurator_timeout} * 60u * 1000u);
+            // The presence sensor was restored from NVS before on_boot runs.
+            tilehaus::presence_setup();
             // Load any persisted deck config before the first build so the
             // panel boots straight into the saved deck (else default_deck()).
             tilehaus::deck_store().setup();

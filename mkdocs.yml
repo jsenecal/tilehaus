@@ -8,5 +8,6 @@ nav:
   - Flashing: flashing.md
   - Configurator: configurator.md
   - Card reference: cards.md
+  - Panel settings: panel-settings.md
   - Config API: config-api.md
   - vs EspControl: comparison.md
