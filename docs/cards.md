@@ -19,9 +19,9 @@ editor.
 | 0 | Blank | A plain tile: an optional icon + title, positioned by horizontal/vertical alignment. With **Transparent** on, it works as a section header or spacer. | Horizontal align, Vertical align, Reduced margins |
 | 1 | Sensor | Read-only value display. A number is drawn as large as the tile allows with its unit smaller beside it (`23.4` big, `°C` small); a text state uses the regular faces. The name sits below. | — |
 | 2 | Toggle | Tap to turn an entity on/off; tints to the on/off colour. A detail chevron can open a popup with more controls. | — |
-| 3 | Light (slider) | Whole-tile vertical fill slider. For `light.*` entities it maps to brightness (0–100%, `light.turn_on`/`off`); for `number.*`/`input_number.*` entities it maps to the entity's raw value range (`number.set_value`). Drag or tap-to-glide; a centered readout flashes on change. | — |
+| 3 | Light (slider) | Whole-tile vertical fill slider. For `light.*` entities it maps to brightness (0–100%, `light.turn_on`/`off`); for `number.*`/`input_number.*` entities it maps to the entity's raw value range (`number.set_value`). Press and hold for a moment (the readout appears), then drag; a quick touch changes nothing, so brushing the tile or starting a swipe on it is safe. The readout flashes on every change. | — |
 | 4 | Light (control) | Tile look (icon + name, tints on/off) that opens a full light-controls modal (brightness, color, etc.) on tap. | — |
-| 5 | Cover | Whole-tile fill slider anchored to the top, mirroring a shade's position: dragging down lowers/closes it. Backed by the cover's open-percent state. | — |
+| 5 | Cover | Whole-tile fill slider anchored to the top, mirroring a shade's position: dragging down lowers/closes it. Like Light (slider), it acts only once pressed and held for a moment. Backed by the cover's open-percent state. | — |
 | 6 | Presence | Read-only occupancy tile — icon + name, tinted occupied vs. clear. Not tappable. | — |
 | 7 | Weather | Read-only weather tile: a condition-driven icon, the condition name as the label, today's high/low, and current temperature in the corner. | Forecast-high helper (Entity 2), Forecast-low helper (Icon alt) — optional `input_number` entities, see [Weather helpers](#weather-helpers) |
 | 8 | Scene | Momentary action tile — press-dip and a one-shot flash on tap, then calls `scene.turn_on`. Stateless. | — |
