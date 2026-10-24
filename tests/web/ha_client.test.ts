@@ -1,4 +1,4 @@
-import { createHaClient } from "../../web/ha_client";
+import { createHaClient, KEY_BASE, KEY_TOKEN } from "../../web/ha_client";
 
 function assert(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -40,8 +40,8 @@ export async function runHaClientTests(): Promise<void> {
     assert(s.calls[0]!.url === "http://ha:8123/api/states", "trailing slash trimmed");
     const headers = s.calls[0]!.init.headers as Record<string, string>;
     assert(headers["Authorization"] === "Bearer TOK", "bearer token sent");
-    assert(storage.getItem("epc.ha.baseUrl") === "http://ha:8123", "base persisted");
-    assert(storage.getItem("epc.ha.token") === "TOK", "token persisted");
+    assert(storage.getItem(KEY_BASE) === "http://ha:8123", "base persisted");
+    assert(storage.getItem(KEY_TOKEN) === "TOK", "token persisted");
     // Per-entity metadata is captured from attributes for autofill.
     assert(ha.meta("light.b")?.friendlyName === "Lamp B", "friendly name captured");
     assert(ha.meta("light.b")?.icon === "mdi:lightbulb", "icon captured");
@@ -71,15 +71,49 @@ export async function runHaClientTests(): Promise<void> {
     }
     // Creds must persist even when the connection fails (the first-run CORS
     // case), so a reload keeps the fields filled and can auto-retry.
-    assert(storage.getItem("epc.ha.baseUrl") === "http://ha:8123", "base persisted on error");
-    assert(storage.getItem("epc.ha.token") === "TOK", "token persisted on error");
+    assert(storage.getItem(KEY_BASE) === "http://ha:8123", "base persisted on error");
+    assert(storage.getItem(KEY_TOKEN) === "TOK", "token persisted on error");
   }
 
   {
     const storage = fakeStorage();
-    storage.setItem("epc.ha.baseUrl", "http://saved:8123");
-    storage.setItem("epc.ha.token", "SAVED");
+    storage.setItem(KEY_BASE, "http://saved:8123");
+    storage.setItem(KEY_TOKEN, "SAVED");
     const ha = createHaClient({ fetch: stub(() => new Response("[]", { status: 200 })).fetch, storage, origin: "http://panel" });
     assert(ha.creds().baseUrl === "http://saved:8123" && ha.creds().token === "SAVED", "creds loaded from storage");
+  }
+
+  // Credentials an older configurator saved under epc.* still load.
+  {
+    const storage = fakeStorage();
+    storage.setItem("epc.ha.baseUrl", "http://old:8123");
+    storage.setItem("epc.ha.token", "OLD");
+    const ha = createHaClient({ fetch: stub(() => new Response("[]", { status: 200 })).fetch, storage, origin: "http://panel" });
+    assert(ha.creds().baseUrl === "http://old:8123" && ha.creds().token === "OLD", "legacy keys read");
+  }
+
+  // States, units and attributes are kept for the preview, and refresh re-reads them;
+  // a failed refresh keeps the last good states.
+  {
+    let temp = "21.5";
+    let ok = true;
+    const s = stub(() => ok
+      ? new Response(JSON.stringify([
+          { entity_id: "sensor.t", state: temp, attributes: { unit_of_measurement: "\u00b0C" } },
+          { entity_id: "light.a", state: "on", attributes: { brightness: 128 } },
+        ]), { status: 200 })
+      : new Response("down", { status: 502 }));
+    const ha = createHaClient({ fetch: s.fetch, storage: fakeStorage(), origin: "http://panel" });
+    await ha.refresh();
+    assert(s.calls.length === 0, "refresh before connect does nothing");
+    await ha.connect("http://ha", "TOK");
+    assert(ha.meta("sensor.t")?.state === "21.5" && ha.meta("sensor.t")?.unit === "\u00b0C", "state and unit kept");
+    assert(ha.meta("light.a")?.attributes["brightness"] === 128, "attributes kept");
+    temp = "22.0";
+    await ha.refresh();
+    assert(ha.meta("sensor.t")?.state === "22.0", "refresh re-reads states");
+    ok = false;
+    await ha.refresh();
+    assert(ha.status().state === "connected" && ha.meta("sensor.t")?.state === "22.0", "failed refresh keeps the last states");
   }
 }

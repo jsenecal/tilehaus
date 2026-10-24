@@ -4,18 +4,38 @@ The device serves a browser-based configurator at its own IP address (`/`).
 It loads the current deck (or starts empty on an unconfigured panel), and
 lets you edit pages, tiles, and deck-wide settings before saving.
 
+It is laid out like the panel looks: pages and deck settings on the left,
+a **preview** of the panel's screen in the middle, and the selected tile's
+settings on the right. On a narrow screen the three stack.
+
+## The preview
+
+The preview is the panel's screen at its real resolution, scaled to fit:
+tiles are placed with the firmware's own grid arithmetic and drawn with its
+colours, fonts and sizes, so a tile looks here the way it will on the glass.
+
+- Connected to Home Assistant, tiles show **live states**: a light that is on
+  is lit, a sensor shows its reading (number large, unit small), a cover's
+  shade sits at its position, a gauge's dial fills. States refresh every 30
+  seconds.
+- A tile bound to an entity Home Assistant doesn't know gets a red outline and
+  an **UNKNOWN ENTITY** tag, before you save it to the panel.
+- **Day / Night** switches the page behind the tiles to the panel's night mode.
+- Rows past the screen's bottom edge are marked with a dashed line; on the
+  panel they scroll.
+
 ## Pages
 
 The deck is organized into pages. Page 0 is always **Home** and can't be
-renamed away from being the first page or deleted. The page bar across the
-top lets you:
+renamed away from being the first page or deleted. The page list on the left
+(with each page's tile count) lets you:
 
-- Switch pages by clicking a page chip.
-- Add a page with **+ Page**. A new page starts with a single **Back** tile
+- Switch pages by clicking one.
+- Add a page with **+ New page**. A new page starts with a single **Back** tile
   (type 22) so it's never a dead end — tap it to pop back to the page you
   came from.
-- Rename the current page (any page except Home) with the text field next to
-  its chip.
+- Rename the current page (any page except Home) with the text field under
+  the list.
 - Delete the current page (any page except Home) with **Delete page**. Tiles
   on a deleted page are removed, and later pages shift down to fill the gap.
 
@@ -41,14 +61,14 @@ shows the configured number of visible rows and a taller deck simply scrolls.
   by label; the underlying type numbers are fixed and don't reflect this
   order) and click **+ Add tile**. New tiles auto-place into the first open
   grid slot on the current page.
-- **Drag**: tiles can be dragged directly in the grid pane to reposition
+- **Drag**: tiles can be dragged directly in the preview to reposition
   them.
-- **Resize**: drag a tile's corner in the grid pane, or set exact **Width**
+- **Resize**: drag the selected tile's corner handle in the preview, or set exact **Width**
   and **Height** (in grid cells) in the tile's settings pane. Width is capped
   at the grid's column count.
-- **Select**: click a tile to open its settings in the form pane on the
-  right.
-- **Delete**: with a tile selected, use **Delete tile** in the settings pane.
+- **Select**: click a tile to open its settings on the right.
+- **Delete**: with a tile selected, use its ✕ in the preview, or **Delete
+  tile** in its settings.
 
 ## Per-tile fields
 
@@ -92,14 +112,15 @@ Every tile also has:
 
 ## Home Assistant connection
 
-The Home Assistant bar (collapsed once connected) holds:
+The Home Assistant section at the bottom of the left column (collapsed once
+connected) holds:
 
 - **Base URL** — your HA instance, e.g. `http://homeassistant.local:8123`.
 - **Long-lived access token** — generate one from your HA user profile.
 
 Click **Connect**. Credentials are saved in the browser's local storage so
-they survive a reload. Once connected, the bar shows the entity count and
-entity fields gain live typeahead.
+they survive a reload. Once connected, it shows the entity count, entity
+fields gain live typeahead, and the preview shows live states.
 
 If the connection fails, the most common cause is CORS: Home Assistant needs
 to allow requests from the configurator's origin. Add the panel's origin to
@@ -107,9 +128,9 @@ to allow requests from the configurator's origin. Add the panel's origin to
 
 ## Accent colour
 
-The **Accent** color picker in the toolbar sets a deck-wide accent used by
-the panel's built-in card colors. It previews live in the configurator page
-itself. The reset button (⟲) clears it back to the built-in default (amber).
+The **Accent** colour picker under **Deck** sets the colour lit tiles use on
+the panel. The preview and the configurator's own buttons follow it live.
+**Reset** puts it back to the panel's lime.
 
 ## Undo and backups
 

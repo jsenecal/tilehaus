@@ -13,6 +13,7 @@ import { BackupError, backupFileName, exportSpec, parseSpec } from "./backup";
 import { cardFieldDefs, cardFlagDefs, fieldValue, flagValue, matchEntities, patchForField, patchForFlag } from "./card_fields";
 import { gridLimits } from "./model/grid_layout";
 import { TIME_ZONES } from "./time_zones";
+import { hex as hexColor, isBright } from "./tile_preview";
 
 type StatusState = "idle" | "busy" | "ok" | "warn" | "err";
 
@@ -41,6 +42,18 @@ export function createEditorView(
   let statusState: StatusState = "idle";
   let busy = false;
   let session: SessionInfo | null = null;
+  let previewNight = false;               // the preview's page: day or night mode
+  let previewSlot: HTMLElement | null = null;
+
+  // Live states: re-read HA every 30s and redraw only the preview, so a field
+  // being typed in keeps its focus.
+  const HA_REFRESH_MS = 30 * 1000;
+  // Numbers are fitted by measuring text; once the web fonts arrive, measure again.
+  void document.fonts?.ready.then(() => { renderPreview(); });
+  setInterval(() => {
+    if (ha.status().state !== "connected") return;
+    void ha.refresh().then(() => { renderPreview(); });
+  }, HA_REFRESH_MS);
 
   // ---- Undo, and what's unsaved ----
   const history = createHistory();
@@ -213,18 +226,18 @@ export function createEditorView(
     );
   }
 
-  // Push the deck accent into the page's CSS variables (live preview); -1 clears
-  // the override back to the built-in amber.
+  // Push the deck accent into the page's CSS variables; -1 clears the override
+  // back to the panel's built-in lime.
   function applyAccent(): void {
     const root = document.documentElement;
     if (state.accent < 0) {
       root.style.removeProperty("--accent");
-      root.style.removeProperty("--accent-strong");
+      root.style.removeProperty("--accent-ink");
       return;
     }
-    const hex = "#" + (state.accent & 0xffffff).toString(16).padStart(6, "0");
-    root.style.setProperty("--accent", hex);
-    root.style.setProperty("--accent-strong", hex);
+    root.style.setProperty("--accent", hexColor(state.accent));
+    // Text on accent-filled buttons follows the fill, as on the panel's tiles.
+    root.style.setProperty("--accent-ink", isBright(state.accent) ? "#141414" : "#ffffff");
   }
   function onReset(): void { void runMutation(() => client.reset(state.etag), "Resetting"); }
 
@@ -495,46 +508,91 @@ export function createEditorView(
     return form;
   }
 
-  function renderPageBar(): HTMLElement {
-    const bar = el("div", "page-bar");
+  // Pages, vertically; the current one can be renamed or deleted (not Home).
+  function renderPages(): HTMLElement {
+    const sec = el("section", "side-sec");
+    sec.append(el("h2", "side-cap", "Pages"));
+    const list = el("div", "page-list");
     state.pages.forEach((name, i) => {
-      const chip = el("button", "page-chip" + (i === state.currentPage ? " active" : ""), name || "Home");
+      const count = state.cards.filter((c) => c.page === i).length;
+      const chip = el("button", "page-item" + (i === state.currentPage ? " active" : ""));
+      chip.append(el("span", "page-name", name || "Home"), el("span", "page-count", String(count)));
       chip.onclick = () => { state.currentPage = i; state.selected = null; render(); };
-      bar.append(chip);
+      list.append(chip);
     });
-    const add = el("button", "page-chip add", "+ Page");
-    add.title = "Add a page";
+    const add = el("button", "page-item add", "+ New page");
     add.onclick = () => {
       addPage(state, `Page ${state.pages.length}`);
       addCard(state, 22);  // new pages start with a Back tile so they aren't dead ends
       render();
     };
-    bar.append(add);
+    list.append(add);
+    sec.append(list);
     if (state.currentPage > 0) {
       const rename = el("input", "page-rename");
       rename.type = "text";
       rename.value = state.pages[state.currentPage] ?? "";
-      rename.title = "Rename this page";
+      rename.setAttribute("aria-label", "Page name");
       rename.onchange = () => { renamePage(state, state.currentPage, rename.value.trim()); render(); };
       const del = el("button", "ghost danger", "Delete page");
       del.onclick = () => { deletePage(state, state.currentPage); render(); };
-      bar.append(rename, del);
+      const row = el("div", "page-edit");
+      row.append(rename, del);
+      sec.append(row);
     }
-    return bar;
+    return sec;
+  }
+
+  // Deck-wide settings: grid size and the accent colour.
+  function renderDeck(): HTMLElement {
+    const sec = el("section", "side-sec");
+    sec.append(el("h2", "side-cap", "Deck"));
+    const { maxCols, maxRows } = gridLimits(state.displayW, state.displayH);
+    const gridWrap = el("label", "grid-picker");
+    const mkNum = (val: number, min: number, max: number, apply: (n: number) => void, label: string): HTMLInputElement => {
+      const i = el("input");
+      i.type = "number"; i.min = String(min); i.max = String(max); i.value = String(val);
+      i.setAttribute("aria-label", label);
+      i.oninput = () => { const n = Number(i.value); if (n >= min && n <= max) { apply(n); render(); } };
+      return i;
+    };
+    gridWrap.append(
+      el("span", "flabel", "Grid"),
+      mkNum(state.gridCols, 2, maxCols, (n) => { state.gridCols = n; }, "Columns"),
+      el("span", "grid-x", "×"),
+      mkNum(state.gridRows, 2, maxRows, (n) => { state.gridRows = n; }, "Visible rows"),
+    );
+    gridWrap.title = `Columns × visible rows (max ${maxCols}×${maxRows} for this display). Shrinking may push tiles off-grid — use Auto-arrange.`;
+    const accentWrap = el("label", "accent-picker");
+    accentWrap.title = "Accent colour for lit tiles, on the panel and in this preview";
+    const accentInput = el("input");
+    accentInput.type = "color";
+    accentInput.value = state.accent < 0 ? "#b5e853" : "#" + (state.accent & 0xffffff).toString(16).padStart(6, "0");
+    accentInput.oninput = () => {
+      state.accent = Number.parseInt(accentInput.value.slice(1), 16);
+      applyAccent();
+      renderPreview();
+    };
+    const accentReset = el("button", "ghost small", "Reset");
+    accentReset.title = "Back to the panel's lime";
+    accentReset.onclick = () => { state.accent = -1; applyAccent(); render(); };
+    accentWrap.append(el("span", "flabel", "Accent"), accentInput, accentReset);
+    sec.append(gridWrap, accentWrap);
+    return sec;
   }
 
   function renderHaBar(): HTMLElement {
-    const bar = el("details", "ha-bar");
+    const bar = el("details", "ha-bar side-sec");
     const st = ha.status();
     bar.open = st.state !== "connected";
 
     const summary = document.createElement("summary");
     const dot = el("span", "ha-dot");
     dot.dataset["state"] = st.state;
-    let text = "Home Assistant — not connected";
-    if (st.state === "connecting") text = "Home Assistant — connecting…";
-    else if (st.state === "connected") text = `Home Assistant — ${st.count} entities`;
-    else if (st.state === "error") text = "Home Assistant — connection problem";
+    let text = "Home Assistant · not connected";
+    if (st.state === "connecting") text = "Home Assistant · connecting…";
+    else if (st.state === "connected") text = `Home Assistant · ${st.count} entities`;
+    else if (st.state === "error") text = "Home Assistant · connection problem";
     summary.append(dot, el("span", undefined, text));
     bar.append(summary);
 
@@ -591,68 +649,15 @@ export function createEditorView(
     return [saveBtn, resetBtn];
   }
 
-  function renderToolbar(): HTMLElement {
-    const bar = el("div", "toolbar");
-
-    const addGroup = el("div", "add-group");
-    const picker = typeSelect(null);
-    const addBtn = el("button", undefined, "+ Add tile");
-    addBtn.onclick = () => { addCard(state, Number(picker.value)); render(); };
-    addGroup.append(picker, addBtn);
-
-    undoBtn = el("button", "ghost", "Undo");
-    undoBtn.title = "Undo (Ctrl+Z)";
-    undoBtn.onclick = onUndo;
-    redoBtn = el("button", "ghost", "Redo");
-    redoBtn.title = "Redo (Ctrl+Shift+Z)";
-    redoBtn.onclick = onRedo;
-    addGroup.append(undoBtn, redoBtn);
-
-    const arrangeBtn = el("button", "ghost", "Auto-arrange");
-    arrangeBtn.title = "Repack tiles to the top-left, clearing gaps";
-    arrangeBtn.onclick = () => { autoArrange(state); render(); };
-    addGroup.append(arrangeBtn);
-
-    // Deck accent colour: themes this page live and the panel on Save.
-    const accentWrap = el("label", "accent-picker");
-    accentWrap.title = "Accent colour (this page + the panel)";
-    const accentInput = el("input");
-    accentInput.type = "color";
-    accentInput.value = state.accent < 0 ? "#ff9d2f" : "#" + (state.accent & 0xffffff).toString(16).padStart(6, "0");
-    accentInput.oninput = () => {
-      state.accent = Number.parseInt(accentInput.value.slice(1), 16);
-      applyAccent();
-    };
-    const accentReset = el("button", "ghost", "⟲");
-    accentReset.title = "Reset accent to the default";
-    accentReset.onclick = () => { state.accent = -1; applyAccent(); render(); };
-    accentWrap.append(el("span", "accent-label", "Accent"), accentInput, accentReset);
-    addGroup.append(accentWrap);
-
-    // Grid size: columns × visible rows, clamped to what the panel's display can fit.
-    const { maxCols, maxRows } = gridLimits(state.displayW, state.displayH);
-    const gridWrap = el("label", "grid-picker");
-    const mkNum = (val: number, min: number, max: number, apply: (n: number) => void): HTMLInputElement => {
-      const i = el("input");
-      i.type = "number"; i.min = String(min); i.max = String(max); i.value = String(val);
-      i.oninput = () => { const n = Number(i.value); if (n >= min && n <= max) { apply(n); render(); } };
-      return i;
-    };
-    gridWrap.append(
-      el("span", "grid-label", "Grid"),
-      mkNum(state.gridCols, 2, maxCols, (n) => { state.gridCols = n; }),
-      el("span", "grid-x", "×"),
-      mkNum(state.gridRows, 2, maxRows, (n) => { state.gridRows = n; }),
-    );
-    gridWrap.title = `Columns × visible rows (max ${maxCols}×${maxRows} for this display). Shrinking may push tiles off-grid — use Auto-arrange.`;
-    addGroup.append(gridWrap);
-
-    const spacer = el("div", "spacer");
-
+  // Brand and panel on the left; backup, status and Save on the right.
+  function renderHeader(): HTMLElement {
+    const bar = el("header", "app-head");
+    const brand = el("div", "brand");
+    brand.append(el("span", "mark"), el("span", "brand-name", "tilehaus"),
+      el("span", "brand-host", window.location.hostname || "panel"));
     const pill = el("div", "status");
     pill.dataset["state"] = statusState;
     pill.append(el("span", "dot"), document.createTextNode(status));
-
     const exportBtn = el("button", "ghost", "Export");
     exportBtn.title = "Download this deck as a JSON backup (also pushable with deck_cli.js)";
     exportBtn.onclick = onExport;
@@ -660,17 +665,54 @@ export function createEditorView(
     importBtn.title = "Load a JSON backup into the editor; nothing reaches the panel until Save";
     importBtn.disabled = busy;
     importBtn.onclick = () => { importInput.click(); };
-
-    // One group, so backup, status and Save wrap together rather than apart.
     const actions = el("div", "actions");
-    actions.append(exportBtn, importBtn, pill, ...renderSaveArea());
-    bar.append(addGroup, spacer, actions);
+    actions.append(pill, exportBtn, importBtn, ...renderSaveArea());
+    bar.append(brand, actions);
     return bar;
   }
 
+  // Adding and arranging tiles, over the preview.
+  function renderToolbar(): HTMLElement {
+    const bar = el("div", "toolbar");
+    const picker = typeSelect(null);
+    picker.setAttribute("aria-label", "Tile type to add");
+    const addBtn = el("button", "primary-ink", "+ Add tile");
+    addBtn.onclick = () => { addCard(state, Number(picker.value)); render(); };
+    undoBtn = el("button", "ghost", "Undo");
+    undoBtn.title = "Undo (Ctrl+Z)";
+    undoBtn.onclick = onUndo;
+    redoBtn = el("button", "ghost", "Redo");
+    redoBtn.title = "Redo (Ctrl+Shift+Z)";
+    redoBtn.onclick = onRedo;
+    const arrangeBtn = el("button", "ghost", "Auto-arrange");
+    arrangeBtn.title = "Repack tiles to the top-left, clearing gaps";
+    arrangeBtn.onclick = () => { autoArrange(state); render(); };
+    const seg = el("div", "seg");
+    seg.title = "Preview the page in day or night mode";
+    for (const [label, night] of [["Day", false], ["Night", true]] as const) {
+      const b = el("button", previewNight === night ? "sel" : "", label);
+      b.onclick = () => { previewNight = night; render(); };
+      seg.append(b);
+    }
+    bar.append(picker, addBtn, undoBtn, redoBtn, arrangeBtn, el("div", "spacer"), seg);
+    return bar;
+  }
+
+  function previewCaption(): string {
+    const page = state.pages[state.currentPage] || "Home";
+    return `${page} · ${state.gridCols} × ${state.gridRows} · ${state.displayW} × ${state.displayH}`;
+  }
+
+  function renderPreview(): void {
+    if (previewSlot === null) return;
+    previewSlot.textContent = "";
+    previewSlot.append(createGridPane(state, render, { ha, night: previewNight }));
+  }
+
   function renderFormPane(): HTMLElement {
-    const pane = el("div", "pane form-pane");
-    pane.append(el("div", "pane-title", "Tile settings"));
+    const pane = el("aside", "inspector");
+    const sel = state.selected !== null ? state.cards[state.selected] : undefined;
+    pane.append(el("h2", "side-cap", sel ? `Tile · ${CARD_TYPES.find((t) => t.value === sel.type)?.label ?? ""}` : "Tile"));
     if (state.selected !== null) {
       const card = state.cards[state.selected];
       if (card !== undefined) {
@@ -685,7 +727,7 @@ export function createEditorView(
         return pane;
       }
     }
-    pane.append(el("div", "no-selection", "Select a tile to edit its settings."));
+    pane.append(el("p", "no-selection", "Select a tile in the preview to edit it, or add one from the toolbar."));
     return pane;
   }
 
@@ -694,7 +736,15 @@ export function createEditorView(
     keepSessionAlive();
     applyAccent();
     root.textContent = "";
-    root.append(renderPageBar(), renderHaBar(), renderToolbar(), createGridPane(state, render), renderFormPane());
+    const side = el("nav", "sidebar");
+    side.append(renderPages(), renderDeck(), renderHaBar());
+    const main = el("main", "stage");
+    previewSlot = el("div", "preview-slot");
+    main.append(renderToolbar(), el("div", "pv-cap", previewCaption()), previewSlot);
+    const shell = el("div", "app");
+    shell.append(renderHeader(), side, main, renderFormPane());
+    root.append(shell);
+    renderPreview();
     syncHistory();  // after the toolbar exists, so Undo/Redo get their state
   }
 
