@@ -114,4 +114,18 @@ export function runDeckCodecTests(): void {
     assert(doc.gridCols === 10 && doc.gridRows === 6, "v5 defaults to 10x6");
     assert(doc.pages.length === 2, "v5 pages still decode");
   }
+
+  // --- Action (23) to Wi-Fi share (28); 29 is not a type ---
+  {
+    const action: DeckCard = { ...BASIC[1]!, type: 23, entity: "", entity2: "doorbell" };
+    const timer: DeckCard = { ...BASIC[1]!, type: 24, entity: "timer.pasta", col: 6 };
+    const doc = decodeDeckDocument(encodeDeck([action, timer]));
+    assert(doc.cards[0]!.type === 23 && doc.cards[0]!.entity2 === "doorbell", "Action round-trips");
+    assert(doc.cards[1]!.type === 24 && doc.cards[1]!.entity === "timer.pasta", "Timer round-trips");
+    assert(decodeDeckDocument(encodeDeck([{ ...action, type: 25 }])).cards[0]!.type === 25, "Garage round-trips");
+    assert(decodeDeckDocument(encodeDeck([{ ...action, type: 26, entity2: "0..100 <20" }])).cards[0]!.entity2 === "0..100 <20", "Gauge round-trips");
+    assert(decodeDeckDocument(encodeDeck([{ ...action, type: 27, entity2: "JST-9" }])).cards[0]!.entity2 === "JST-9", "Clock round-trips");
+    assert(decodeDeckDocument(encodeDeck([{ ...action, type: 28 }])).cards[0]!.type === 28, "Wi-Fi share round-trips");
+    throws(() => encodeDeck([{ ...action, type: 29 }]), "type 29 rejected");
+  }
 }

@@ -26,9 +26,7 @@ struct LockCard : Card {
   static void recolor_cb(lv_observer_t *o, lv_subject_t *s) {
     auto *self = static_cast<LockCard *>(lv_observer_get_user_data(o));
     bool locked = lv_subject_get_int(s) != 0;
-    lv_obj_set_style_bg_color(
-        self->cell_,
-        lv_color_hex(locked ? self->locked_color_ : self->unlocked_color_), 0);
+    paint_cell(self->cell_, locked ? self->locked_color_ : self->unlocked_color_);
     set_icon_glyph(self->icon_lbl_,
                    locked ? self->icon_locked_ : self->icon_unlocked_);
   }

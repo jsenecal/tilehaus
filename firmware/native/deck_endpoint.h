@@ -184,6 +184,11 @@ inline esp_err_t deck_get_handler(httpd_req_t *req) {
     httpd_resp_set_hdr(req, "X-Display-Width", wbuf);
     httpd_resp_set_hdr(req, "X-Display-Height", hbuf);
   }
+  // The newest card type this firmware renders, so a configurator or CLI can
+  // refuse a deck the panel would reject before sending it.
+  char tbuf[4];
+  std::snprintf(tbuf, sizeof(tbuf), "%u", static_cast<unsigned>(kDeckMaxType));
+  httpd_resp_set_hdr(req, "X-Deck-Max-Type", tbuf);
   if (store.empty()) {
     httpd_resp_set_status(req, "204 No Content");
     httpd_resp_send(req, nullptr, 0);
@@ -261,9 +266,11 @@ inline esp_err_t deck_put_handler(httpd_req_t *req) {
 
   // Validate before persisting, so the store never holds an undecodable doc.
   std::vector<CardConfig> dry;
-  if (!decode_deck(body.data(), body.size(), dry)) {
+  std::string why;
+  if (!decode_deck(body.data(), body.size(), dry, nullptr, nullptr, nullptr, nullptr, &why)) {
+    const std::string msg = "Deck not saved: " + why;  // outlives the send below
     httpd_resp_set_status(req, "400 Bad Request");
-    httpd_resp_sendstr(req, "Malformed deck document");
+    httpd_resp_sendstr(req, msg.c_str());
     return ESP_OK;
   }
 

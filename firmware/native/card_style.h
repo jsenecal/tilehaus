@@ -123,6 +123,72 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
   return lbl;
 }
 
+// Text on a tile follows its fill: dark ink on a bright fill, the usual white
+// on a dark one. Done with LV_STATE_USER_2 rather than by rewriting colours:
+// the first time a label lands on a bright fill it gets USER_2 styles derived
+// from its own colour (white -> kTileInkOnLight, light grey -> the same at 70%,
+// the black legibility twin -> hidden), and from then on the fill just adds or
+// removes the state. Going dark again restores exactly what was there, and
+// labels a card colours itself (an amber caption) are left alone. Labels inside
+// a child with its own opaque fill (a button) belong to that surface instead.
+inline void label_ink(lv_obj_t *lbl, bool bright) {
+  if (bright && !lv_obj_has_flag(lbl, LV_OBJ_FLAG_USER_1)) {
+    lv_obj_add_flag(lbl, LV_OBJ_FLAG_USER_1);  // USER_2 styles installed
+    const uint32_t col = style_rgb(lv_obj_get_style_text_color(lbl, LV_PART_MAIN));
+    const lv_style_selector_t on_light = LV_PART_MAIN | LV_STATE_USER_2;
+    if (col == kBlack) {
+      lv_obj_set_style_text_opa(lbl, LV_OPA_TRANSP, on_light);
+    } else if (col == kTileInk) {
+      lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInkOnLight), on_light);
+    } else if (needs_dark_ink(col)) {
+      lv_obj_set_style_text_color(lbl, lv_color_hex(kTileInkOnLight), on_light);
+      lv_obj_set_style_text_opa(lbl, LV_OPA_70, on_light);
+    }
+  }
+  if (bright) lv_obj_add_state(lbl, LV_STATE_USER_2);
+  else lv_obj_remove_state(lbl, LV_STATE_USER_2);
+}
+
+inline void tile_ink_follow(lv_obj_t *obj, bool bright) {
+  const uint32_t n = lv_obj_get_child_count(obj);
+  for (uint32_t i = 0; i < n; ++i) {
+    lv_obj_t *c = lv_obj_get_child(obj, static_cast<int32_t>(i));
+    uint32_t own_bg;
+    if (opaque_bg(c, LV_PART_MAIN, &own_bg)) continue;
+    if (lv_obj_check_type(c, &lv_label_class)) label_ink(c, bright);
+    tile_ink_follow(c, bright);
+  }
+}
+
+// For a tile whose bright fill covers only part of it (the cover's shade, a
+// fill slider): each label takes the ink of whatever lies under its centre,
+// the band [y1, y2] (screen coordinates) or the tile's resting fill. Called as
+// the band moves, so a label changes ink as the fill passes it.
+inline void ink_under_band(lv_obj_t *obj, int32_t y1, int32_t y2, bool band_bright,
+                           bool rest_bright) {
+  const uint32_t n = lv_obj_get_child_count(obj);
+  for (uint32_t i = 0; i < n; ++i) {
+    lv_obj_t *c = lv_obj_get_child(obj, static_cast<int32_t>(i));
+    uint32_t own_bg;
+    if (opaque_bg(c, LV_PART_MAIN, &own_bg)) continue;  // the fill itself, buttons
+    if (lv_obj_check_type(c, &lv_label_class)) {
+      lv_area_t a;
+      lv_obj_get_coords(c, &a);
+      const int32_t cy = (a.y1 + a.y2) / 2;
+      label_ink(c, (cy >= y1 && cy <= y2) ? band_bright : rest_bright);
+    }
+    ink_under_band(c, y1, y2, band_bright, rest_bright);
+  }
+}
+
+// Paint a tile's fill, and its text to match. Every state tint goes through
+// here, so no card can tint a tile bright and leave white text on it.
+inline void paint_cell(lv_obj_t *cell, uint32_t fill) {
+  if (!cell) return;
+  lv_obj_set_style_bg_color(cell, lv_color_hex(fill), 0);
+  tile_ink_follow(cell, needs_dark_ink(fill));
+}
+
 // Repaint a state-tint tile's cell for its current on/off state.
 //
 // Shared by the recolour observer and restyle() so a state change and an accent
@@ -131,7 +197,7 @@ inline lv_obj_t *add_icon(lv_obj_t *cell, const lv_font_t *font,
 // have arrived by copy-paste.
 inline void paint_state_cell(lv_obj_t *cell, bool on, uint32_t on_color,
                              uint32_t off_color) {
-  if (cell) lv_obj_set_style_bg_color(cell, lv_color_hex(on ? on_color : off_color), 0);
+  paint_cell(cell, on ? on_color : off_color);
 }
 
 // Swap an icon label's glyph, fading the new glyph in — but only when the glyph

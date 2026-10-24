@@ -30,6 +30,31 @@ export function cardFieldDefs(type: number): FieldDef[] {
     { key: "entity2", label: "Target page",               entity: false, hint: "The page this tile opens when tapped." },
     { key: "title",   label: "Title",                     entity: false, hint: "Name shown on the tile." },
   ];
+  if (type === 23) return [ // Action (domain picks the service; no entity = fire an event)
+    { key: "entity",  label: "Script, automation, scene or button", entity: true,  hint: "Runs a script, triggers an automation, activates a scene or presses a button. Blank = fire an esphome.tilehaus_action event instead." },
+    { key: "entity2", label: "Event name",                          entity: false, hint: "With no entity: sent as the event's `action` value, for an automation to match. Blank = use the Title." },
+    { key: "title",   label: "Title",                               entity: false, hint: "Name shown on the tile." },
+  ];
+  if (type === 24) return [ // Timer
+    { key: "entity", label: "Timer entity", entity: true,  hint: "A timer helper, e.g. timer.pasta. Tap starts, pauses or resumes it; a long press cancels." },
+    { key: "title",  label: "Title",        entity: false, hint: "Name shown under the ring. On a 3x3 or larger tile the timer's state is shown top-left as well." },
+  ];
+  if (type === 25) return [ // Garage door / gate
+    { key: "entity", label: "Garage door or gate", entity: true,  hint: "A cover entity. Tap asks before opening or closing; while it moves, a tap stops it. Turns amber after 10 minutes open." },
+    { key: "title",  label: "Title",               entity: false, hint: "Name shown on the tile, and in the confirm step (\"Open Garage?\")." },
+  ];
+  if (type === 26) return [ // Gauge
+    { key: "entity",  label: "Sensor", entity: true,  hint: "A numeric sensor: battery, humidity, CO2, power, a tank level." },
+    { key: "entity2", label: "Range",  entity: false, hint: "min..max, optionally <n or >n to warn below or above n, e.g. 0..100 <20 or 400..2000 >1000. Blank = a range for the sensor's unit." },
+    { key: "title",   label: "Title",  entity: false, hint: "Name shown under the dial." },
+  ];
+  if (type === 27) return [ // Clock (no entity: the panel's own clock)
+    { key: "entity2", label: "Time zone", entity: false, hint: "The panel's own time, or a city's for a world clock (with a sun or moon for day or night there)." },
+    { key: "title",   label: "Title",     entity: false, hint: "Name shown bottom-left. Picking a city fills it in." },
+  ];
+  if (type === 28) return [ // Wi-Fi share (the network is set in HA, not here)
+    { key: "title", label: "Title", entity: false, hint: "Name shown under the code. The network itself is set on the panel's Guest Wi-Fi name and password in Home Assistant, so it never sits in the deck." },
+  ];
   if (type === 7) return [ // Weather
     { key: "entity",  label: "Weather entity",       entity: true,  hint: "Weather entity this tile displays." },
     { key: "entity2", label: "Forecast-high helper", entity: true,  hint: "input_number holding today's forecast high (optional)." },
@@ -56,7 +81,7 @@ export interface FlagDef {
 }
 
 // Card type numbers (frozen wire enum, see card_types.ts).
-const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22]);
+const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28]);
 const DETAIL_TYPES = new Set([2, 3, 5, 15, 17]);
 const FOLLOW_COLOR_TYPES = new Set([3, 4]);
 const HEADER_TYPE = 11;

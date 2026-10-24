@@ -2,6 +2,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
+#include <utility>
 #include <string>
 #include <cstdio>
 #include "esphome/components/api/api_server.h"
@@ -61,6 +63,22 @@ inline void ha_call(const char *service, const std::string &entity) {
   auto &kv = req.data.emplace_back();
   kv.key = decltype(kv.key)("entity_id");
   kv.value = decltype(kv.value)(entity.c_str());
+  esphome::api::global_api_server->send_homeassistant_action(req);
+}
+
+// Fire a Home Assistant event (the name must start with "esphome.") with
+// string data. HA automations trigger on it with an `event` trigger.
+inline void ha_fire_event(const char *event,
+                          std::initializer_list<std::pair<const char *, std::string>> data) {
+  esphome::api::HomeassistantActionRequest req;
+  req.service = decltype(req.service)(event);
+  req.is_event = true;
+  req.data.init(data.size());
+  for (const auto &d : data) {
+    auto &kv = req.data.emplace_back();
+    kv.key = decltype(kv.key)(d.first);
+    kv.value = decltype(kv.value)(d.second.c_str());
+  }
   esphome::api::global_api_server->send_homeassistant_action(req);
 }
 

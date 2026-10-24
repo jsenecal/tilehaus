@@ -17,7 +17,7 @@ editor.
 | # | Name | What it does | Fields (beyond Entity/Title) |
 |---|------|---------------|-------------------------------|
 | 0 | Blank | A plain tile: an optional icon + title, positioned by horizontal/vertical alignment. With **Transparent** on, it works as a section header or spacer. | Horizontal align, Vertical align, Reduced margins |
-| 1 | Sensor | Read-only numeric/text value display — the value in the icon slot, the name below it. | — |
+| 1 | Sensor | Read-only value display. A number is drawn as large as the tile allows with its unit smaller beside it (`23.4` big, `°C` small); a text state uses the regular faces. The name sits below. | — |
 | 2 | Toggle | Tap to turn an entity on/off; tints to the on/off colour. A detail chevron can open a popup with more controls. | — |
 | 3 | Light (slider) | Whole-tile vertical fill slider. For `light.*` entities it maps to brightness (0–100%, `light.turn_on`/`off`); for `number.*`/`input_number.*` entities it maps to the entity's raw value range (`number.set_value`). Drag or tap-to-glide; a centered readout flashes on change. | — |
 | 4 | Light (control) | Tile look (icon + name, tints on/off) that opens a full light-controls modal (brightness, color, etc.) on tap. | — |
@@ -39,6 +39,33 @@ editor.
 | 20 | Camera | **Reserved — removed.** Not offered in the configurator's type list. A deck that somehow stores this value renders as a Blank tile instead. | — |
 | 21 | Page | Navigation tile: tap opens another page. Can optionally track an entity for an on/off tint, like Toggle. | Tracked entity (Entity, optional), Target page (Entity 2, picked from existing pages) |
 | 22 | Back | Navigation tile that pops back to the previous page. Every new page starts with one so it's never a dead end. | Title only — no Entity field |
+| 23 | Action | Momentary tile, like Scene. The entity's domain picks what a tap does: runs a `script` (and tints while it runs), triggers an `automation`, activates a `scene`, presses a `button`/`input_button`, or turns anything else on. With no entity it fires an `esphome.tilehaus_action` event — see [Action events](#action-events). | Script, automation, scene or button (Entity, optional), Event name (Entity 2) |
+| 24 | Timer | A `timer` helper as a countdown ring: the ring shows the share of the duration left, and the tile tints while it runs. Tap starts, pauses or resumes; a long press cancels. On a 3×3 or larger tile the state (Running, Paused, Ready) is also shown top-left. The panel counts down between Home Assistant updates, from the timer's end time. | Timer entity (Entity) |
+| 25 | Garage door / gate | A `cover` with one big action. Tap asks before opening or closing it; while it moves, a tap stops it. A caption reads `OPEN · 14 MIN`, `CLOSING` and so on, and after 10 minutes open the tile turns amber (the Active colour). Gates get gate icons from their device class. The minutes count from when the panel saw the door open, so a door already open at boot shows just `OPEN`. | Garage door or gate (Entity) |
+| 26 | Gauge | A numeric sensor as a 240° dial with its value inside: battery, humidity, CO₂, power. The dial fills with the accent, or red past the warning threshold. On a 3×3 or larger tile a caption shows the range, or LOW / HIGH while warning. | Sensor (Entity), Range (Entity 2): `min..max`, optionally `<n` or `>n`, e.g. `0..100 <20`. Blank = a range for the unit (`%` 0–100, `°C` 0–40, `ppm` 400–2000 warning above 1000, `W` 0–3000, `kW` 0–10). |
+| 27 | Clock | The panel's own time, or a city's for a world clock. A caption shows the date (`FRI 24 OCT`), or for a world clock the day there and its offset from here (`FRI · +13 H`), with a sun or moon for day or night there. Keeps time on the panel, so it runs without Home Assistant once the clock has synced. | Time zone (Entity 2): picked from a city list in the configurator, stored as a POSIX TZ rule (e.g. `JST-9`); blank = the panel's own time. No Entity field |
+| 28 | Wi-Fi share | The guest network as a QR code: a phone camera pointed at it offers to join. Tap for a full-screen page with a large code and the network name and password in text. The network is set on the panel's **Guest Wi-Fi name** and **Guest Wi-Fi password** entities in Home Assistant, never in the deck (which anyone on the network can read); changing them updates the code at once. An empty password makes an open network. | Title only — no Entity field |
+
+## Action events
+
+An Action tile with no entity fires a Home Assistant event instead of calling
+a service, so a tap can drive any automation without a helper entity. The
+event is `esphome.tilehaus_action`, with:
+
+| Field | Value |
+|---|---|
+| `action` | The tile's **Event name**, or its Title when that is blank |
+| `panel` | The panel's ESPHome name, e.g. `tilehaus-office` |
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: esphome.tilehaus_action
+    event_data:
+      action: doorbell_chime
+```
+
+Add `panel: tilehaus-office` to `event_data` to react to one panel only.
 
 ## Weather helpers
 
@@ -170,7 +197,7 @@ flags are type-specific:
 
 | Flag | Applies to | Effect |
 |------|-----------|--------|
-| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22) | Shows only the icon, no name text. |
+| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action, Timer, Garage door / gate, Gauge, Clock, Wi-Fi share (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28) | Shows only the icon, no name text. |
 | **Detail chevron** | Toggle, Light (slider), Cover, Number slider, Fan (2, 3, 5, 15, 17) | Adds a corner button opening the entity's detail popup. |
 | **Follow colour** | Light (slider), Light (control) (3, 4) | Tints the tile (and its modal/sliders) to the light's actual color instead of the fixed active colour. |
 | **Show weather** | Header (11) | Shows the weather glyph + temperature; off = text-only header. |

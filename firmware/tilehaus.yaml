@@ -33,6 +33,8 @@ esphome:
       - "-DLV_USE_BAR=1"
       - "-DLV_USE_BUTTON=1"
       - "-DLV_USE_GRID=1"
+      - "-DLV_USE_CANVAS=1"   # the QR code draws on a canvas
+      - "-DLV_USE_QRCODE=1"   # Wi-Fi share tile
       - "-DLV_USE_FLEX=1"
   includes:
     - native

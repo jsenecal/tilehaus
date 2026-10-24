@@ -66,4 +66,11 @@ export function runCardFieldsTests(): void {
     const many = Array.from({ length: 100 }, (_, i) => `sensor.s${i}`);
     assert(matchEntities(many, "sensor", 50).length === 50, "capped at limit");
   }
+
+  // Action: an entity target, an event name for when there is none, a title
+  {
+    const keys = cardFieldDefs(23).map((d) => d.key);
+    assert(JSON.stringify(keys) === JSON.stringify(["entity", "entity2", "title"]), "Action fields");
+    assert(cardFieldDefs(23)[1]!.entity === false, "event name is plain text, not an entity id");
+  }
 }

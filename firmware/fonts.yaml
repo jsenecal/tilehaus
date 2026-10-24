@@ -73,11 +73,12 @@ font:
     id: font_clock_xl
     size: 180
     bpp: 4
-    # Exactly the characters screensaver.h's "%02d:%02d" can emit. LVGL skips
-    # glyphs it lacks silently rather than failing, so changing that format —
-    # a 12-hour clock with AM/PM, say — would render blanks with nothing to
-    # catch it but looking at the panel. Change both together.
-    glyphs: "0123456789:"
+    # The screensaver's "%02d:%02d", plus what fit_number.h draws large on
+    # tiles: sensor values, countdowns and clock times (digits, sign, decimal
+    # point, colon). LVGL skips glyphs it lacks silently, so anything else must
+    # stay out of this face: fit_face_can_draw() in sensor_format.h is the
+    # gate, and the two lists change together.
+    glyphs: "0123456789:.,-+"
 
   # Page titles (editorial theme): heavy grotesk on the page background, with
   # the bar beneath. Sized to fit a one-row (~72px) title tile with the bar.

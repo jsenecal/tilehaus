@@ -12,6 +12,7 @@ import { createHistory, type DeckSnapshot } from "./history";
 import { BackupError, backupFileName, exportSpec, parseSpec } from "./backup";
 import { cardFieldDefs, cardFlagDefs, fieldValue, flagValue, matchEntities, patchForField, patchForFlag } from "./card_fields";
 import { gridLimits } from "./model/grid_layout";
+import { TIME_ZONES } from "./time_zones";
 
 type StatusState = "idle" | "busy" | "ok" | "warn" | "err";
 
@@ -245,6 +246,12 @@ export function createEditorView(
       const opt = el("option");
       opt.value = String(option.value);
       opt.textContent = option.label;
+      // Types newer than the panel's firmware stay visible but can't be picked,
+      // so the deck never gains a tile the panel would refuse.
+      if (option.value > state.maxType) {
+        opt.textContent = `${option.label} (needs a firmware update)`;
+        opt.disabled = option.value !== selected;
+      }
       if (option.value === selected) opt.selected = true;
       sel.append(opt);
     }
@@ -327,6 +334,35 @@ export function createEditorView(
     };
 
     for (const def of defs) {
+      // Clock: a city picker that stores the city's POSIX rule. Cities sharing a
+      // rule (Toronto, New York) are told apart by the tile's title.
+      if (card.type === 27 && def.key === "entity2") {
+        const sel = el("select");
+        const known = TIME_ZONES.some((z) => z.tz === card.entity2);
+        const match = TIME_ZONES.findIndex((z) => z.tz === card.entity2 && z.city === card.title);
+        const chosen = match >= 0 ? match : TIME_ZONES.findIndex((z) => z.tz === card.entity2);
+        TIME_ZONES.forEach((z, i) => {
+          const opt = el("option"); opt.value = String(i); opt.textContent = z.city;
+          if (i === chosen) opt.selected = true;
+          sel.append(opt);
+        });
+        if (!known) {  // a rule typed in by hand (or from a CLI spec) stays selectable
+          const opt = el("option"); opt.value = "custom"; opt.textContent = `Custom: ${card.entity2}`;
+          opt.selected = true;
+          sel.append(opt);
+        }
+        sel.onchange = () => {
+          if (sel.value === "custom") return;
+          const z = TIME_ZONES[Number(sel.value)]!;
+          const before = TIME_ZONES.find((t) => t.tz === card.entity2)?.city ?? "";
+          // Name the tile after the city, unless it was given a name of its own.
+          const retitle = card.title === "" || card.title === before;
+          updateCard(state, index, { entity2: z.tz, ...(retitle ? { title: z.tz === "" ? "" : z.city } : {}) });
+          render();
+        };
+        form.append(fieldRow(def.label, sel, def.hint));
+        continue;
+      }
       if (card.type === 21 && def.key === "entity2") {
         const sel = el("select");
         for (const name of state.pages) {

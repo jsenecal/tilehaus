@@ -24,12 +24,17 @@ inline constexpr uint32_t kTileInkSoft = 0xC8C8C8;   // secondary values (hi/lo,
 inline constexpr uint32_t kTileInkDim = 0xB0B0B0;    // captions in modals and overlays
 inline constexpr uint32_t kTileInkFaint = 0x909090;  // tertiary (a forecast low)
 inline constexpr uint32_t kBlack = 0x000000;         // overlays, scrims, text twins
+// Text and glyphs on a bright fill (a lime tile, a pale follow colour). Kept
+// apart from the page's kInk so night mode, which recolours page ink by value,
+// never touches a tile.
+inline constexpr uint32_t kTileInkOnLight = 0x1A1A1A;
 
 // State tints: each card's built-in active/inactive colour.
 inline constexpr uint32_t kStateGood = 0x2E7D32;   // locked, disarmed
 inline constexpr uint32_t kStateAlert = 0xC62828;  // unlocked, a destructive confirm
 inline constexpr uint32_t kStateWarm = 0xC24E1E;   // heating, armed home/away/night
 inline constexpr uint32_t kStateArmed = 0xB23B3B;  // the alarm tile while armed
+inline constexpr uint32_t kStateWarn = 0xD99A1E;   // a garage door left open
 inline constexpr uint32_t kFanOn = 0x2C6E8A;       // cool teal while a fan runs
 inline constexpr uint32_t kWledOn = 0x5A3E8A;      // WLED violet while on
 

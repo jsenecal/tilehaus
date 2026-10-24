@@ -61,7 +61,9 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
 
 - `GET` → `200` with the binary DECK document (media type
   `application/vnd.tilehaus.deck`) plus `ETag`, `X-Display-Width`,
-  `X-Display-Height`; or `204` when unconfigured.
+  `X-Display-Height`, `X-Deck-Max-Type` (newest card type the firmware renders;
+  absent = 22); or `204` when unconfigured. A new card type means both panels
+  need the firmware before a deck using it can be pushed.
 - `PUT` (`Content-Type: application/vnd.tilehaus.deck` + `If-Match: "<gen>"`) →
   `204`, then the panel **reboots to apply**.
 - `DELETE` (`If-Match`) → `204`, reboots to the awaiting-config screen.

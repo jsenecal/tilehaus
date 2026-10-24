@@ -28,6 +28,12 @@ export const CARD_TYPES: readonly CardTypeOption[] = [
   // value 20 (Camera) is reserved but not offered — the card was removed.
   { value: 21, label: "Page" },
   { value: 22, label: "Back" },
+  { value: 23, label: "Action" },
+  { value: 24, label: "Timer" },
+  { value: 25, label: "Garage door / gate" },
+  { value: 26, label: "Gauge" },
+  { value: 27, label: "Clock" },
+  { value: 28, label: "Wi-Fi share" },
 ];
 
 export function cardTypeLabel(value: number): string {

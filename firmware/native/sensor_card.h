@@ -5,32 +5,27 @@
 #include "card.h"
 #include "card_style.h"
 #include "ha.h"
+#include "fit_number.h"
 #include "sensor_format.h"
 
 namespace tilehaus {
 
 struct SensorCard : Card {
-  lv_subject_t text_{};
-  char buf_[32];
-  char prev_[32];
-  lv_obj_t *label_ = nullptr;
+  FitNumber value_;  // the reading, number as large as the tile allows, unit small
 
   TileSpan default_size() const override { return {2, 2}; }
 
   void build(lv_obj_t *cell, const CardConfig &cfg,
              const CardFonts &fonts) override {
-    // Value takes the icon slot (top-left); name sits bottom-left.
-    label_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(label_, lv_color_hex(kTileInk), 0);
-    // Tight tiles drop to the medium rung: 55px overflows a 124px content
-    // area, which clipped "23.4°C" to "23.4°(".
-    if (const lv_font_t *vf = tile_value_font(fonts))
-      lv_obj_set_style_text_font(label_, vf, 0);
-    lv_obj_align(label_, LV_ALIGN_TOP_LEFT, 0, 0);
+    // The value fills the tile above the name line (all of it without a name).
+    const TileMetrics m = tile_metrics();
+    const int content_w = m.px_w > 0 ? m.px_w - 2 * kTileInset : 120;
+    const int content_h = m.px_h > 0 ? m.px_h - 2 * kTileInset : 120;
+    const bool named = !cfg.hide_label && !cfg.title.empty();
+    value_.create(cell, content_w, content_h - (named ? 34 : 0), fonts, false);
+    lv_obj_align(value_.box, LV_ALIGN_TOP_LEFT, 0, 0);
     add_name(cell, fonts, cfg.title, cfg.hide_label);
-    buf_[0] = prev_[0] = '\0';
-    lv_subject_init_string(&text_, buf_, prev_, sizeof(buf_), "-");
-    lv_label_bind_text(label_, &text_, nullptr);
+    value_.set("-", "", false);
   }
 
   void bind(const CardConfig &cfg) override {
@@ -52,8 +47,8 @@ struct SensorCard : Card {
   void render() {
     const bool valid = have_state_ && !state_.empty() &&
                        state_ != "unavailable" && state_ != "unknown";
-    const std::string text = format_sensor_value(state_, unit_, valid);
-    lv_subject_copy_string(&text_, text.c_str());
+    const SensorParts p = split_sensor_value(state_, unit_, valid);
+    value_.set(p.value, p.unit, p.numeric);
   }
 
   std::string state_;

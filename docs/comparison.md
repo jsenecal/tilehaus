@@ -17,35 +17,38 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 22 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 28 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
 |---|:-:|:-:|---|
 | Lights (brightness / switch / temperature / full control) | ✓ | ✓ | Tilehaus: **Light (slider)** + **Light (control)** with a colour/temperature modal and follow-colour tinting |
 | Switches / plugs | ✓ | ✓ | Tilehaus: **Toggle** |
-| Scenes / scripts / buttons | ✓ | ◑ | Tilehaus: **Scene** (`scene.turn_on`) + **Button** (`button.press`); no generic script/automation action card |
-| Webhook / Trigger / Push / Local action | ✓ | ✗ | — |
+| Scenes / scripts / buttons | ✓ | ✓ | Tilehaus: **Action** runs a script (tinting while it runs), triggers an automation, activates a scene or presses a button; **Scene** and **Button** remain |
+| Trigger (fire an HA event) | ✓ | ✓ | Tilehaus: an **Action** tile with no entity fires `esphome.tilehaus_action` |
+| Webhook / Push / Local action | ✓ | ✗ | — |
 | Option select | ✓ | ✓ | |
-| Sensor | ✓ | ✓ | |
+| Sensor | ✓ | ✓ | Tilehaus also has a **Gauge** dial with a range and a warning threshold |
 | Local sensor (on-device) | ✓ | ✗ | |
 | Doors & Windows | ✓ | ✓ | Tilehaus: **Door/Window** (read-only contact) |
 | Presence | ✓ | ✓ | |
 | Slider (number / input_number) | ✓ | ✓ | Tilehaus: **Number slider** |
 | Fans | ✓ | ✓ | Tilehaus: **Fan** with a speed/preset modal |
 | Cover / blinds | ✓ | ✓ | Tilehaus: **Cover** with a position modal |
-| Garage door / Gate | ✓ | ✗ | No dedicated garage/gate card (Cover only) |
+| Garage door / Gate | ✓ | ✓ | Tilehaus: **Garage door / gate** — confirm before open/close, tap to stop, open-time caption and an amber overdue tint |
 | Vacuum / Lawn mower | ✓ | ✗ | — |
 | Lock | ✓ | ✓ | |
 | Alarm | ✓ | ✓ | Tilehaus: **Alarm** with an on-screen PIN keypad |
 | Climate / HVAC | ✓ | ✓ | Tilehaus: **Climate** with an arc/target modal |
 | Weather | ✓ | ✓ | |
 | Weather forecast | ✓ | ✓ | |
-| Date & time / World clock / Timezone / Calendar | ✓ | ◑ | Tilehaus has a composite **Header** (greeting + weather + clock/date) but no standalone clock/world-clock/timezone/calendar cards |
+| Date & time / World clock / Timezone / Calendar | ✓ | ◑ | Tilehaus: **Clock** (local or a world clock from a city list) plus the **Header** clock; no calendar card |
 | Camera / image | ✓ | ✗ | Deliberately removed from Tilehaus (full-res JPEG decode froze the UI) — type 20 stays reserved |
+| Timer | ✓ | ✓ | Tilehaus: **Timer** countdown ring; tap to start/pause, hold to cancel |
 | Media player | ✓ | ✗ | No media card (art, transport, volume, progress) |
 | Internal switches / relays | ✓ | ✗ | On-panel relays not exposed |
 | Screen lock | ✓ | ✗ | |
+| Wi-Fi sharing (guest QR) | ✓ | ✓ | Tilehaus: **Wi-Fi share** — the network is set from Home Assistant, never stored in the deck; tap for a full-screen code with the password in text |
 | Subpages / navigation | ✓ | ✓ | Tilehaus: **Page** + **Back** tiles for multi-page navigation |
 | Section header / spacer | ◑ | ✓ | Tilehaus: **Header** and **Blank** (transparent/section) tiles |
 | WLED | ✗ | ✓ | Tilehaus has a dedicated **WLED** card + modal |

@@ -51,6 +51,7 @@ struct CoverCard : Card {
       if (self->touch_phase_ == 1) {  // live drag: track the finger, no anim
         lv_anim_del(self->fill_, fill_h_cb);
         lv_obj_set_height(self->fill_, LV_PCT(closed));
+        ink_cover(self->fill_, closed);
       } else {  // HA update or tap: glide the shade to the new height
         lv_anim_t a;
         lv_anim_init(&a);
@@ -81,7 +82,25 @@ struct CoverCard : Card {
 
   // Animate the shade panel's height (closed percent) between two values.
   static void fill_h_cb(void *var, int32_t v) {
-    lv_obj_set_height(static_cast<lv_obj_t *>(var), LV_PCT(v));
+    auto *fill = static_cast<lv_obj_t *>(var);
+    lv_obj_set_height(fill, LV_PCT(v));
+    ink_cover(fill, v);
+  }
+
+  // Labels the shade covers take the ink for the shade's colour; the rest keep
+  // the tile's. Worked out from the percent rather than the shade's coordinates,
+  // which only update on the next layout pass.
+  static void ink_cover(lv_obj_t *fill, int closed_pct) {
+    lv_obj_t *cell = lv_obj_get_parent(fill);
+    lv_obj_update_layout(cell);  // label coordinates are valid from the first build
+    lv_area_t a;
+    lv_obj_get_coords(cell, &a);
+    const int32_t bottom = a.y1 + lv_area_get_height(&a) * closed_pct / 100;
+    uint32_t shade = 0, rest = kTileBg;
+    opaque_bg(fill, LV_PART_MAIN, &shade);
+    opaque_bg(cell, LV_PART_MAIN, &rest);
+    ink_under_band(cell, a.y1, closed_pct > 0 ? bottom : a.y1 - 1, needs_dark_ink(shade),
+                   needs_dark_ink(rest));
   }
 
   void build(lv_obj_t *cell, const CardConfig &cfg,
@@ -185,7 +204,10 @@ struct CoverCard : Card {
   // tile_on_color() (no per-tile active_color override for the cover fill),
   // so restyle can just re-apply it directly to the widget.
   void restyle() override {
-    if (fill_) lv_obj_set_style_bg_color(fill_, lv_color_hex(tile_on_color()), 0);
+    if (fill_) {
+      lv_obj_set_style_bg_color(fill_, lv_color_hex(tile_on_color()), 0);
+      ink_cover(fill_, fill_closed_);  // an accent change can flip the ink
+    }
   }
 };
 
