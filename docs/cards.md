@@ -17,7 +17,7 @@ editor.
 | # | Name | What it does | Fields (beyond Entity/Title) |
 |---|------|---------------|-------------------------------|
 | 0 | Blank | A plain tile: an optional icon + title, positioned by horizontal/vertical alignment. With **Transparent** on, it works as a section header or spacer. | Horizontal align, Vertical align, Reduced margins |
-| 1 | Sensor | Read-only numeric/text value display — the value in the icon slot, the name below it. | — |
+| 1 | Sensor | Read-only value display. A number is drawn as large as the tile allows with its unit smaller beside it (`23.4` big, `°C` small); a text state uses the regular faces. The name sits below. | — |
 | 2 | Toggle | Tap to turn an entity on/off; tints to the on/off colour. A detail chevron can open a popup with more controls. | — |
 | 3 | Light (slider) | Whole-tile vertical fill slider. For `light.*` entities it maps to brightness (0–100%, `light.turn_on`/`off`); for `number.*`/`input_number.*` entities it maps to the entity's raw value range (`number.set_value`). Drag or tap-to-glide; a centered readout flashes on change. | — |
 | 4 | Light (control) | Tile look (icon + name, tints on/off) that opens a full light-controls modal (brightness, color, etc.) on tap. | — |

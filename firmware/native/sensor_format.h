@@ -49,4 +49,46 @@ inline std::string format_sensor_value(const std::string &state,
   return text;
 }
 
+// The same value as format_sensor_value, in two parts: the number (or the
+// text of a non-numeric state) and the unit, so a tile can set the number large
+// and the unit smaller beside it. `numeric` is false for text states, the em
+// dash, and anything else the digits-only big face can't draw.
+struct SensorParts {
+  std::string value;
+  std::string unit;
+  bool numeric = false;
+};
+
+inline bool fit_face_can_draw(const std::string &s) {
+  if (s.empty()) return false;
+  for (char ch : s) {
+    if (!((ch >= '0' && ch <= '9') || ch == '.' || ch == ',' || ch == '-' || ch == '+' || ch == ':'))
+      return false;
+  }
+  return true;
+}
+
+inline SensorParts split_sensor_value(const std::string &state, const std::string &unit,
+                                      bool valid) {
+  SensorParts p;
+  if (!valid) {
+    p.value = "\xE2\x80\x94";
+    return p;
+  }
+  const char *begin = state.c_str();
+  char *end = nullptr;
+  const double value = std::strtod(begin, &end);
+  while (end && *end == ' ') ++end;
+  if (end != begin && end && *end == '\0' && std::isfinite(value)) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), value == std::floor(value) ? "%.0f" : "%.1f", value);
+    p.value = buf;
+    p.unit = unit;
+    p.numeric = fit_face_can_draw(p.value);
+    return p;
+  }
+  p.value = format_sensor_value(state, unit, true);  // text: keep it whole
+  return p;
+}
+
 }  // namespace tilehaus

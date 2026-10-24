@@ -1,5 +1,6 @@
 #pragma once
 #include "lvgl.h"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -8,6 +9,7 @@
 #include "card.h"
 #include "card_style.h"
 #include "clock.h"
+#include "fit_number.h"
 #include "theme.h"
 #include "timer_state.h"  // days_from_civil
 
@@ -28,12 +30,12 @@ struct ClockCard : Card {
   static constexpr const char *kMoon = "\U000F0594";  // mdi-weather-night
 
   lv_obj_t *cell_ = nullptr;
-  lv_obj_t *time_lbl_ = nullptr;
+  FitNumber time_;
   lv_obj_t *cap_lbl_ = nullptr;
   lv_obj_t *glyph_lbl_ = nullptr;
   esphome::time::ParsedTimezone tz_{};
   bool world_ = false;
-  std::string shown_time_, shown_cap_, shown_glyph_;
+  std::string shown_cap_, shown_glyph_;
 
   TileSpan default_size() const override { return {2, 2}; }
 
@@ -47,15 +49,16 @@ struct ClockCard : Card {
     lv_obj_set_style_text_color(cap_lbl_, lv_color_hex(kTileInkDim), 0);
     lv_obj_align(cap_lbl_, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    // The large face when the tile is wide enough for "00:00" in it.
+    // The time fills the band between the caption and the name, as large as
+    // it fits (fit_number.h).
     const TileMetrics m = tile_metrics();
     const int content_w = m.px_w > 0 ? m.px_w - 2 * kTileInset : 120;
-    time_lbl_ = lv_label_create(cell);
-    lv_obj_set_style_text_color(time_lbl_, lv_color_hex(kTileInk), 0);
-    const lv_font_t *f = content_w >= 170 ? fonts.value : fonts.medium;
-    if (f) lv_obj_set_style_text_font(time_lbl_, f, 0);
-    lv_obj_set_style_text_letter_space(time_lbl_, -1, 0);
-    lv_obj_align(time_lbl_, LV_ALIGN_LEFT_MID, 0, 0);
+    const int content_h = m.px_h > 0 ? m.px_h - 2 * kTileInset : 120;
+    const bool named = !cfg.hide_label && !cfg.title.empty();
+    constexpr int kCaptionH = 22, kNameH = 34, kGap = 6;
+    const int band_h = content_h - kCaptionH - (named ? kNameH : 0) - 2 * kGap;
+    time_.create(cell, content_w, band_h, fonts, false);
+    lv_obj_align(time_.box, LV_ALIGN_TOP_LEFT, 0, kCaptionH + kGap);
 
     add_name(cell, fonts, cfg.title, cfg.hide_label);
     if (world_) {
@@ -108,8 +111,11 @@ struct ClockCard : Card {
     static const char *const kDays[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
     static const char *const kMonths[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN",
                                           "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-    if (app_clock() == nullptr || !app_clock()->now().is_valid()) {
-      set_text(time_lbl_, shown_time_, "--:--");
+    // Before the clock syncs: a faint dash placeholder.
+    const bool synced = app_clock() != nullptr && app_clock()->now().is_valid();
+    lv_obj_set_style_text_opa(time_.num, synced ? LV_OPA_COVER : LV_OPA_30, 0);
+    if (!synced) {
+      time_.set("--:--", "", true);
       return;
     }
     const esphome::ESPTime now = app_clock()->now();
@@ -127,7 +133,7 @@ struct ClockCard : Card {
 
     char hm[8];
     std::snprintf(hm, sizeof(hm), "%02d:%02d", t.tm_hour, t.tm_min);
-    set_text(time_lbl_, shown_time_, hm);
+    time_.set(hm, "", true);
 
     std::string cap;
     if (world_) {

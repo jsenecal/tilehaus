@@ -5,6 +5,7 @@
 #include "card.h"
 #include "card_style.h"
 #include "clock.h"
+#include "fit_number.h"
 #include "ha.h"
 #include "theme.h"
 #include "timer_state.h"
@@ -26,7 +27,7 @@ namespace tilehaus {
 struct TimerCard : Card {
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *arc_ = nullptr;
-  lv_obj_t *time_lbl_ = nullptr;
+  FitNumber count_;  // the countdown, as large as the ring allows
   lv_obj_t *state_lbl_ = nullptr;  // roomy layout: "RUNNING" caption
   CardFonts fonts_{};
   int ring_ = 0;
@@ -35,7 +36,6 @@ struct TimerCard : Card {
   uint32_t off_color_ = kTileBg;
   int32_t cfg_active_color_ = -1;
   bool active_ = false;
-  std::string shown_;  // the countdown text on screen, to skip no-op relabels
 
   TileSpan default_size() const override { return {2, 2}; }
 
@@ -76,8 +76,10 @@ struct TimerCard : Card {
     lv_obj_set_style_arc_color(arc_, lv_color_hex(kBlack), LV_PART_MAIN);
     lv_obj_set_style_arc_opa(arc_, LV_OPA_30, LV_PART_MAIN);
 
-    time_lbl_ = lv_label_create(arc_);
-    lv_obj_center(time_lbl_);
+    // The countdown fills the ring's opening (a box inside the stroke).
+    const int inner = ring_ - 2 * stroke;
+    count_.create(arc_, inner * 74 / 100, inner * 46 / 100, fonts, true);
+    lv_obj_center(count_.box);
     if (roomy) {
       state_lbl_ = lv_label_create(cell);
       if (fonts.caption) lv_obj_set_style_text_font(state_lbl_, fonts.caption, 0);
@@ -146,7 +148,7 @@ struct TimerCard : Card {
     const uint32_t fill = active_ ? on_color_ : off_color_;
     const uint32_t ink = needs_dark_ink(fill) ? kTileInkOnLight : kTileInk;
     lv_obj_set_style_arc_color(arc_, lv_color_hex(ink), LV_PART_INDICATOR);
-    lv_obj_set_style_text_color(time_lbl_, lv_color_hex(ink), 0);
+    lv_obj_set_style_text_color(count_.num, lv_color_hex(ink), 0);
     if (state_lbl_) {
       // The caption is the quiet line: ink at reduced strength reads as muted
       // on both the lime and the charcoal fill.
@@ -155,20 +157,11 @@ struct TimerCard : Card {
       lv_label_set_text(state_lbl_, state_caption(v.phase));
     }
     // Paused reads as held: the countdown dims until it runs again.
-    lv_obj_set_style_text_opa(time_lbl_, v.phase == TimerPhase::Paused ? LV_OPA_60 : LV_OPA_COVER, 0);
+    lv_obj_set_style_text_opa(count_.num, v.phase == TimerPhase::Paused ? LV_OPA_60 : LV_OPA_COVER, 0);
     lv_arc_set_value(arc_, v.ring_permille());
 
     const std::string text = format_countdown(v.remaining_s);
-    if (text != shown_) {
-      shown_ = text;
-      // The largest face that fits inside the ring, a step down for h:mm:ss.
-      const lv_font_t *steps[] = {fonts_.value, fonts_.medium, fonts_.body, fonts_.small};
-      int i = ring_ >= 200 ? 0 : ring_ >= 120 ? 1 : 2;
-      if (text.size() > 5) ++i;
-      const lv_font_t *f = steps[i];
-      if (f != nullptr) lv_obj_set_style_text_font(time_lbl_, f, 0);
-      lv_label_set_text(time_lbl_, text.c_str());
-    }
+    count_.set(text, "", fit_face_can_draw(text));
   }
 };
 

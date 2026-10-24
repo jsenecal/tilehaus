@@ -6,6 +6,7 @@
 #include <string>
 #include "card.h"
 #include "card_style.h"
+#include "fit_number.h"
 #include "gauge_state.h"
 #include "ha.h"
 #include "sensor_format.h"
@@ -25,14 +26,13 @@ namespace tilehaus {
 struct GaugeCard : Card {
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *arc_ = nullptr;
-  lv_obj_t *value_lbl_ = nullptr;
+  FitNumber value_;  // the reading, number large and unit small
   lv_obj_t *cap_lbl_ = nullptr;  // roomy layout only
   CardFonts fonts_{};
   int ring_ = 0;
   std::string range_spec_, state_, unit_;
   bool have_state_ = false;
   int32_t cfg_active_color_ = -1;
-  std::string shown_;
 
   TileSpan default_size() const override { return {2, 2}; }
 
@@ -71,9 +71,10 @@ struct GaugeCard : Card {
     lv_obj_set_style_arc_color(arc_, lv_color_hex(kBlack), LV_PART_MAIN);
     lv_obj_set_style_arc_opa(arc_, LV_OPA_30, LV_PART_MAIN);
 
-    value_lbl_ = lv_label_create(arc_);
-    lv_obj_set_style_text_color(value_lbl_, lv_color_hex(kTileInk), 0);
-    lv_obj_center(value_lbl_);
+    // The reading fills the dial's opening.
+    const int inner = ring_ - 2 * stroke;
+    value_.create(arc_, inner * 78 / 100, inner * 46 / 100, fonts, true);
+    lv_obj_center(value_.box);
 
     if (roomy) {
       cap_lbl_ = lv_label_create(cell);
@@ -132,16 +133,8 @@ struct GaugeCard : Card {
       lv_label_set_text(cap_lbl_, cap.c_str());
     }
 
-    const std::string text = format_sensor_value(state_, unit_, valid);
-    if (text != shown_) {
-      shown_ = text;
-      // The largest face that fits inside the dial; a step down for long text.
-      const lv_font_t *steps[] = {fonts_.value, fonts_.medium, fonts_.body, fonts_.small};
-      int i = ring_ >= 200 ? 0 : ring_ >= 120 ? 1 : 2;
-      if (text.size() > 5) ++i;
-      if (steps[i] != nullptr) lv_obj_set_style_text_font(value_lbl_, steps[i], 0);
-      lv_label_set_text(value_lbl_, text.c_str());
-    }
+    const SensorParts p = split_sensor_value(state_, unit_, valid);
+    value_.set(p.value, p.unit, p.numeric);
   }
 };
 
