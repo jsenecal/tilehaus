@@ -77,6 +77,26 @@ struct LightSliderCard : Card {
                         static_cast<uint32_t>(fb_))
                      : tile_on_color();
     lv_obj_set_style_bg_color(slider_, lv_color_hex(c), LV_PART_INDICATOR);
+    ink_fill();
+  }
+
+  // Labels the fill (rising from the bottom) covers take the ink for its
+  // colour; the rest keep the track's. Uses the slider's target value, so
+  // during a 100ms glide the ink can lead the fill by a frame or two.
+  void ink_fill() {
+    if (!slider_) return;
+    lv_obj_t *cell = lv_obj_get_parent(slider_);
+    lv_obj_update_layout(cell);
+    lv_area_t a;
+    lv_obj_get_coords(slider_, &a);
+    const int32_t lo = lv_slider_get_min_value(slider_), hi = lv_slider_get_max_value(slider_);
+    const int32_t v = lv_slider_get_value(slider_);
+    const int32_t h = lv_area_get_height(&a);
+    const int32_t top = hi > lo ? a.y2 - h * (v - lo) / (hi - lo) : a.y2;
+    uint32_t fill = 0, track = kTileBg;
+    fill = style_rgb(lv_obj_get_style_bg_color(slider_, LV_PART_INDICATOR));
+    opaque_bg(slider_, LV_PART_MAIN, &track);
+    ink_under_band(cell, v > lo ? top : a.y2 + 1, a.y2, needs_dark_ink(fill), needs_dark_ink(track));
   }
 
   // Flash the centered readout on every change, then auto-hide it 1.5s after the
@@ -87,6 +107,7 @@ struct LightSliderCard : Card {
     std::string t = self->format_val(v);
     lv_subject_copy_string(&self->text_, t.c_str());
     set_icon_glyph(self->icon_lbl_, v > 0 ? self->icon_on_ : self->icon_off_);
+    self->ink_fill();
     if (self->pct_lbl_) {
       lv_anim_del(self->pct_lbl_, nullptr);  // stop any in-flight fade-out
       lv_obj_set_style_opa(self->pct_lbl_, LV_OPA_COVER, 0);  // snap to visible
