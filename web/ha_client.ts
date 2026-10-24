@@ -13,6 +13,9 @@ export interface EntityMeta {
   friendlyName: string;
   icon: string;
   deviceClass: string;
+  state: string;                        // the entity's current state, as HA reports it
+  unit: string;                         // unit_of_measurement, "" if none
+  attributes: Record<string, unknown>;  // for the preview: brightness, position, …
 }
 
 export interface HaClient {
@@ -21,10 +24,16 @@ export interface HaClient {
   meta(entityId: string): EntityMeta | undefined;
   status(): HaStatus;
   connect(baseUrl: string, token: string): Promise<void>;
+  /** Re-read every entity's state with the saved credentials (no-op unless connected). */
+  refresh(): Promise<void>;
 }
 
-const KEY_BASE = "epc.ha.baseUrl";
-const KEY_TOKEN = "epc.ha.token";
+export const KEY_BASE = "tilehaus.ha.baseUrl";
+export const KEY_TOKEN = "tilehaus.ha.token";
+// Where an older configurator (from the EspControl days) kept them: read once,
+// so updating doesn't make anyone reconnect.
+const LEGACY_KEY_BASE = "epc.ha.baseUrl";
+const LEGACY_KEY_TOKEN = "epc.ha.token";
 
 export function createHaClient(options: {
   fetch?: typeof fetch;
@@ -44,8 +53,8 @@ export function createHaClient(options: {
     try { storage?.setItem(key, value); } catch { /* storage unavailable */ }
   };
 
-  let baseUrl = readStored(KEY_BASE);
-  let token = readStored(KEY_TOKEN);
+  let baseUrl = readStored(KEY_BASE) || readStored(LEGACY_KEY_BASE);
+  let token = readStored(KEY_TOKEN) || readStored(LEGACY_KEY_TOKEN);
   let cached: string[] = [];
   let metaById = new Map<string, EntityMeta>();
   let state: HaStatus = { state: "idle" };
@@ -64,6 +73,18 @@ export function createHaClient(options: {
     writeStored(KEY_BASE, baseUrl);
     writeStored(KEY_TOKEN, token);
     state = { state: "connecting" };
+    await load();
+  }
+
+  async function refresh(): Promise<void> {
+    if (state.state !== "connected") return;
+    await load(true);
+  }
+
+  // A failed refresh keeps the last good states rather than going blank.
+  async function load(quiet = false): Promise<void> {
+    const before = state;
+    const fail = (next: HaStatus): void => { state = quiet ? before : next; };
 
     let response: Response;
     try {
@@ -71,19 +92,19 @@ export function createHaClient(options: {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch {
-      state = {
+      fail({
         state: "error",
         message: `Couldn't reach Home Assistant. If it's running, add ${origin} to http.cors_allowed_origins in configuration.yaml and restart — this page loads from a different origin.`,
-      };
+      });
       return;
     }
 
     if (response.status === 401 || response.status === 403) {
-      state = { state: "error", message: "Home Assistant rejected the token — check the long-lived access token." };
+      fail({ state: "error", message: "Home Assistant rejected the token — check the long-lived access token." });
       return;
     }
     if (!response.ok) {
-      state = { state: "error", message: `Home Assistant returned ${response.status}.` };
+      fail({ state: "error", message: `Home Assistant returned ${response.status}.` });
       return;
     }
 
@@ -106,12 +127,15 @@ export function createHaClient(options: {
             friendlyName: readStr(a, "friendly_name"),
             icon: readStr(a, "icon"),
             deviceClass: readStr(a, "device_class"),
+            state: readStr(record, "state"),
+            unit: readStr(a, "unit_of_measurement"),
+            attributes: a,
           });
         }
       }
       list = Array.from(ids).sort();
     } catch {
-      state = { state: "error", message: "Home Assistant sent an unexpected response." };
+      fail({ state: "error", message: "Home Assistant sent an unexpected response." });
       return;
     }
 
@@ -126,5 +150,6 @@ export function createHaClient(options: {
     meta: (entityId: string): EntityMeta | undefined => metaById.get(entityId),
     status: (): HaStatus => state,
     connect,
+    refresh,
   };
 }
