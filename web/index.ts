@@ -23,6 +23,7 @@ async function main(): Promise<void> {
     state.displayW = loaded.displayW;
     state.displayH = loaded.displayH;
     state.etag = loaded.etag;
+    state.maxType = loaded.maxType;
     state.selected = loaded.cards.length > 0 ? 0 : null;
   } catch (error) {
     root.textContent = `Failed to load config: ${String(error)}`;

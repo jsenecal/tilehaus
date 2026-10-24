@@ -245,6 +245,12 @@ export function createEditorView(
       const opt = el("option");
       opt.value = String(option.value);
       opt.textContent = option.label;
+      // Types newer than the panel's firmware stay visible but can't be picked,
+      // so the deck never gains a tile the panel would refuse.
+      if (option.value > state.maxType) {
+        opt.textContent = `${option.label} (needs a firmware update)`;
+        opt.disabled = option.value !== selected;
+      }
       if (option.value === selected) opt.selected = true;
       sel.append(opt);
     }

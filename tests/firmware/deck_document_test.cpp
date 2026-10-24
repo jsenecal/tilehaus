@@ -69,6 +69,35 @@ int main() {
   assert(!tilehaus::decode_deck(bytes.data(), 8, untouched));                 // short header
   assert(!tilehaus::decode_deck(bytes.data(), bytes.size() - 1, untouched));  // truncated body
 
+  // Each rejection says why, in words the PUT handler can send back.
+  {
+    std::string why;
+    auto reason = [&why](const std::vector<uint8_t> &b) {
+      std::vector<CardConfig> c;
+      why.clear();
+      assert(!tilehaus::decode_deck(b.data(), b.size(), c, nullptr, nullptr, nullptr, nullptr, &why));
+      return why;
+    };
+    assert(reason(bad_magic) == "not a deck document");
+    assert(reason(bad_version).find("deck format v") == 0);
+    assert(reason(std::vector<uint8_t>(bytes.begin(), bytes.end() - 1)).find("truncated") == 0 ||
+           reason(std::vector<uint8_t>(bytes.begin(), bytes.end() - 1)).find("body length") == 0);
+
+    // A tile newer than this firmware: the reason names the tile and the type.
+    const uint16_t version = static_cast<uint16_t>(bytes[4] | (bytes[5] << 8));
+    size_t first = version == 6 ? tilehaus::kDeckHeaderSizeV6 : tilehaus::kDeckHeaderSizeV3;
+    for (size_t pg = 0; pg < bytes[14]; ++pg) first += 1 + bytes[first];  // skip page names
+    std::vector<uint8_t> newer = bytes;
+    newer[first] = tilehaus::kDeckMaxType + 1;
+    const std::string r = reason(newer);
+    assert(r.find("tile 1 is card type " + std::to_string(tilehaus::kDeckMaxType + 1)) == 0);
+    assert(r.find("update the panel's firmware") != std::string::npos);
+    std::vector<CardConfig> ok;
+    std::string none = "unchanged";
+    assert(tilehaus::decode_deck(bytes.data(), bytes.size(), ok, nullptr, nullptr, nullptr, nullptr, &none));
+    assert(none == "unchanged");  // success leaves it alone
+  }
+
   // v5 fixture: named pages table + per-card page field + Page card type;
   // no grid bytes present → defaults to 10x6.
   {

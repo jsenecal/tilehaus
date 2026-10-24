@@ -80,6 +80,7 @@ Response headers on every GET:
 | `ETag` | Current config generation, quoted (e.g. `"3"`). Use it as `If-Match` on the next write. |
 | `X-Display-Width` | The panel's display width in pixels. |
 | `X-Display-Height` | The panel's display height in pixels. |
+| `X-Deck-Max-Type` | The newest card type this firmware renders (e.g. `25`). Firmware too old to send it knows types up to `22`. A deck with a newer type is refused. |
 
 ### `PUT /api/v1/config`
 
@@ -94,7 +95,9 @@ Writes a new document.
 - **409 Conflict** if `If-Match` doesn't match the device's current
   generation (someone else changed it first) — re-`GET` and retry.
 - **400/415/428** on a malformed body, wrong content type, or a missing/bad
-  `If-Match`.
+  `If-Match`. A rejected body's 400 says why, e.g. `Deck not saved: tile 3 is
+  card type 24, but this firmware knows types up to 22: update the panel's
+  firmware`.
 - **401 Unauthorized** without the session key; **423 Locked** while the
   Configurator switch is off. Both are checked before anything else.
 
@@ -141,7 +144,10 @@ node scripts/deck_cli.js <status|push <spec.json>|reset|build <spec.json> <out.b
 - `build <spec.json> <out.bin>` — encode a spec to a `.bin` file offline
   (with a round-trip decode check), without talking to a device.
 
-`--device <ip>` targets a specific panel; it defaults to `192.168.252.221`.
+`--device <host>` names the panel (`tilehaus-office.local`, or an IP) and is
+required for every command except `build`. `push` checks the deck against the
+panel's `X-Deck-Max-Type` first and stops, naming the tile, if the panel's
+firmware is too old for one of its cards.
 
 `push` and `reset` need the Configurator switch on. The first one claims the
 session and caches its key per device in `~/.config/tilehaus/sessions.json`
@@ -194,7 +200,7 @@ defaults (`["Home"]`, `10`, `6`, `-1`).
 ### Example
 
 ```bash
-node scripts/deck_cli.js push my-deck.json --device 192.168.252.221
+node scripts/deck_cli.js push my-deck.json --device tilehaus-office.local
 ```
 
 This reads `my-deck.json`, encodes it to a DECK document, fetches the

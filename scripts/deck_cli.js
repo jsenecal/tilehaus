@@ -19,9 +19,11 @@ const path = require("node:path");
 const { loadTypeScriptModule } = require("./load_typescript_module");
 
 const { encodeDeck, decodeDeckDocument } = loadTypeScriptModule("web/model/deck.ts");
+const { cardTypeLabel } = loadTypeScriptModule("web/card_types.ts");
 
 const MEDIA_TYPE = "application/vnd.tilehaus.deck";
-const DEFAULT_DEVICE = "192.168.252.221";
+// Firmware older than the X-Deck-Max-Type header knows card types up to Back (22).
+const PANEL_MAX_TYPE_DEFAULT = 22;
 
 function parseArgs(argv) {
   const out = { _: [] };
@@ -30,7 +32,6 @@ function parseArgs(argv) {
     else if (argv[i] === "--key") out.key = argv[++i];
     else out._.push(argv[i]);
   }
-  out.device = out.device || DEFAULT_DEVICE;
   return out;
 }
 
@@ -106,10 +107,11 @@ async function getState(device) {
   const etag = res.headers.get("etag") || '"0"';
   const dw = res.headers.get("x-display-width");
   const dh = res.headers.get("x-display-height");
-  if (res.status === 204) return { etag, dw, dh, empty: true };
+  const maxType = Number(res.headers.get("x-deck-max-type")) || PANEL_MAX_TYPE_DEFAULT;
+  if (res.status === 204) return { etag, dw, dh, maxType, empty: true };
   if (!res.ok) throw new Error(`GET failed: ${res.status}`);
   const doc = decodeDeckDocument(new Uint8Array(await res.arrayBuffer()));
-  return { etag, dw, dh, empty: false, doc };
+  return { etag, dw, dh, maxType, empty: false, doc };
 }
 
 // Poll GET until the panel is back after a config-apply reboot.
@@ -124,7 +126,7 @@ async function waitForReboot(device, timeoutMs = 90000) {
 }
 
 function printState(s) {
-  console.log(`ETag ${s.etag}   display ${s.dw || "?"}x${s.dh || "?"}`);
+  console.log(`ETag ${s.etag}   display ${s.dw || "?"}x${s.dh || "?"}   card types up to ${s.maxType}`);
   if (s.empty) { console.log("awaiting config (204 — no layout stored)"); return; }
   const d = s.doc;
   console.log(`pages ${JSON.stringify(d.pages)}   grid ${d.gridCols}x${d.gridRows}   accent ${d.accent}   tiles ${d.cards.length}`);
@@ -148,6 +150,11 @@ async function main() {
     return;
   }
 
+  // Every other command talks to a panel; never guess which one.
+  if (["status", "push", "reset", "session"].includes(cmd) && !args.device) {
+    throw new Error(`${cmd} needs --device <host>, e.g. --device tilehaus-office.local`);
+  }
+
   if (cmd === "status") {
     printState(await getState(args.device));
     return;
@@ -158,6 +165,14 @@ async function main() {
     if (!specFile) throw new Error("usage: push <spec.json> --device <ip>");
     const bin = encodeSpec(specFile);
     const current = await getState(args.device);
+    // Refuse what the panel would refuse, naming the tile.
+    const cards = decodeDeckDocument(new Uint8Array(bin)).cards;
+    const tooNew = cards.findIndex((c) => c.type > current.maxType);
+    if (tooNew >= 0) {
+      const c = cards[tooNew];
+      throw new Error(`tile ${tooNew + 1} ("${c.title || cardTypeLabel(c.type)}") is a ${cardTypeLabel(c.type)} (type ${c.type}), ` +
+        `but ${args.device} knows card types up to ${current.maxType}: flash newer firmware first`);
+    }
     const res = await write(args, {
       method: "PUT",
       headers: { "Content-Type": MEDIA_TYPE, "If-Match": current.etag },
@@ -200,7 +215,7 @@ async function main() {
     return;
   }
 
-  console.error("usage: deck_cli.js <build <spec.json> <out.bin> | status | push <spec.json> | reset | session> [--device <host>] [--key <hex>]");
+  console.error("usage: deck_cli.js <build <spec.json> <out.bin> | status | push <spec.json> | reset | session> --device <host> [--key <hex>]");
   process.exit(1);
 }
 

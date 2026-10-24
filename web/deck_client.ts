@@ -3,6 +3,7 @@ import {
   DECK_GRID_COLS_DEFAULT, DECK_GRID_ROWS_DEFAULT, type DeckCard,
 } from "./model/deck";
 import { DISPLAY_W_DEFAULT, DISPLAY_H_DEFAULT } from "./model/grid_layout";
+import { cardTypeLabel } from "./card_types";
 
 export const DECK_MEDIA_TYPE = "application/vnd.tilehaus.deck";
 const CONFIG_URL = "/api/v1/config";
@@ -18,6 +19,9 @@ export interface SessionInfo {
   timeoutMinutes: number;  // idle minutes before the switch turns itself off
 }
 
+// Firmware older than the X-Deck-Max-Type header knows card types up to Back (22).
+export const PANEL_MAX_TYPE_DEFAULT = 22;
+
 export interface LoadResult {
   cards: DeckCard[];
   accent: number;
@@ -26,6 +30,7 @@ export interface LoadResult {
   gridRows: number;
   displayW: number;
   displayH: number;
+  maxType: number;  // newest card type the panel's firmware renders
   etag: string;
 }
 
@@ -56,6 +61,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const pollIntervalMs = options.pollIntervalMs ?? 2000;
   const rebootTimeoutMs = options.rebootTimeoutMs ?? 60000;
+  let panelMaxType = PANEL_MAX_TYPE_DEFAULT;
   const storage = options.storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
 
   const readKey = (): string => {
@@ -101,10 +107,12 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     const etag = response.headers.get("ETag") ?? '"0"';
     const displayW = Number(response.headers.get("X-Display-Width")) || DISPLAY_W_DEFAULT;
     const displayH = Number(response.headers.get("X-Display-Height")) || DISPLAY_H_DEFAULT;
+    const maxType = Number(response.headers.get("X-Deck-Max-Type")) || PANEL_MAX_TYPE_DEFAULT;
+    panelMaxType = maxType;
     if (response.status === 204) {
       return {
         cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"],
-        gridCols: DECK_GRID_COLS_DEFAULT, gridRows: DECK_GRID_ROWS_DEFAULT, displayW, displayH, etag,
+        gridCols: DECK_GRID_COLS_DEFAULT, gridRows: DECK_GRID_ROWS_DEFAULT, displayW, displayH, maxType, etag,
       };
     }
     if (!response.ok) throw new Error(`load failed: ${response.status}`);
@@ -112,7 +120,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     const doc = decodeDeckDocument(buffer);
     return {
       cards: doc.cards, accent: doc.accent, pages: doc.pages,
-      gridCols: doc.gridCols, gridRows: doc.gridRows, displayW, displayH, etag,
+      gridCols: doc.gridCols, gridRows: doc.gridRows, displayW, displayH, maxType, etag,
     };
   }
 
@@ -184,13 +192,24 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     if (response.status === 409) {
       return { status: "conflict", etag: response.headers.get("ETag") ?? etag };
     }
-    return { status: "error", message: `${method} failed: ${response.status}` };
+    // The panel's 400 says why ("Deck not saved: tile 3 is card type 24, …").
+    const detail = await response.text().catch(() => "");
+    return { status: "error", message: detail !== "" ? detail : `${method} failed: ${response.status}` };
   }
 
   async function save(
     cards: DeckCard[], etag: string, accent: number = DECK_ACCENT_DEFAULT, pages: string[] = ["Home"],
     gridCols: number = DECK_GRID_COLS_DEFAULT, gridRows: number = DECK_GRID_ROWS_DEFAULT,
   ): Promise<SaveResult> {
+    // Refuse here what the panel would refuse, with the tile named.
+    const tooNew = cards.findIndex((c) => c.type > panelMaxType);
+    if (tooNew >= 0) {
+      const c = cards[tooNew]!;
+      return {
+        status: "error",
+        message: `“${c.title || cardTypeLabel(c.type)}” is a ${cardTypeLabel(c.type)} tile, which this panel's firmware doesn't have yet. Update the panel's firmware, or remove that tile, then save.`,
+      };
+    }
     let body: Uint8Array;
     try {
       body = encodeDeck(cards, accent, pages, gridCols, gridRows);

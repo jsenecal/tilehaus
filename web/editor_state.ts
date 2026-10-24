@@ -16,6 +16,7 @@ export interface EditorState {
   displayH: number;
   etag: string;
   selected: number | null;
+  maxType: number;  // newest card type the panel's firmware renders
 }
 
 export function defaultCard(type: number): DeckCard {
@@ -35,7 +36,7 @@ export function createEditorState(): EditorState {
     cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"], currentPage: 0,
     gridCols: DECK_GRID_COLS_DEFAULT, gridRows: DECK_GRID_ROWS_DEFAULT,
     displayW: DISPLAY_W_DEFAULT, displayH: DISPLAY_H_DEFAULT,
-    etag: '"0"', selected: null,
+    etag: '"0"', selected: null, maxType: 22,
   };
 }
 

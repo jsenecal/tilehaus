@@ -79,6 +79,32 @@ export async function runDeckClientTests(): Promise<void> {
     assert(loaded.displayW === 1280 && loaded.displayH === 800, "load reported display size from headers");
   }
 
+  // load: the panel's newest card type, or 22 when the firmware predates the header
+  {
+    const withHeader = new Response(null, { status: 204, headers: { ETag: '"0"', "X-Deck-Max-Type": "25" } });
+    assert((await createDeckClient({ fetch: stub([withHeader]).fetch, sleep: noSleep }).load()).maxType === 25, "max type read");
+    const old = new Response(null, { status: 204, headers: { ETag: '"0"' } });
+    assert((await createDeckClient({ fetch: stub([old]).fetch, sleep: noSleep }).load()).maxType === 22, "max type default");
+  }
+
+  // save: a tile newer than the panel is refused before anything is sent
+  {
+    const s = stub([new Response(null, { status: 204, headers: { ETag: '"5"', "X-Deck-Max-Type": "22" } })]);
+    const client = createDeckClient({ fetch: s.fetch, sleep: noSleep, storage: memStorage(KEY) });
+    await client.load();
+    const result = await client.save([{ ...CARD, type: 24, title: "Pasta" }], '"5"');
+    assert(result.status === "error" && result.message.includes("Pasta") && result.message.includes("Timer"), "too-new tile named");
+    assert(s.calls.length === 1, "nothing sent after the load");
+  }
+
+  // save: the panel's own reason comes through on a 400
+  {
+    const res = new Response("Deck not saved: tile 3 is card type 24", { status: 400 });
+    const client = createDeckClient({ fetch: stub([res]).fetch, sleep: noSleep, storage: memStorage(KEY) });
+    const result = await client.save([CARD], '"7"');
+    assert(result.status === "error" && result.message === "Deck not saved: tile 3 is card type 24", "400 reason surfaced");
+  }
+
   // save: 204 -> reboot wait polls GET -> applied with new etag; PUT well-formed
   {
     const putRes = new Response(null, { status: 204, headers: { ETag: '"8"' } });
