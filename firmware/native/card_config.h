@@ -12,7 +12,8 @@ enum class CardType {
   Page, Back,
   Action,  // 23: script / automation / scene / button, or an HA event
   Timer,   // 24: a timer entity as a countdown ring
-  Garage   // 25: a garage door or gate, with a confirm step
+  Garage,  // 25: a garage door or gate, with a confirm step
+  Gauge    // 26: a numeric sensor as a dial
 };
 
 struct CardConfig {

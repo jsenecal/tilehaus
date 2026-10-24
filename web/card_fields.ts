@@ -43,6 +43,11 @@ export function cardFieldDefs(type: number): FieldDef[] {
     { key: "entity", label: "Garage door or gate", entity: true,  hint: "A cover entity. Tap asks before opening or closing; while it moves, a tap stops it. Turns amber after 10 minutes open." },
     { key: "title",  label: "Title",               entity: false, hint: "Name shown on the tile, and in the confirm step (\"Open Garage?\")." },
   ];
+  if (type === 26) return [ // Gauge
+    { key: "entity",  label: "Sensor", entity: true,  hint: "A numeric sensor: battery, humidity, CO2, power, a tank level." },
+    { key: "entity2", label: "Range",  entity: false, hint: "min..max, optionally <n or >n to warn below or above n, e.g. 0..100 <20 or 400..2000 >1000. Blank = a range for the sensor's unit." },
+    { key: "title",   label: "Title",  entity: false, hint: "Name shown under the dial." },
+  ];
   if (type === 7) return [ // Weather
     { key: "entity",  label: "Weather entity",       entity: true,  hint: "Weather entity this tile displays." },
     { key: "entity2", label: "Forecast-high helper", entity: true,  hint: "input_number holding today's forecast high (optional)." },
@@ -69,7 +74,7 @@ export interface FlagDef {
 }
 
 // Card type numbers (frozen wire enum, see card_types.ts).
-const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25]);
+const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26]);
 const DETAIL_TYPES = new Set([2, 3, 5, 15, 17]);
 const FOLLOW_COLOR_TYPES = new Set([3, 4]);
 const HEADER_TYPE = 11;

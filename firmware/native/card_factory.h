@@ -21,6 +21,7 @@
 #include "back_card.h"
 #include "timer_card.h"
 #include "garage_card.h"
+#include "gauge_card.h"
 
 namespace tilehaus {
 
@@ -56,6 +57,7 @@ inline std::unique_ptr<Card> make_card(CardType type) {
     case CardType::Action: return std::unique_ptr<Card>(new ActionCard());
     case CardType::Timer: return std::unique_ptr<Card>(new TimerCard());
     case CardType::Garage: return std::unique_ptr<Card>(new GarageCard());
+    case CardType::Gauge: return std::unique_ptr<Card>(new GaugeCard());
     default: return std::unique_ptr<Card>(new BlankCard());
   }
 }

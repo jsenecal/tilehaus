@@ -17,7 +17,7 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 25 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 26 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
@@ -28,7 +28,7 @@ Grouped by capability:
 | Trigger (fire an HA event) | ✓ | ✓ | Tilehaus: an **Action** tile with no entity fires `esphome.tilehaus_action` |
 | Webhook / Push / Local action | ✓ | ✗ | — |
 | Option select | ✓ | ✓ | |
-| Sensor | ✓ | ✓ | |
+| Sensor | ✓ | ✓ | Tilehaus also has a **Gauge** dial with a range and a warning threshold |
 | Local sensor (on-device) | ✓ | ✗ | |
 | Doors & Windows | ✓ | ✓ | Tilehaus: **Door/Window** (read-only contact) |
 | Presence | ✓ | ✓ | |
