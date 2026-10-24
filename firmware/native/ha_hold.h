@@ -48,12 +48,17 @@ struct HaHold {
     else apply();
   }
 
+  // The press ended. Public so a control whose release never reaches
+  // release_cb (a SliderHold cancel stops it) can still end the hold.
+  void release() {
+    touching = false;
+    settling = true;
+    lv_timer_reset(timer);
+    lv_timer_resume(timer);
+  }
+
   static void release_cb(lv_event_t *e) {
-    auto *self = static_cast<HaHold *>(lv_event_get_user_data(e));
-    self->touching = false;
-    self->settling = true;
-    lv_timer_reset(self->timer);
-    lv_timer_resume(self->timer);
+    static_cast<HaHold *>(lv_event_get_user_data(e))->release();
   }
 
   static void settled_cb(lv_timer_t *t) {

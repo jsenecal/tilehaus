@@ -9,6 +9,7 @@
 #include "card_style.h"
 #include "ha.h"
 #include "ha_hold.h"
+#include "slider_hold.h"
 #include "slider_glide.h"
 #include "slider_map.h"
 #include "detail_modal.h"
@@ -38,6 +39,7 @@ struct LightSliderCard : Card {
   std::unique_ptr<DetailModal> detail_;
   std::string icon_on_;   // filled glyph when > 0
   std::string icon_off_;  // outline glyph at 0 (empty = no swap)
+  SliderHold press_;   // acts only once held; a brush of the tile does nothing
   SliderGlide glide_;  // tap glides, drag tracks the finger; owns touch phase
   HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   bool is_number_ = false;   // number entity vs light brightness
@@ -108,12 +110,16 @@ struct LightSliderCard : Card {
     lv_subject_copy_string(&self->text_, t.c_str());
     set_icon_glyph(self->icon_lbl_, v > 0 ? self->icon_on_ : self->icon_off_);
     self->ink_fill();
-    if (self->pct_lbl_) {
-      lv_anim_del(self->pct_lbl_, nullptr);  // stop any in-flight fade-out
-      lv_obj_set_style_opa(self->pct_lbl_, LV_OPA_COVER, 0);  // snap to visible
-      lv_timer_reset(self->hide_timer_);
-      lv_timer_resume(self->hide_timer_);
-    }
+    self->show_readout();
+  }
+
+  // Show the centered readout now, fading out 1.5s after the last call.
+  void show_readout() {
+    if (!pct_lbl_) return;
+    lv_anim_del(pct_lbl_, nullptr);  // stop any in-flight fade-out
+    lv_obj_set_style_opa(pct_lbl_, LV_OPA_COVER, 0);  // snap to visible
+    lv_timer_reset(hide_timer_);
+    lv_timer_resume(hide_timer_);
   }
 
   static void hide_cb(lv_timer_t *t) {
@@ -148,6 +154,8 @@ struct LightSliderCard : Card {
     lv_obj_set_size(slider_, LV_PCT(100), LV_PCT(100));
     lv_obj_align(slider_, LV_ALIGN_CENTER, 0, 0);
     style_fill_slider(slider_);
+    press_.attach(slider_);  // first: it stops LVGL's handling of a short touch
+    press_.on_arm = [this]() { show_readout(); };
     glide_.attach(slider_);  // tap glides, drag tracks the finger 1:1
 
     icon_lbl_ = add_icon(cell, fonts.icon, cfg.icon, LV_ALIGN_TOP_LEFT,
@@ -179,6 +187,10 @@ struct LightSliderCard : Card {
   void bind(const CardConfig &cfg) override {
     entity_ = cfg.entity;
     hold_.attach(slider_);
+    press_.on_cancel = [this]() {
+      hold_.release();
+      glide_.touch_phase = 0;
+    };
     if (is_number_) {
       ha_subscribe(entity_, "min", [this](const std::string &s) {
         if (!s.empty()) { nmin_ = static_cast<int>(std::atof(s.c_str())); apply_number_range(); }

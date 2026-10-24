@@ -6,6 +6,7 @@
 #include "card.h"
 #include "card_config.h"
 #include "card_host.h"
+#include "ha.h"
 #include "idle_state.h"
 #include "overlay.h"
 #include "page_nav.h"
@@ -20,6 +21,37 @@ namespace tilehaus {
 inline IdleConfig &idle_config() {
   static IdleConfig cfg;
   return cfg;
+}
+
+// Presence wake: an optional HA occupancy sensor, named by the "Presence
+// sensor" text entity. Read once at boot, because ESPHome hands its state
+// subscriptions to HA only when the API connects: one added later would never
+// be sent, so a new sensor takes effect at the next restart.
+struct PresenceWake {
+  std::string entity;     // as set from HA; may differ from the one subscribed
+  bool present = false;
+};
+
+inline PresenceWake &presence_wake() {
+  static PresenceWake p;
+  return p;
+}
+
+// Every change counts as activity. Arriving wakes the screen, and leaving
+// starts the dim and sleep countdowns from the moment the room emptied, not
+// from the last touch hours earlier.
+inline void presence_update(bool on) {
+  if (on == presence_wake().present) return;
+  presence_wake().present = on;
+  lv_display_trigger_activity(nullptr);
+}
+
+inline void presence_setup() {
+  const std::string &entity = presence_wake().entity;
+  if (entity.find('.') == std::string::npos) return;   // unset, or not an entity id
+  ha_subscribe(entity, nullptr, [](const std::string &s) {
+    presence_update(presence_state_on(s));
+  });
 }
 
 // Native code cannot drive an ESPHome light or publish to a text_sensor, so the
@@ -53,8 +85,22 @@ inline bool input_guarded() {
 
 inline void begin_wake_guard() { wake_at() = lv_tick_get(); }
 
-inline void apply_brightness(int pct) {
+// Set by a touch that woke a dark screen, cleared by the next touch (see
+// IdleConfig::wake_dimmed). Button and page wakes clear it: those are asks
+// for the panel, not a fumble in the dark.
+inline bool &woke_dimmed() {
+  static bool w = false;
+  return w;
+}
+
+// The last brightness sent to the backlight; -1 until the first one.
+inline int &applied_brightness() {
   static int last = -1;
+  return last;
+}
+
+inline void apply_brightness(int pct) {
+  int &last = applied_brightness();
   if (pct == last) return;        // the poll runs 4x a second; only act on change
   last = pct;
   if (set_brightness_hook()) set_brightness_hook()(pct);
@@ -97,7 +143,9 @@ inline void tick_idle() noexcept {
   const IdleTargets t = idle_targets(idle_config(),
                                      lv_display_get_inactive_time(nullptr),
                                      page_nav().current,
-                                     active_overlay() != nullptr);
+                                     active_overlay() != nullptr,
+                                     presence_wake().present,
+                                     woke_dimmed());
   if (t.go_home) go_home();
   apply_brightness(t.brightness_pct);
   if (t.screensaver != screensaver_showing()) {
@@ -109,6 +157,7 @@ inline void tick_idle() noexcept {
 // button.wake: put the panel into a known state for someone about to walk up.
 inline void panel_wake() {
   lv_display_trigger_activity(nullptr);   // without this the next tick re-sleeps it
+  woke_dimmed() = false;
   begin_wake_guard();
   screensaver_hide();
   go_home();
@@ -117,12 +166,17 @@ inline void panel_wake() {
 }
 
 // on_touch: wake without navigating. Touch must never move the page out from
-// under someone mid-task — only button.wake does that.
+// under someone mid-task — only button.wake does that. on_touch fires for every
+// touch, so the guard is armed only when this one is waking a dark screen.
 inline void panel_touch_wake() {
+  const bool waking = touch_is_wake(applied_brightness(), screensaver_showing());
   lv_display_trigger_activity(nullptr);
-  begin_wake_guard();
+  if (waking) begin_wake_guard();
+  woke_dimmed() = waking;
   screensaver_hide();
-  apply_brightness(idle_config().brightness);
+  // The awake level, after any wake-dimmed cap: the same answer the next tick
+  // gives, so the backlight doesn't flash to full and back.
+  apply_brightness(idle_targets(idle_config(), 0, 0, false, false, woke_dimmed()).brightness_pct);
 }
 
 // The show-page API service. Counts as activity, or an idle panel would be
@@ -136,6 +190,7 @@ inline void panel_touch_wake() {
 // the touchscreen dead.
 inline void show_page(const std::string &name) {
   lv_display_trigger_activity(nullptr);
+  woke_dimmed() = false;
   screensaver_hide();
   apply_brightness(idle_config().brightness);
   const int i = page_nav().index_of(name);

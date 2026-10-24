@@ -10,6 +10,7 @@
 #include "ha.h"
 #include "ha_hold.h"
 #include "slider_map.h"
+#include "slider_hold.h"
 #include "detail_modal.h"
 
 namespace tilehaus {
@@ -34,6 +35,7 @@ struct CoverCard : Card {
   std::string icon_closed_;  // glyph when fully closed
   std::string icon_open_;    // glyph when any part open (empty = no swap)
   int touch_phase_ = 0;   // 0 idle, 1 pressing, 2 releasing
+  SliderHold press_;   // acts only once held; a brush of the tile does nothing
   HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles
   int fill_closed_ = 0;   // current shade height (closed %), anim start value
   lv_obj_t *cell_ = nullptr;
@@ -66,12 +68,16 @@ struct CoverCard : Card {
     std::string t = format_brightness_pct(open);   // show HA position (open %)
     lv_subject_copy_string(&self->text_, t.c_str());
     set_icon_glyph(self->icon_lbl_, open == 0 ? self->icon_closed_ : self->icon_open_);
-    if (self->pct_lbl_) {
-      lv_anim_del(self->pct_lbl_, nullptr);
-      lv_obj_set_style_opa(self->pct_lbl_, LV_OPA_COVER, 0);
-      lv_timer_reset(self->hide_timer_);
-      lv_timer_resume(self->hide_timer_);
-    }
+    self->show_readout();
+  }
+
+  // Show the centered readout now, fading out 1.5s after the last call.
+  void show_readout() {
+    if (!pct_lbl_) return;
+    lv_anim_del(pct_lbl_, nullptr);  // stop any in-flight fade-out
+    lv_obj_set_style_opa(pct_lbl_, LV_OPA_COVER, 0);  // snap to visible
+    lv_timer_reset(hide_timer_);
+    lv_timer_resume(hide_timer_);
   }
 
   static void hide_cb(lv_timer_t *t) {
@@ -131,6 +137,8 @@ struct CoverCard : Card {
     lv_obj_set_style_opa(slider_, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_opa(slider_, LV_OPA_TRANSP, LV_PART_INDICATOR);
     lv_obj_set_style_opa(slider_, LV_OPA_TRANSP, LV_PART_KNOB);
+    press_.attach(slider_);  // first: it stops LVGL's handling of a short touch
+    press_.on_arm = [this]() { show_readout(); };
 
     // Track the touch phase so on_change_cb knows whether a value change is a
     // live drag (track the finger, no anim) or a tap / HA update (glide). The
@@ -176,6 +184,10 @@ struct CoverCard : Card {
     entity_ = cfg.entity;
     lv_subject_t *subj = &value_;
     hold_.attach(slider_);
+    press_.on_cancel = [this]() {
+      hold_.release();
+      touch_phase_ = 0;
+    };
     // HA reports current_position as open percent (0=closed, 100=open); the
     // tile value is the inverse (closed percent).
     ha_subscribe(cfg.entity, "current_position", [this, subj](const std::string &s) {

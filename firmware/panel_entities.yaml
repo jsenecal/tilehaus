@@ -203,6 +203,20 @@ switch:
   # carries across the reboot every save causes. restore_mode DISABLED stops
   # ESPHome from also restoring the switch: its default (ALWAYS_OFF) would turn
   # it off at every boot and revoke the session it just restored.
+  # A touch on a dark screen brings it up at Dim brightness instead of full;
+  # the next touch goes to full. Off by default.
+  - platform: template
+    name: "Wake dimmed"
+    id: cfg_wake_dimmed
+    entity_category: config
+    icon: mdi:brightness-4
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: "tilehaus::idle_config().wake_dimmed = true;"
+    on_turn_off:
+      - lambda: "tilehaus::idle_config().wake_dimmed = false;"
+
   - platform: template
     name: "Configurator"
     id: sw_configurator
@@ -275,6 +289,24 @@ text:
       - lambda: |-
           tilehaus::guest_wifi().password = x;
           tilehaus::guest_wifi().changed();
+
+  # Presence wake: an occupancy sensor's entity id (e.g.
+  # binary_sensor.office_presence). Arriving wakes the screen, and while it
+  # reads "on" the panel neither dims nor sleeps. Read at boot, so a change
+  # takes effect after a restart (the panel's Restart button).
+  - platform: template
+    name: "Presence sensor"
+    id: cfg_presence_entity
+    entity_category: config
+    icon: mdi:motion-sensor
+    mode: text
+    min_length: 0
+    max_length: 100
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    on_value:
+      - lambda: "tilehaus::presence_wake().entity = x;"
 
 text_sensor:
   # "Locked", "Open", or "In use by <ip>" — who holds the configurator session.
