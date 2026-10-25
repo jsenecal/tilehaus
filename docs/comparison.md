@@ -17,7 +17,7 @@ Legend: **✓** supported · **◑** partial / different approach · **✗** not
 
 ## Card types
 
-EspControl exposes ~40 card variants; Tilehaus has 28 wire types (one reserved).
+EspControl exposes ~40 card variants; Tilehaus has 29 wire types (one reserved).
 Grouped by capability:
 
 | Capability | EspControl | Tilehaus | Notes |
@@ -45,7 +45,7 @@ Grouped by capability:
 | Date & time / World clock / Timezone / Calendar | ✓ | ◑ | Tilehaus: **Clock** (local or a world clock from a city list) plus the **Header** clock; no calendar card |
 | Camera / image | ✓ | ✗ | Deliberately removed from Tilehaus (full-res JPEG decode froze the UI) — type 20 stays reserved |
 | Timer | ✓ | ✓ | Tilehaus: **Timer** countdown ring; tap to start/pause, hold to cancel |
-| Media player | ✓ | ✗ | No media card (art, transport, volume, progress) |
+| Media player | ✓ | ◑ | Tilehaus: **Media** — track, artist, progress, transport and volume, for any player including Music Assistant; no artwork yet |
 | Internal switches / relays | ✓ | ✗ | On-panel relays not exposed |
 | Screen lock | ✓ | ✗ | |
 | Wi-Fi sharing (guest QR) | ✓ | ✓ | Tilehaus: **Wi-Fi share** — the network is set from Home Assistant, never stored in the deck; tap for a full-screen code with the password in text |

@@ -45,6 +45,7 @@ editor.
 | 26 | Gauge | A numeric sensor as a 240° dial with its value inside: battery, humidity, CO₂, power. The dial fills with the accent, or red past the warning threshold. On a 3×3 or larger tile a caption shows the range, or LOW / HIGH while warning. | Sensor (Entity), Range (Entity 2): `min..max`, optionally `<n` or `>n`, e.g. `0..100 <20`. Blank = a range for the unit (`%` 0–100, `°C` 0–40, `ppm` 400–2000 warning above 1000, `W` 0–3000, `kW` 0–10). |
 | 27 | Clock | The panel's own time, or a city's for a world clock. A caption shows the date (`FRI 24 OCT`), or for a world clock the day there and its offset from here (`FRI · +13 H`), with a sun or moon for day or night there. Keeps time on the panel, so it runs without Home Assistant once the clock has synced. | Time zone (Entity 2): picked from a city list in the configurator, stored as a POSIX TZ rule (e.g. `JST-9`); blank = the panel's own time. No Entity field |
 | 28 | Wi-Fi share | The guest network as a QR code: a phone camera pointed at it offers to join. Tap for a full-screen page with a large code and the network name and password in text. The network is set on the panel's **Guest Wi-Fi name** and **Guest Wi-Fi password** entities in Home Assistant, never in the deck (which anyone on the network can read); changing them updates the code at once. An empty password makes an open network. | Title only — no Entity field |
+| 29 | Media | A `media_player` as now playing: the track, the artist and the state (`PLAYING`, `PAUSED`), tinted while playing. Any player works, Music Assistant's included. Tap plays or pauses. With nothing loaded (idle or off) the tile shows only its state and name, never the last track. A 4×2 tile adds the time (`1:23 / 4:56`), a progress line and previous / play / next buttons; a 3×4 or 4×4 tile adds a larger two-line title and a volume slider that, like the tile sliders, needs a press and hold before it moves. The position counts on the panel between Home Assistant updates. No artwork yet. | Media player (Entity) |
 
 ## Action events
 
@@ -197,7 +198,7 @@ flags are type-specific:
 
 | Flag | Applies to | Effect |
 |------|-----------|--------|
-| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action, Timer, Garage door / gate, Gauge, Clock, Wi-Fi share (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28) | Shows only the icon, no name text. |
+| **Hide label** | Sensor, Toggle, Light (slider), Light (control), Cover, Presence, Scene, Button, Lock, Climate, WLED, Number slider, Option select, Fan, Alarm, Back, Action, Timer, Garage door / gate, Gauge, Clock, Wi-Fi share, Media (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28, 29) | Shows only the icon, no name text. |
 | **Detail chevron** | Toggle, Light (slider), Cover, Number slider, Fan (2, 3, 5, 15, 17) | Adds a corner button opening the entity's detail popup. |
 | **Follow colour** | Light (slider), Light (control) (3, 4) | Tints the tile (and its modal/sliders) to the light's actual color instead of the fixed active colour. |
 | **Show weather** | Header (11) | Shows the weather glyph + temperature; off = text-only header. |
