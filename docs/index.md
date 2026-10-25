@@ -23,7 +23,7 @@ reboots into it.
   cloud round-trip for the display itself.
 - **Browser-based configurator** — served by the device; no separate install,
   just open its IP address.
-- **28 card types** — toggles, sliders, covers, climate, locks, alarms,
+- **29 card types** — toggles, sliders, covers, climate, locks, alarms,
   weather, scenes, navigation tiles, and more. See the
   [card reference](cards.md).
 - **Multi-page decks** — organize tiles across pages, with dedicated

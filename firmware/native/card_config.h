@@ -15,7 +15,8 @@ enum class CardType {
   Garage,  // 25: a garage door or gate, with a confirm step
   Gauge,   // 26: a numeric sensor as a dial
   Clock,   // 27: the panel's time, or a world clock
-  Wifi     // 28: the guest network as a QR code
+  Wifi,    // 28: the guest network as a QR code
+  Media    // 29: a media player, now playing
 };
 
 struct CardConfig {

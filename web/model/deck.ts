@@ -15,7 +15,7 @@ export const DECK_MAX_CARD_COUNT = 128;
 export const DECK_MAX_DOCUMENT_BYTES = 16384;
 export const DECK_MAX_STRING_BYTES = 63;
 export const DECK_MAX_ICON_BYTES = 63;
-export const DECK_MAX_TYPE = 28;
+export const DECK_MAX_TYPE = 29;
 
 const MAGIC = [0x44, 0x45, 0x43, 0x4b]; // DECK
 

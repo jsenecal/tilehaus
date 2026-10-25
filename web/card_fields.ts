@@ -55,6 +55,10 @@ export function cardFieldDefs(type: number): FieldDef[] {
   if (type === 28) return [ // Wi-Fi share (the network is set in HA, not here)
     { key: "title", label: "Title", entity: false, hint: "Name shown under the code. The network itself is set on the panel's Guest Wi-Fi name and password in Home Assistant, so it never sits in the deck." },
   ];
+  if (type === 29) return [ // Media
+    { key: "entity", label: "Media player", entity: true,  hint: "Any media_player, Music Assistant players included. Tap plays or pauses. A 4x2 tile adds progress and previous / next; a 3x4 or 4x4 adds volume (press and hold, then drag)." },
+    { key: "title",  label: "Title",        entity: false, hint: "Name of the player, shown in the caption or at the bottom." },
+  ];
   if (type === 7) return [ // Weather
     { key: "entity",  label: "Weather entity",       entity: true,  hint: "Weather entity this tile displays." },
     { key: "entity2", label: "Forecast-high helper", entity: true,  hint: "input_number holding today's forecast high (optional)." },
@@ -81,7 +85,7 @@ export interface FlagDef {
 }
 
 // Card type numbers (frozen wire enum, see card_types.ts).
-const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28]);
+const HIDE_LABEL_TYPES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22, 23, 24, 25, 26, 27, 28, 29]);
 const DETAIL_TYPES = new Set([2, 3, 5, 15, 17]);
 const FOLLOW_COLOR_TYPES = new Set([3, 4]);
 const HEADER_TYPE = 11;

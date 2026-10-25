@@ -34,6 +34,7 @@ export const CARD_TYPES: readonly CardTypeOption[] = [
   { value: 26, label: "Gauge" },
   { value: 27, label: "Clock" },
   { value: 28, label: "Wi-Fi share" },
+  { value: 29, label: "Media" },
 ];
 
 export function cardTypeLabel(value: number): string {
