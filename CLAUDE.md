@@ -85,7 +85,7 @@ on the other. The per-device files exist for that:
 
 | file | host | panel |
 |---|---|---|
-| `firmware/tilehaus-office.yaml` | `tilehaus-office.local` · .102 | office, 72 tiles |
+| `firmware/tilehaus-office.yaml` | `tilehaus-office.local` · .102 (Wi-Fi), wired too | office, 72 tiles |
 | `firmware/tilehaus-lobby.yaml`  | `tilehaus-lobby.local` · .101  | lobby |
 
 Each is a few lines: substitutions for `name`/`friendly_name`, then

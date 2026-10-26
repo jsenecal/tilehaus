@@ -1,0 +1,34 @@
+# Wired Ethernet: the JC1060P470's RJ45 jack, an IP101 PHY on the P4's own
+# EMAC. Runs beside Wi-Fi, not instead of it: with both listed under
+# network: priority:, a plugged-in cable carries the panel's traffic and Wi-Fi
+# stays up as the fallback. A panel with no cable (or pins that turn out not to
+# match a board revision) just carries on over Wi-Fi.
+#
+# The RMII data pins (28-30, 34, 35, 49) are fixed by ESP-IDF. MDC/MDIO, the
+# PHY reset and the 50 MHz reference clock follow Espressif's P4 reference
+# design, which Guition's P4 boards copy (as they do its C6 Wi-Fi wiring).
+network:
+  priority:
+    - ethernet
+    - wifi
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO31
+  mdio_pin: GPIO52
+  clk:
+    mode: CLK_EXT_IN
+    pin: GPIO50
+  phy_addr: 1
+  power_pin: GPIO51
+  on_connect:
+    - lambda: |-
+        tilehaus::splash_set("\U000F07D0", "Almost ready",
+                        "Waiting for Home Assistant");
+
+# The wired address in Home Assistant: empty while the cable is out.
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "Ethernet IP"
+      entity_category: diagnostic
