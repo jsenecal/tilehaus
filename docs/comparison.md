@@ -45,7 +45,7 @@ Grouped by capability:
 | Date & time / World clock / Timezone / Calendar | ✓ | ◑ | Tilehaus: **Clock** (local or a world clock from a city list) plus the **Header** clock; no calendar card |
 | Camera / image | ✓ | ✗ | Deliberately removed from Tilehaus (full-res JPEG decode froze the UI) — type 20 stays reserved |
 | Timer | ✓ | ✓ | Tilehaus: **Timer** countdown ring; tap to start/pause, hold to cancel |
-| Media player | ✓ | ◑ | Tilehaus: **Media** — track, artist, progress, transport and volume, for any player including Music Assistant; no artwork yet |
+| Media player | ✓ | ✓ | Tilehaus: **Media** — album cover, track, artist, progress, transport and volume, plus a full-screen player, for any player including Music Assistant |
 | Internal switches / relays | ✓ | ✗ | On-panel relays not exposed |
 | Screen lock | ✓ | ✗ | |
 | Wi-Fi sharing (guest QR) | ✓ | ✓ | Tilehaus: **Wi-Fi share** — the network is set from Home Assistant, never stored in the deck; tap for a full-screen code with the password in text |
@@ -58,6 +58,7 @@ Grouped by capability:
 | Feature | EspControl | Tilehaus | Notes |
 |---|:-:|:-:|---|
 | Supported panels | ✓ (6: four ESP32-P4 + one S3 + the 86-panel) | ◑ (ESP32-P4 JC1060P470) | Tilehaus targets one P4 panel today; others not yet in a device catalog |
+| Wired Ethernet | ✗ | ✓ | Tilehaus uses the JC1060P470's RJ45 jack beside Wi-Fi, with Wi-Fi as the fallback |
 | Browser web installer (first flash) | ✓ | ✗ | Tilehaus flashes via the ESPHome CLI (USB then OTA) |
 | Browser configurator (drag/drop, pages, tile sizes) | ✓ | ✓ | Tilehaus's configurator is served by the panel and works without internet access |
 | Configurable grid size (columns × visible rows) | ✗ | ✓ | Tilehaus lets you set the deck grid; EspControl uses fixed per-device card slots |

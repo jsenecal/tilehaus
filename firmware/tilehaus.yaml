@@ -63,6 +63,7 @@ packages:
   fonts: !include fonts.yaml
   bindings: !include bindings.yaml
   entities: !include panel_entities.yaml
+  ethernet: !include ethernet.yaml
 
 wifi:
   ssid: !secret wifi_ssid
