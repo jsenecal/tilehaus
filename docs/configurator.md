@@ -63,6 +63,9 @@ shows the configured number of visible rows and a taller deck simply scrolls.
   grid slot on the current page.
 - **Drag**: tiles can be dragged directly in the preview to reposition
   them.
+- **Swap**: drag a tile and release it over another tile on the same page, and
+  the two trade places. Each takes the other's spot and size, so the layout
+  stays the same. The other tile is outlined while you hover.
 - **Resize**: drag the selected tile's corner handle in the preview, or set exact **Width**
   and **Height** (in grid cells) in the tile's settings pane. Width is capped
   at the grid's column count.
