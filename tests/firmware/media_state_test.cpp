@@ -78,5 +78,32 @@ int main() {
   assert(volume_level_arg(5) == "0.05");
   assert(volume_level_arg(100) == "1.00");
   assert(volume_level_arg(140) == "1.00");
+  // Cover URLs: Music Assistant's proxy is asked for the smallest size it
+  // serves that covers the square.
+  const std::string ma = "https://ma.example/imageproxy/abc?size=512&fmt=jpg";
+  assert(media_art_url(ma, "", 300) == "https://ma.example/imageproxy/abc?size=512&fmt=jpg");
+  assert(media_art_url(ma, "", 199) == "https://ma.example/imageproxy/abc?size=256&fmt=jpg");
+  assert(media_art_url(ma, "", 256) == "https://ma.example/imageproxy/abc?size=256&fmt=jpg");
+  assert(media_art_url(ma, "", 80) == "https://ma.example/imageproxy/abc?size=80&fmt=jpg");
+  assert(media_art_url(ma, "", 1500) == "https://ma.example/imageproxy/abc?size=1024&fmt=jpg");
+  assert(media_art_url("https://ma.example/imageproxy/abc?fmt=jpg&size=64", "", 128)
+         == "https://ma.example/imageproxy/abc?fmt=jpg&size=160");
+  // Other full URLs are taken as they are, size= and all.
+  assert(media_art_url("https://cdn.example/a.jpg?size=10", "", 300) == "https://cdn.example/a.jpg?size=10");
+  // A path on Home Assistant needs its address.
+  const std::string proxy = "/api/media_player_proxy/media_player.x?token=t&cache=c";
+  assert(media_art_url(proxy, "", 300).empty());
+  assert(media_art_url(proxy, "http://ha.local:8123/", 300)
+         == "http://ha.local:8123/api/media_player_proxy/media_player.x?token=t&cache=c");
+  assert(media_art_url(proxy, "http://ha.local:8123", 300)
+         == "http://ha.local:8123/api/media_player_proxy/media_player.x?token=t&cache=c");
+  assert(media_art_url("", "http://ha.local:8123", 300).empty());
+  assert(media_art_url("None", "http://ha.local:8123", 300).empty());
+
+  // Repeat cycles off -> all -> one -> off.
+  assert(std::string(media_repeat_next("off")) == "all");
+  assert(std::string(media_repeat_next("all")) == "one");
+  assert(std::string(media_repeat_next("one")) == "off");
+  assert(std::string(media_repeat_next("")) == "off");
   return 0;
 }

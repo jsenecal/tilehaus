@@ -33,6 +33,8 @@ struct Overlay {
   int content_w_ = 0;
   int content_h_ = 0;
   std::function<void()> on_close_;
+  // Left open, the idle timer does not send the panel Home from this one.
+  bool stays_open_ = false;
 
   // Editorial chrome: the light page, a square black back button, and the
   // heavy page title with its bar beside it — the same header a page gets. The

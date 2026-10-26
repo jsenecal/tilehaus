@@ -103,6 +103,50 @@ inline int volume_pct(const std::string &level) {
   return static_cast<int>(pct < 0 ? 0 : (pct > 100 ? 100 : pct));
 }
 
+// The cover to download for a player's entity_picture, at `px` square. HA
+// gives either a full URL (Music Assistant's image proxy, a streaming
+// service's CDN) or a path on Home Assistant itself (its media player proxy),
+// which needs `ha_base` ("http://homeassistant.local:8123") in front. "" when
+// there is no picture, or a path and no `ha_base`. Music Assistant's proxy
+// resizes on request, but only to 80, 160, 256, 512 or 1024 (anything else is
+// a 400), so its size= is set to the smallest of those covering `px`; the
+// panel scales the rest of the way down.
+inline std::string media_art_url(const std::string &picture, const std::string &ha_base, int px) {
+  if (picture.empty() || picture == "None") return "";
+  std::string url;
+  if (picture.rfind("http://", 0) == 0 || picture.rfind("https://", 0) == 0) {
+    url = picture;
+  } else if (picture[0] == '/' && !ha_base.empty()) {
+    url = ha_base.back() == '/' ? ha_base.substr(0, ha_base.size() - 1) : ha_base;
+    url += picture;
+  } else {
+    return "";
+  }
+  if (url.find("/imageproxy") != std::string::npos) {
+    for (const char *key : {"?size=", "&size="}) {
+      const size_t at = url.find(key);
+      if (at == std::string::npos) continue;
+      const size_t from = at + 6;
+      size_t to = from;
+      while (to < url.size() && url[to] >= '0' && url[to] <= '9') ++to;
+      int size = 1024;
+      for (int allowed : {80, 160, 256, 512}) {
+        if (allowed >= px) { size = allowed; break; }
+      }
+      url.replace(from, to - from, std::to_string(size));
+      break;
+    }
+  }
+  return url;
+}
+
+// The repeat mode a tap moves to: off -> all -> one -> off.
+inline const char *media_repeat_next(const std::string &repeat) {
+  if (repeat == "off") return "all";
+  if (repeat == "all") return "one";
+  return "off";
+}
+
 // 0..100 -> the string media_player.volume_set takes: "0.36", "1.00".
 inline std::string volume_level_arg(int pct) {
   pct = pct < 0 ? 0 : (pct > 100 ? 100 : pct);

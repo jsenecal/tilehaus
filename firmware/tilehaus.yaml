@@ -10,6 +10,7 @@ substitutions:
   grid_subdivisions: "2"    # sub-cells per normal unit (2 = half-units)
   configurator_timeout: "30"  # minutes without use before the Configurator switch turns off
   mdi_font_file: "assets/materialdesignicons-webfont-7.4.47.ttf"
+  ha_url: ""                # Home Assistant, for covers it serves (see tilehaus_art)
 
 esphome:
   name: ${name}
@@ -45,10 +46,16 @@ external_components:
   - source:
       type: local
       path: components
-    components: [tilehaus_web]
+    components: [tilehaus_web, tilehaus_art]
 
 tilehaus_web:
   port: 80
+
+# Cover art on the Media card. ha_url is only needed for covers Home Assistant
+# serves itself (a path such as /api/media_player_proxy/...); Music Assistant's
+# are full URLs. Set it per panel, e.g. "http://homeassistant.local:8123".
+tilehaus_art:
+  ha_url: "${ha_url}"
 
 packages:
   hardware: !include hardware.yaml

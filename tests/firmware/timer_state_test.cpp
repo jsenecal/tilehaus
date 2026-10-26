@@ -20,6 +20,9 @@ int main() {
   assert(parse_iso8601("1970-01-01T00:00:00+00:00") == 0);
   assert(parse_iso8601("2026-10-23T23:59:59+00:00") == 1792799999);
   assert(parse_iso8601("2026-10-23T23:59:59Z") == 1792799999);
+  // A datetime attribute arrives as str() of it: a space, and microseconds.
+  assert(parse_iso8601("2026-10-23 23:59:59.657070+00:00") == 1792799999);
+  assert(parse_iso8601("2026-10-23X23:59:59+00:00") == -1);
   assert(parse_iso8601("2026-10-23T19:59:59-04:00") == 1792799999);
   assert(parse_iso8601("2026-10-24T01:29:59.123456+01:30") == 1792799999);
   assert(parse_iso8601("2024-02-29T12:00:00+00:00") == 1709208000);  // leap day
