@@ -50,7 +50,7 @@ inline void fill_rect(lv_layer_t *layer, const lv_area_t &r, uint32_t rgb) {
   lv_draw_rect(layer, &d, &r);
 }
 
-// A solid ink bar object (the title bar, the modal header rule).
+// A solid ink bar object (the title bar under a page title).
 inline lv_obj_t *add_ink_bar(lv_obj_t *parent, int w, int h) {
   lv_obj_t *bar = lv_obj_create(parent);
   lv_obj_remove_style_all(bar);

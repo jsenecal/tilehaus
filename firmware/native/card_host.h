@@ -100,9 +100,10 @@ inline void poc_build_cards(lv_obj_t *root, int unit_px, int pad_px, int gap_px,
   std::vector<CardConfig> deck;
   int32_t accent = -1;
   std::vector<std::string> pages;
+  std::vector<bool> page_back;
   int grid_cols = kDeckGridColsDefault, grid_rows = kDeckGridRowsDefault;
   if (store.empty() || !decode_deck(store.data(), store.length(), deck, &accent,
-                                    &pages, &grid_cols, &grid_rows)) {
+                                    &pages, &grid_cols, &grid_rows, nullptr, &page_back)) {
     awaiting_build(root, fonts);
     return;
   }
@@ -129,12 +130,24 @@ inline void poc_build_cards(lv_obj_t *root, int unit_px, int pad_px, int gap_px,
     lv_obj_align(page, LV_ALIGN_TOP_LEFT, 0, 0);
     std::vector<CardConfig> subset;
     for (const auto &c : deck) if (c.page == static_cast<int>(p)) subset.push_back(c);
+    // A page set to show a Back button (never Home: nothing to go back to).
+    page_back_pending() = p != 0 && p < page_back.size() && page_back[p];
     build_page(page, subset, unit_px, pad_px, gap_px, subdivisions, base_cols,
                base_rows, fonts, grid_cols, grid_rows);
+    if (page_back_pending()) {
+      // No title in the corner took it: float it there, over the grid, fixed
+      // while the page scrolls.
+      page_back_pending() = false;
+      lv_obj_t *b = add_back_square(page, fonts.icon, kPageBackSide, [](lv_event_t *) {
+        page_nav().back_or_home();
+      }, nullptr);
+      lv_obj_add_flag(b, LV_OBJ_FLAG_FLOATING);
+      lv_obj_align(b, LV_ALIGN_TOP_LEFT, pad_px, pad_px);
+    }
     nav.containers.push_back(page);
   }
-  // Back navigation is a placeable "Back" tile (CardType::Back), not an overlay;
-  // nav.back_btn stays null (PageNav::show guards for it).
+  // Back navigation is a placeable "Back" tile (CardType::Back), or a page's
+  // own Back button (above); nav.back_btn stays null (PageNav::show guards for it).
   nav.show(0);
 }
 

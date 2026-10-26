@@ -18,6 +18,7 @@ async function main(): Promise<void> {
     state.cards = loaded.cards;
     state.accent = loaded.accent;
     state.pages = loaded.pages;
+    state.pageBack = loaded.pageBack;
     state.gridCols = loaded.gridCols;
     state.gridRows = loaded.gridRows;
     state.displayW = loaded.displayW;

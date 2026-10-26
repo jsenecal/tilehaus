@@ -89,7 +89,7 @@ async function write(args, init) {
 }
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Read a spec file ({cards,pages?,gridCols?,gridRows?,accent?} or a bare cards array)
+// Read a spec file ({cards,pages?,pageBack?,gridCols?,gridRows?,accent?} or a bare cards array)
 // and encode it to a DECK document (Uint8Array).
 function encodeSpec(specFile) {
   const raw = JSON.parse(fs.readFileSync(specFile, "utf8"));
@@ -99,7 +99,8 @@ function encodeSpec(specFile) {
   const accent = (!Array.isArray(raw) && raw.accent != null) ? raw.accent : -1;
   const gridCols = (!Array.isArray(raw) && raw.gridCols != null) ? raw.gridCols : 10;
   const gridRows = (!Array.isArray(raw) && raw.gridRows != null) ? raw.gridRows : 6;
-  return encodeDeck(cards, accent, pages, gridCols, gridRows);
+  const pageBack = (!Array.isArray(raw) && raw.pageBack) || [];
+  return encodeDeck(cards, accent, pages, gridCols, gridRows, pageBack);
 }
 
 async function getState(device) {
@@ -129,7 +130,8 @@ function printState(s) {
   console.log(`ETag ${s.etag}   display ${s.dw || "?"}x${s.dh || "?"}   card types up to ${s.maxType}`);
   if (s.empty) { console.log("awaiting config (204 — no layout stored)"); return; }
   const d = s.doc;
-  console.log(`pages ${JSON.stringify(d.pages)}   grid ${d.gridCols}x${d.gridRows}   accent ${d.accent}   tiles ${d.cards.length}`);
+  const back = d.pages.filter((_, i) => d.pageBack[i]);
+  console.log(`pages ${JSON.stringify(d.pages)}${back.length ? "   back " + JSON.stringify(back) : ""}   grid ${d.gridCols}x${d.gridRows}   accent ${d.accent}   tiles ${d.cards.length}`);
   d.cards.forEach((c, i) => {
     console.log(`  #${i} type=${c.type} ${c.w}x${c.h} @(${c.col},${c.row}) page ${c.page}` +
       `${c.entity ? " entity=" + c.entity : ""}${c.title ? " title=" + JSON.stringify(c.title) : ""}`);

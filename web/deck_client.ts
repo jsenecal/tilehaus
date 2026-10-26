@@ -26,6 +26,7 @@ export interface LoadResult {
   cards: DeckCard[];
   accent: number;
   pages: string[];
+  pageBack: boolean[];
   gridCols: number;
   gridRows: number;
   displayW: number;
@@ -35,7 +36,7 @@ export interface LoadResult {
 }
 
 export type SaveResult =
-  | { status: "applied"; etag: string; cards: DeckCard[]; accent: number; pages: string[]; gridCols: number; gridRows: number }
+  | { status: "applied"; etag: string; cards: DeckCard[]; accent: number; pages: string[]; pageBack: boolean[]; gridCols: number; gridRows: number }
   | { status: "conflict"; etag: string }
   | { status: "locked" }   // the HA Configurator switch is off
   | { status: "taken" }    // another client holds the session
@@ -51,7 +52,7 @@ export interface DeckClientOptions {
 
 export interface DeckClient {
   load(): Promise<LoadResult>;
-  save(cards: DeckCard[], etag: string, accent?: number, pages?: string[], gridCols?: number, gridRows?: number): Promise<SaveResult>;
+  save(cards: DeckCard[], etag: string, accent?: number, pages?: string[], gridCols?: number, gridRows?: number, pageBack?: readonly boolean[]): Promise<SaveResult>;
   reset(etag: string): Promise<SaveResult>;
   session(): Promise<SessionInfo>;
 }
@@ -111,7 +112,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     panelMaxType = maxType;
     if (response.status === 204) {
       return {
-        cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"],
+        cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"], pageBack: [false],
         gridCols: DECK_GRID_COLS_DEFAULT, gridRows: DECK_GRID_ROWS_DEFAULT, displayW, displayH, maxType, etag,
       };
     }
@@ -119,7 +120,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     const buffer = new Uint8Array(await response.arrayBuffer());
     const doc = decodeDeckDocument(buffer);
     return {
-      cards: doc.cards, accent: doc.accent, pages: doc.pages,
+      cards: doc.cards, accent: doc.accent, pages: doc.pages, pageBack: doc.pageBack,
       gridCols: doc.gridCols, gridRows: doc.gridRows, displayW, displayH, maxType, etag,
     };
   }
@@ -183,7 +184,8 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
         const reloaded = await waitForReboot();
         return {
           status: "applied", etag: reloaded.etag, cards: reloaded.cards, accent: reloaded.accent,
-          pages: reloaded.pages, gridCols: reloaded.gridCols, gridRows: reloaded.gridRows,
+          pages: reloaded.pages, pageBack: reloaded.pageBack,
+          gridCols: reloaded.gridCols, gridRows: reloaded.gridRows,
         };
       } catch (error) {
         return { status: "error", message: String(error) };
@@ -200,6 +202,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
   async function save(
     cards: DeckCard[], etag: string, accent: number = DECK_ACCENT_DEFAULT, pages: string[] = ["Home"],
     gridCols: number = DECK_GRID_COLS_DEFAULT, gridRows: number = DECK_GRID_ROWS_DEFAULT,
+    pageBack: readonly boolean[] = [],
   ): Promise<SaveResult> {
     // Refuse here what the panel would refuse, with the tile named.
     const tooNew = cards.findIndex((c) => c.type > panelMaxType);
@@ -212,7 +215,7 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     }
     let body: Uint8Array;
     try {
-      body = encodeDeck(cards, accent, pages, gridCols, gridRows);
+      body = encodeDeck(cards, accent, pages, gridCols, gridRows, pageBack);
     } catch (error) {
       return { status: "error", message: String(error) };
     }

@@ -9,7 +9,7 @@ function assert(cond: boolean, message: string): void {
 function deck(titles: string[], accent = -1): DeckSnapshot {
   return {
     cards: titles.map((title) => ({ ...defaultCard(2), title })),
-    pages: ["Home"], accent, gridCols: 10, gridRows: 6,
+    pages: ["Home"], pageBack: [false], accent, gridCols: 10, gridRows: 6,
   };
 }
 
@@ -81,6 +81,7 @@ export function runHistoryBackupTests(): void {
   {
     const d = deck(["Lamp", "Fan"], 0xb5e853);
     d.pages = ["Home", "Office"];
+    d.pageBack = [false, true];
     d.cards[1]!.page = 1;
     const text = exportSpec(d);
     const spec = JSON.parse(text) as Record<string, unknown>;
@@ -97,6 +98,9 @@ export function runHistoryBackupTests(): void {
     assert(card.entity === "switch.fan" && card.w === 2 && card.showClock === true, "defaults filled");
     assert(!("bogus" in card), "unknown key dropped");
     assert(back.pages.length === 1 && back.gridCols === 10, "bare array takes deck defaults");
+    assert(back.pageBack.length === 1 && !back.pageBack[0], "no Back button by default");
+    const short = parseSpec(JSON.stringify({ pages: ["Home", "A", "B"], pageBack: [false, true], cards: [] }));
+    assert(JSON.stringify(short.pageBack) === JSON.stringify([false, true, false]), "short pageBack pads with off");
   }
 
   // Bad files fail with a reason a person can act on.
@@ -117,6 +121,8 @@ export function runHistoryBackupTests(): void {
     rejects(JSON.stringify({ cards: [{ type: 2, page: 3 }] }), "page 3");
     rejects(JSON.stringify({ cards: [{ type: 2, title: "x".repeat(80) }] }), "reject");
     rejects(JSON.stringify({ cards: [], gridCols: "ten" }), "gridCols");
+    rejects(JSON.stringify({ cards: [], pageBack: ["yes"] }), "pageBack");
+    rejects(JSON.stringify({ cards: [], pageBack: [false, true] }), "pageBack");
   }
 
   // File names come from the panel's host.

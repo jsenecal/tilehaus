@@ -4,6 +4,7 @@ import { type DeckCard } from "./model/deck";
 export interface DeckSnapshot {
   cards: DeckCard[];
   pages: string[];
+  pageBack: boolean[];  // per page: the panel draws a Back button
   accent: number;
   gridCols: number;
   gridRows: number;
@@ -27,11 +28,12 @@ export interface HistoryOptions {
 }
 
 const serialize = (s: DeckSnapshot): string =>
-  JSON.stringify([s.cards, s.pages, s.accent, s.gridCols, s.gridRows]);
+  JSON.stringify([s.cards, s.pages, s.pageBack, s.accent, s.gridCols, s.gridRows]);
 
 const parse = (text: string): DeckSnapshot => {
-  const [cards, pages, accent, gridCols, gridRows] = JSON.parse(text) as [DeckCard[], string[], number, number, number];
-  return { cards, pages, accent, gridCols, gridRows };
+  const [cards, pages, pageBack, accent, gridCols, gridRows] =
+    JSON.parse(text) as [DeckCard[], string[], boolean[], number, number, number];
+  return { cards, pages, pageBack, accent, gridCols, gridRows };
 };
 
 // Snapshot-based: rather than every mutation recording an inverse, the editor

@@ -8,10 +8,12 @@
 
 namespace tilehaus {
 
-inline constexpr uint16_t kDeckDocumentVersion = 6;
+inline constexpr uint16_t kDeckDocumentVersion = 7;
 inline constexpr size_t kDeckHeaderSize = 16;     // v1/v2 header
 inline constexpr size_t kDeckHeaderSizeV3 = 20;   // v3 appends a 4-byte accent; also v5
-inline constexpr size_t kDeckHeaderSizeV6 = 22;   // v6 appends gridCols/gridRows
+inline constexpr size_t kDeckHeaderSizeV6 = 22;   // v6 appends gridCols/gridRows; v7 keeps it
+// v7: each page name is followed by one byte of page options.
+inline constexpr uint8_t kDeckPageBack = 0x01;     // the page shows a Back button
 inline constexpr size_t kDeckMaxCardCount = 128;
 // Capacity of the persisted deck blob (see DeckStore). Lives here so the codec
 // and its host tests can assert a max-size deck still fits without dragging in
@@ -53,7 +55,8 @@ inline bool decode_deck(const uint8_t *data, size_t len, std::vector<CardConfig>
                         int32_t *out_accent = nullptr,
                         std::vector<std::string> *out_pages = nullptr,
                         int *out_grid_cols = nullptr, int *out_grid_rows = nullptr,
-                        std::string *out_error = nullptr) {
+                        std::string *out_error = nullptr,
+                        std::vector<bool> *out_page_back = nullptr) {
   using namespace deck_detail;
   auto fail = [out_error](std::string why) {
     if (out_error) *out_error = std::move(why);
@@ -63,9 +66,10 @@ inline bool decode_deck(const uint8_t *data, size_t len, std::vector<CardConfig>
   if (data[0] != 0x44 || data[1] != 0x45 || data[2] != 0x43 || data[3] != 0x4b)  // DECK
     return fail("not a deck document");
   const uint16_t version = read_u16(data + 4);
-  if (version != 5 && version != 6)
-    return fail("deck format v" + std::to_string(version) + " is not one this firmware reads (v5, v6)");
-  const size_t header_size = version == 6 ? kDeckHeaderSizeV6 : kDeckHeaderSizeV3;  // v5 == 20
+  if (version < 5 || version > 7)
+    return fail("deck format v" + std::to_string(version) +
+                " is not one this firmware reads (v5 to v7): update the panel's firmware");
+  const size_t header_size = version >= 6 ? kDeckHeaderSizeV6 : kDeckHeaderSizeV3;  // v5 == 20
   if (len < header_size) return fail("truncated header");
   if (read_u16(data + 6) != header_size) return fail("bad header size");
   if (data[15] != 0) return fail("bad header");
@@ -73,18 +77,25 @@ inline bool decode_deck(const uint8_t *data, size_t len, std::vector<CardConfig>
   const int32_t accent = read_i32(data + 16);
   const size_t page_count = data[14];
   if (page_count < 1) return fail("a deck needs at least one page");
-  const int grid_cols = version == 6 ? data[20] : kDeckGridColsDefault;
-  const int grid_rows = version == 6 ? data[21] : kDeckGridRowsDefault;
+  const int grid_cols = version >= 6 ? data[20] : kDeckGridColsDefault;
+  const int grid_rows = version >= 6 ? data[21] : kDeckGridRowsDefault;
   const size_t card_count = read_u16(data + 12);
   if (card_count > kDeckMaxCardCount)
     return fail(std::to_string(card_count) + " tiles; the most a deck holds is " +
                 std::to_string(kDeckMaxCardCount));
   size_t offset = header_size;
   std::vector<std::string> pages;
+  std::vector<bool> page_back;
   for (size_t i = 0; i < page_count; ++i) {
     std::string name;
     if (!read_string(data, len, offset, name)) return fail("truncated page names");
     pages.push_back(std::move(name));
+    uint8_t options = 0;
+    if (version >= 7) {
+      if (offset >= len) return fail("truncated page options");
+      options = data[offset++];
+    }
+    page_back.push_back((options & kDeckPageBack) != 0);
   }
   std::vector<CardConfig> parsed;
   parsed.reserve(card_count);
@@ -127,6 +138,7 @@ inline bool decode_deck(const uint8_t *data, size_t len, std::vector<CardConfig>
   out = std::move(parsed);
   if (out_accent) *out_accent = accent;
   if (out_pages) *out_pages = std::move(pages);
+  if (out_page_back) *out_page_back = std::move(page_back);
   if (out_grid_cols) *out_grid_cols = grid_cols;
   if (out_grid_rows) *out_grid_rows = grid_rows;
   return true;

@@ -3,6 +3,7 @@
 #include <string>
 #include "card.h"
 #include "card_style.h"
+#include "page_nav.h"
 
 namespace tilehaus {
 
@@ -28,7 +29,25 @@ struct BlankCard : Card {
         lv_obj_set_style_pad_ver(cell, 0, 0);
         lv_obj_t *t = add_page_title(cell, fonts.title ? fonts.title : fonts.value,
                                      cfg.title.c_str());
-        lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
+        if (cfg.col == 0 && page_back_pending()) {
+          // On a page with a Back button, a title in the corner takes it, and
+          // the pair sits exactly where the full-screen views put theirs
+          // (overlay.h): the square kTileInset from the screen's corner, the
+          // title 20px after it with its top 6px higher. The cell starts at
+          // the grid inset, which is kTileInset, so its own side padding is
+          // stepped over and the title allowed past the cell's top edge.
+          page_back_pending() = false;
+          const int h = tile_metrics().px_h;
+          const int side = h > 0 && h < kPageBackSide ? h : kPageBackSide;
+          lv_obj_t *b = add_back_square(cell, fonts.icon, side, [](lv_event_t *) {
+            page_nav().back_or_home();
+          }, nullptr);
+          lv_obj_align(b, LV_ALIGN_TOP_LEFT, -kTileInset, 0);
+          lv_obj_add_flag(cell, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+          lv_obj_align(t, LV_ALIGN_TOP_LEFT, side + 20 - kTileInset, -6);
+        } else {
+          lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, 0);
+        }
       } else {
         lv_obj_set_style_pad_bottom(cell, 4, 0);
         std::string caps = cfg.title;

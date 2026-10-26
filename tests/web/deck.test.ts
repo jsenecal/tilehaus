@@ -113,6 +113,28 @@ export function runDeckCodecTests(): void {
     const doc = decodeDeckDocument(v5);
     assert(doc.gridCols === 10 && doc.gridRows === 6, "v5 defaults to 10x6");
     assert(doc.pages.length === 2, "v5 pages still decode");
+    assert(doc.pageBack.length === 2 && !doc.pageBack[0] && !doc.pageBack[1], "v5 pages have no Back button");
+  }
+  // a v6 doc decodes, with no page options
+  {
+    const v6 = new Uint8Array(readFileSync("tests/firmware/fixtures/deck_v6_grid.bin"));
+    const doc = decodeDeckDocument(v6);
+    assert(doc.gridCols === 8 && doc.gridRows === 4, "v6 grid still decodes");
+    assert(doc.pageBack.length === 1 && !doc.pageBack[0], "v6 pages have no Back button");
+  }
+  // --- v7 page options: the Back button ---
+  {
+    const doc = decodeDeckDocument(encodeDeck(BASIC, -1, ["Home", "Lights", "House"], 10, 6, [false, true]));
+    assert(JSON.stringify(doc.pageBack) === JSON.stringify([false, true, false]), "pageBack round-trips, missing = off");
+    const v7 = new Uint8Array(readFileSync("tests/firmware/fixtures/deck_v7_pages.bin"));
+    const pinned = decodeDeckDocument(v7);
+    assert(JSON.stringify(pinned.pages) === JSON.stringify(["Home", "Lights"]), "v7 fixture pages");
+    assert(JSON.stringify(pinned.pageBack) === JSON.stringify([false, true]), "v7 fixture Back flags");
+    deepEqual(Array.from(encodeDeck(pinned.cards, pinned.accent, pinned.pages, pinned.gridCols, pinned.gridRows, pinned.pageBack)),
+      Array.from(v7), "v7 fixture re-encodes byte for byte");
+    // A page table cut off before a page's options byte is an error.
+    const cut = encodeDeck([], -1, ["Home"]);
+    throws(() => decodeDeckDocument(cut.slice(0, cut.length - 1)), "missing page options rejected");
   }
 
   // --- Action (23) to Media (29); 30 is not a type ---

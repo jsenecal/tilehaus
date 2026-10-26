@@ -51,27 +51,11 @@ struct Overlay {
     lv_obj_add_flag(root_, LV_OBJ_FLAG_HIDDEN);
 
     constexpr int kBack = 60;  // back button side, matched to the title's cap height
-    lv_obj_t *back = lv_button_create(root_);
-    lv_obj_remove_style_all(back);
-    lv_obj_set_size(back, kBack, kBack);
-    lv_obj_align(back, LV_ALIGN_TOP_LEFT, kTileInset, kTileInset);
-    lv_obj_set_style_bg_color(back, lv_color_hex(kInk), 0);
-    lv_obj_set_style_bg_opa(back, LV_OPA_COVER, 0);
-    style_press_dip(back);
-    lv_obj_t *bl = lv_label_create(back);
-    if (fonts.icon) lv_obj_set_style_text_font(bl, fonts.icon, 0);
-    // The arrow is cut out of the button in the page colour, so it follows the
-    // page through night mode (see retheme).
-    lv_obj_set_style_text_color(bl, lv_color_hex(kPageBg), 0);
-    lv_label_set_text(bl, "\U000F004D");  // mdi-arrow-left
-    lv_obj_set_style_transform_pivot_x(bl, lv_pct(50), 0);
-    lv_obj_set_style_transform_pivot_y(bl, lv_pct(50), 0);
-    lv_obj_set_style_transform_scale(bl, 200, 0);  // ~36px arrow in the 60px box
-    lv_obj_center(bl);
-    lv_obj_add_event_cb(back, [](lv_event_t *e) {
+    lv_obj_t *back = add_back_square(root_, fonts.icon, kBack, [](lv_event_t *e) {
       auto *self = static_cast<Overlay *>(lv_event_get_user_data(e));
       if (self->on_close_) self->on_close_();
-    }, LV_EVENT_CLICKED, this);
+    }, this);
+    lv_obj_align(back, LV_ALIGN_TOP_LEFT, kTileInset, kTileInset);
 
     // Title top sits a few px above the button so the cap height and the
     // button share a top edge (the font's line box carries internal leading).
@@ -82,17 +66,13 @@ struct Overlay {
 
     int w = lv_display_get_horizontal_resolution(lv_display_get_default());
     int h = lv_display_get_vertical_resolution(lv_display_get_default());
-    // The body is cut right under the title's bar, and a hairline rule carries
-    // the bar's bottom edge across the full width, so lists read as sliding
-    // under a ruled header. Both are drawn once — nothing repaints behind the
-    // header while a list scrolls. Computed from the font's line height
+    // The body is cut right under the title's bar, so nothing repaints behind
+    // the header while a list scrolls. No rule across the page: the header is
+    // the page's own, as on a deck page. Computed from the font's line height
     // (add_page_title stacks: line, 4px gap, bar) since the overlay is built
     // hidden, before any layout pass could measure it.
     const int bar_bottom =
         title_y + (tfont ? lv_font_get_line_height(tfont) : 56) + 4 + kTitleBarH;
-    constexpr int kRuleH = 2;
-    lv_obj_t *rule = add_ink_bar(root_, w - 2 * kTileInset, kRuleH);
-    lv_obj_align(rule, LV_ALIGN_TOP_LEFT, kTileInset, bar_bottom - kRuleH);
     const int top = bar_bottom;
     content_w_ = w - 2 * kTileInset;
     content_h_ = h - top - kTileInset;

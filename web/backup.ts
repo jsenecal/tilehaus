@@ -8,6 +8,7 @@ import { type DeckSnapshot } from "./history";
 export function exportSpec(deck: DeckSnapshot): string {
   return JSON.stringify({
     pages: deck.pages,
+    pageBack: deck.pageBack,
     gridCols: deck.gridCols,
     gridRows: deck.gridRows,
     accent: deck.accent,
@@ -55,6 +56,11 @@ export function parseSpec(text: string): DeckSnapshot {
     if (typeof v !== "number") throw new BackupError(`"${key}" must be a number.`);
     return v;
   };
+  const rawBack = obj?.["pageBack"] ?? [];
+  if (!Array.isArray(rawBack) || !rawBack.every((b) => typeof b === "boolean") || rawBack.length > pages.length) {
+    throw new BackupError("\"pageBack\" must be a list of true / false, one per page.");
+  }
+  const pageBack = (pages as string[]).map((_, i) => rawBack[i] === true);
   const accent = num("accent", DECK_ACCENT_DEFAULT);
   const gridCols = num("gridCols", DECK_GRID_COLS_DEFAULT);
   const gridRows = num("gridRows", DECK_GRID_ROWS_DEFAULT);
@@ -72,9 +78,9 @@ export function parseSpec(text: string): DeckSnapshot {
   });
 
   try {
-    encodeDeck(cards, accent, pages as string[], gridCols, gridRows);
+    encodeDeck(cards, accent, pages as string[], gridCols, gridRows, pageBack);
   } catch (error) {
     throw new BackupError(`The panel would reject this file: ${error instanceof Error ? error.message : String(error)}.`);
   }
-  return { cards, pages: pages as string[], accent, gridCols, gridRows };
+  return { cards, pages: pages as string[], pageBack, accent, gridCols, gridRows };
 }

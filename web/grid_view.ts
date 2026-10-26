@@ -1,7 +1,7 @@
 import { cardTypeLabel } from "./card_types";
 import { canPlace, cardAt, moveCard, removeCard, swapCards, updateCard, type EditorState } from "./editor_state";
 import { type HaClient } from "./ha_client";
-import { PANEL, hex, renderTileFace } from "./tile_preview";
+import { PAGE_BACK_PX, PANEL, backSquare, hex, renderTileFace } from "./tile_preview";
 
 // The preview: the panel's screen at its real resolution, with tiles placed by
 // the firmware's own grid arithmetic (16px padding, 10px gaps), then scaled as
@@ -87,6 +87,11 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
   const haUp = opts.ha.status().state === "connected";
   const now = new Date();
 
+  // The page's Back button (not on Home): the corner title takes it, else it
+  // floats in the corner, as on the panel.
+  const pageBack = state.currentPage > 0 && state.pageBack[state.currentPage] === true;
+  const cornerTitle = onPage.find(([c]) => c.type === 0 && c.transparent && c.title !== "" && c.row === 0 && c.col === 0);
+
   // Each tile's element and mover, so a drag can preview a swap on its target.
   const tiles = new Map<number, { el: HTMLElement; place: (col: number, row: number, w: number, h: number) => void }>();
 
@@ -107,6 +112,7 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
     const meta = opts.ha.meta(card.entity);
     renderTileFace(tile, card, meta, {
       w: span(card.w, g.cellW), h: span(card.h, g.cellH), accent: state.accent, night: opts.night, now,
+      back: pageBack && cornerTitle !== undefined && cornerTitle[1] === index,
     });
     tile.title = `${cardTypeLabel(card.type)}${card.entity ? " · " + card.entity : ""}`;
 
@@ -218,6 +224,15 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
       tile.append(handle);
     }
     screen.append(tile);
+  }
+  if (pageBack && cornerTitle === undefined) {
+    const b = backSquare(PAGE_BACK_PX, opts.night);
+    b.style.position = "absolute";
+    b.style.left = `${PAD}px`;
+    b.style.top = `${PAD}px`;
+    b.style.pointerEvents = "none";
+    b.style.zIndex = "5";
+    screen.append(b);
   }
   return frame;
 }

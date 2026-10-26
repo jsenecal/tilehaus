@@ -1,6 +1,6 @@
 import {
   addCard, addPage, autoArrange, canPlace, canSwap, cardAt, createEditorState, defaultCard, deletePage, moveCard,
-  removeCard, renamePage, swapCards, updateCard,
+  removeCard, renamePage, setPageBack, swapCards, updateCard,
 } from "../../web/editor_state";
 import { DECK_MAX_CARD_COUNT } from "../../web/model/deck";
 
@@ -93,6 +93,18 @@ export function runEditorStateTests(): void {
     deletePage(s, 1);
     assert(s.pages.length === 1 && s.cards.every((c) => c.page === 0), "delete drops page + reassigns");
     assert(s.cards[0]!.entity2 === "", "deleted target cleared");
+  }
+  // the per-page Back button: new pages have it, Home never does, delete keeps step
+  {
+    const s = createEditorState();
+    deepEqual(s.pageBack, [false], "Home has no Back button");
+    addPage(s, "A"); addPage(s, "B");
+    deepEqual(s.pageBack, [false, true, true], "new pages get a Back button");
+    setPageBack(s, 1, false);
+    setPageBack(s, 0, true);
+    deepEqual(s.pageBack, [false, false, true], "toggled per page; Home stays off");
+    deletePage(s, 1);
+    deepEqual(s.pageBack, [false, true], "deleting a page drops its setting");
   }
   // canPlace is per-page: same cell on different pages doesn't collide
   {
