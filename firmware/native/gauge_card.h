@@ -22,12 +22,14 @@ namespace tilehaus {
 // Same two layouts as the Timer. A roomy tile (3x3 and up) puts a mono caption
 // top-left — the range, or LOW / HIGH while warning — with the dial in the
 // middle and the name bottom-left. A small tile has the dial at the top and the
-// name under it.
+// name under it; its unit sits in the dial's open bottom, under the reading, so
+// a long one ("µg/m³") does not crowd the number out of a 2x2 dial.
 struct GaugeCard : Card {
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *arc_ = nullptr;
   FitNumber value_;  // the reading, number large and unit small
   lv_obj_t *cap_lbl_ = nullptr;  // roomy layout only
+  lv_obj_t *unit_lbl_ = nullptr;  // small layout only: the unit under the reading
   CardFonts fonts_{};
   int ring_ = 0;
   std::string range_spec_, state_, unit_;
@@ -75,6 +77,19 @@ struct GaugeCard : Card {
     const int inner = ring_ - 2 * stroke;
     value_.create(arc_, inner * 78 / 100, inner * 46 / 100, fonts, true);
     lv_obj_center(value_.box);
+
+    if (!roomy) {
+      // The 240° sweep ends at centre + ring/4: the unit's baseline sits just
+      // below those two tips (5px reads as level by eye), in the opening.
+      unit_lbl_ = lv_label_create(arc_);
+      const lv_font_t *uf = fonts.caption ? fonts.caption : fonts.body;
+      if (uf) lv_obj_set_style_text_font(unit_lbl_, uf, 0);
+      lv_obj_set_style_text_color(unit_lbl_, lv_color_hex(kTileInkDim), 0);
+      lv_label_set_text(unit_lbl_, "");
+      const int line_h = uf ? lv_font_get_line_height(uf) : 17;
+      const int above_base = uf ? line_h - uf->base_line : 14;
+      lv_obj_align(unit_lbl_, LV_ALIGN_CENTER, 0, ring_ / 4 + 5 - above_base + line_h / 2);
+    }
 
     if (roomy) {
       cap_lbl_ = lv_label_create(cell);
@@ -134,7 +149,12 @@ struct GaugeCard : Card {
     }
 
     const SensorParts p = split_sensor_value(state_, unit_, valid);
-    value_.set(p.value, p.unit, p.numeric);
+    if (unit_lbl_) {
+      lv_label_set_text(unit_lbl_, p.unit.c_str());
+      value_.set(p.value, "", p.numeric);
+    } else {
+      value_.set(p.value, p.unit, p.numeric);
+    }
   }
 };
 

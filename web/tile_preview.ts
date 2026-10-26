@@ -410,8 +410,15 @@ export function renderTileFace(el: HTMLElement, card: DeckCard, ent: EntityView 
       g.arc(frac, hex(fc));
       add(g.svg, g.x, g.y + g.size / 12);
       const inner = g.size * 0.78;
-      bigNumber(p.value, p.unit, g.x + (g.size - inner * 0.78) / 2, g.y + g.size / 12 + (g.size - inner * 0.46) / 2, inner * 0.78, inner * 0.46, true);
-      if (cw >= 180 && ch >= 180) caption(warning ? (warn?.below ? "Low" : "High") : `${lo}–${hi}${ent?.unit ? " " + ent.unit : ""}`, warning ? hex(PANEL.alert) : dim);
+      const roomy = cw >= 180 && ch >= 180;
+      // A small dial puts its unit in the open bottom, under the reading.
+      bigNumber(p.value, roomy ? p.unit : "", g.x + (g.size - inner * 0.78) / 2, g.y + g.size / 12 + (g.size - inner * 0.46) / 2, inner * 0.78, inner * 0.46, true);
+      if (!roomy && p.unit) {
+        const u = div("pv-caption", p.unit);
+        u.style.cssText += `color:${dim};font-size:${CAPTION_PX}px;width:${g.size}px;text-align:center;letter-spacing:0;line-height:17px;`;
+        add(u, g.x, g.y + g.size / 12 + g.size / 2 + g.size / 4 - 9);  // baseline just below the sweep's tips
+      }
+      if (roomy) caption(warning ? (warn?.below ? "Low" : "High") : `${lo}–${hi}${ent?.unit ? " " + ent.unit : ""}`, warning ? hex(PANEL.alert) : dim);
       name();
       return;
     }
