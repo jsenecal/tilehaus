@@ -5,6 +5,12 @@ layout is per deck, but brightness, timeouts and night mode belong to the
 panel on the wall. The ESPHome integration adds these entities to the panel's
 device page. Every setting survives reboots and reflashes.
 
+The panel's device page also has a **Visit** link, which opens its
+configurator in the browser. The firmware's `tilehaus_web` component reports
+the configurator's port to Home Assistant. Don't add ESPHome's own
+`web_server`: the configurator already holds port 80, and the build refuses
+the two together.
+
 ## Screen and idle
 
 | Entity | Default | What it does |

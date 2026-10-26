@@ -39,6 +39,17 @@ esphome:
   includes:
     - native
 
+# The configurator's port, reported to Home Assistant so the device page has
+# a "Visit" link (see components/tilehaus_web).
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [tilehaus_web]
+
+tilehaus_web:
+  port: 80
+
 packages:
   hardware: !include hardware.yaml
   ui: !include ui.yaml
