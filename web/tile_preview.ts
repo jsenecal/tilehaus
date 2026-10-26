@@ -17,6 +17,8 @@ export const PANEL = {
   ink: 0xffffff,
   inkOnLight: 0x1a1a1a,
   inkDim: 0xb0b0b0,
+  inkFaint: 0x909090,
+  modalWell: 0x1e1e1e,
   good: 0x2e7d32,
   alert: 0xc62828,
   warm: 0xc24e1e,
@@ -417,22 +419,42 @@ export function renderTileFace(el: HTMLElement, card: DeckCard, ent: EntityView 
       const app = String(ent?.attributes["app_name"] ?? "");
       const title = track ? String(ent?.attributes["media_title"] ?? "") || app : "";
       const artist = track ? String(ent?.attributes["media_artist"] ?? "") : "";
+      const picture = track ? String(ent?.attributes["entity_picture"] ?? "") : "";
       const word = ({ playing: "Playing", paused: "Paused", buffering: "Loading", idle: "Idle", on: "Idle", off: "Off", standby: "Off" } as Record<string, string>)[st] ?? "Unavailable";
-      caption(!wide && !large || !named ? word : `${word} · ${card.title}`);
-      const line = (text: string, y: number, px: number, weight: number, lines: number, color: string): void => {
+      const corner = 34, capH = 17;
+      let fg = ink, fgDim = dim;
+      // The cover fills the tile under a dark wash; only a full URL can load
+      // here (a path on Home Assistant can't), and without one the tile keeps
+      // its state colour.
+      if (/^https?:\/\//.test(picture)) {
+        el.style.background = `linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5)), center / cover no-repeat url("${picture.replace(/"/g, "%22")}"), ${hex(PANEL.tileBg)}`;
+        el.style.color = hex(PANEL.ink);
+        fg = hex(PANEL.ink);
+        fgDim = hex(PANEL.inkDim);
+      }
+      const cap = div("pv-caption", (!wide && !large || !named ? word : `${word} · ${card.title}`).toUpperCase());
+      cap.style.cssText += `color:${fgDim};font-size:${CAPTION_PX}px;width:${cw - corner}px;overflow:hidden;white-space:nowrap;`;
+      add(cap, TILE_INSET, TILE_INSET);
+      const line = (text: string, y: number, w: number, px: number, weight: number, lines: number, color: string): void => {
         const d = div("pv-media-line", text);
-        d.style.cssText += `width:${cw}px;font:${weight} ${px}px/1.2 "Inter Tight",sans-serif;color:${color};` +
+        d.style.cssText += `width:${w}px;font:${weight} ${px}px/1.2 "Inter Tight",sans-serif;color:${color};` +
           `display:-webkit-box;-webkit-line-clamp:${lines};-webkit-box-orient:vertical;overflow:hidden;`;
         add(d, TILE_INSET, y);
       };
       const titlePx = large ? 34 : tight ? 17 : 22;
-      const titleY = TILE_INSET + 17 + 4;
+      const titleY = TILE_INSET + capH + 4;
       const titleH = Math.round(titlePx * 1.2) * (large ? 2 : 1);
-      if (title) line(title, titleY, titlePx, large ? 800 : 700, large ? 2 : 1, ink);
-      if (artist) line(artist, titleY + titleH, large ? 22 : 17, 700, 1, dim);
+      if (title) line(title, titleY, cw - corner, titlePx, large ? 800 : 700, large ? 2 : 1, fg);
+      if (artist) line(artist, titleY + titleH, cw, large ? 22 : 17, 700, 1, fgDim);
+      // The full-view arrows, in the top-right corner.
+      const expand = (): void => {
+        const p = pathFor("arrow-expand");
+        if (p) { const g = svgIcon(p, 27, fg); g.style.opacity = "0.7"; add(g, ctx.w - 38, 11); }
+      };
       if (!wide && !large) {
-        if (!title) { const p = pathFor("speaker"); if (p) add(svgIcon(p, ICON_PX, ink), TILE_INSET, TILE_INSET + (ch - ICON_PX) / 2); }
+        if (!title) { const p = pathFor("speaker"); if (p) add(svgIcon(p, ICON_PX, fg), TILE_INSET, TILE_INSET + (ch - ICON_PX) / 2); }
         name();
+        expand();
         return;
       }
       const dur = num(ent?.attributes["media_duration"]), pos = num(ent?.attributes["media_position"]);
@@ -440,40 +462,41 @@ export function renderTileFace(el: HTMLElement, card: DeckCard, ent: EntityView 
       const timeText = track && pos !== null ? fmt(pos) + (dur ? ` / ${fmt(dur)}` : "") : "";
       const bar = (x: number, y: number, w: number): void => {
         if (!track) return;
-        const b = document.createElement("div");
+        const bb = document.createElement("div");
         const frac = pos !== null && dur ? Math.min(1, pos / dur) : 0;
-        b.style.cssText = `width:${w}px;height:4px;background:linear-gradient(90deg, ${ink} ${frac * 100}%, ${ink}4d ${frac * 100}%);`;
-        add(b, x, y);
+        bb.style.cssText = `width:${w}px;height:4px;background:linear-gradient(90deg, ${fg} ${frac * 100}%, ${fg}4d ${frac * 100}%);`;
+        add(bb, x, y);
       };
       const time = (x: number, y: number): void => {
         if (!timeText) return;
         const t = div("pv-caption", timeText);
-        t.style.color = ink;
+        t.style.color = fg;
         t.style.fontSize = `${CAPTION_PX}px`;
         add(t, x, y);
       };
       const btn = (slug: string, x: number, y: number, size: number): void => {
         const p = pathFor(slug);
-        if (p) add(svgIcon(p, ICON_PX, ink), x + (size - ICON_PX) / 2, y + (size - ICON_PX) / 2);
+        if (p) add(svgIcon(p, ICON_PX, fg), x + (size - ICON_PX) / 2, y + (size - ICON_PX) / 2);
       };
       const playSlug = playing ? "pause" : "play";
       const bottom = TILE_INSET + ch;
       if (wide) {
-        const b = 48, g = 2, right = TILE_INSET + cw;
-        btn("skip-next", right - b, bottom - b, b);
-        btn(playSlug, right - 2 * b - g, bottom - b, b);
-        btn("skip-previous", right - 3 * b - 2 * g, bottom - b, b);
-        const leftW = cw - 3 * b - 2 * g - 16, barY = bottom - (b - 4) / 2 - 4;
+        const wb = 48, g = 2, right = TILE_INSET + cw;
+        btn("skip-next", right - wb, bottom - wb, wb);
+        btn(playSlug, right - 2 * wb - g, bottom - wb, wb);
+        btn("skip-previous", right - 3 * wb - 2 * g, bottom - wb, wb);
+        const leftW = cw - 3 * wb - 2 * g - 16, barY = bottom - (wb - 4) / 2 - 4;
         bar(TILE_INSET, barY, leftW);
         time(TILE_INSET, barY + 4 - 8 - 17);
+        expand();
         return;
       }
       const b = 56, volH = 46, mid = TILE_INSET + cw / 2;
       const vp = pathFor("volume-high");
-      if (vp) add(svgIcon(vp, ICON_PX, ink), TILE_INSET, bottom - ICON_PX);
+      if (vp) add(svgIcon(vp, ICON_PX, fg), TILE_INSET, bottom - ICON_PX);
       const vol = num(ent?.attributes["volume_level"]) ?? 0;
       const v = document.createElement("div");
-      v.style.cssText = `width:${cw - 60}px;height:8px;background:linear-gradient(90deg, ${ink} ${vol * 100}%, ${ink}4d ${vol * 100}%);`;
+      v.style.cssText = `width:${cw - 60}px;height:8px;background:linear-gradient(90deg, ${fg} ${vol * 100}%, ${fg}4d ${vol * 100}%);`;
       add(v, TILE_INSET + 60, bottom - volH / 2 - 4);
       const btnY = bottom - volH - 8 - b;
       btn(playSlug, mid - b / 2, btnY, b);
@@ -482,6 +505,7 @@ export function renderTileFace(el: HTMLElement, card: DeckCard, ent: EntityView 
       const timeY = btnY - 10 - 17;
       time(TILE_INSET, timeY);
       bar(TILE_INSET, timeY - 6 - 4, cw);
+      expand();
       return;
     }
     default:

@@ -53,7 +53,12 @@ inline int64_t days_from_civil(int64_t y, unsigned m, unsigned d) {
 inline int64_t parse_iso8601(const std::string &s) {
   int y, mo, d, h, mi, n = 0;
   double sec;
-  if (std::sscanf(s.c_str(), "%4d-%2d-%2dT%2d:%2d:%lf%n", &y, &mo, &d, &h, &mi, &sec, &n) != 6) return -1;
+  char sep = 0;
+  // A 'T' between date and time, or a space: an attribute holding a datetime
+  // reaches the panel as Python's str() of it ("2026-10-26 14:10:26.55+00:00").
+  if (std::sscanf(s.c_str(), "%4d-%2d-%2d%c%2d:%2d:%lf%n", &y, &mo, &d, &sep, &h, &mi, &sec, &n) != 7 ||
+      (sep != 'T' && sep != ' '))
+    return -1;
   if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || sec < 0 || sec >= 61) return -1;
   int64_t t = days_from_civil(y, static_cast<unsigned>(mo), static_cast<unsigned>(d)) * 86400 +
               h * 3600 + mi * 60 + static_cast<int64_t>(sec);

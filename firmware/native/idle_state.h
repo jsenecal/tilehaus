@@ -60,7 +60,8 @@ inline bool idle_stage_reached(int timeout_s, uint32_t inactive_ms) {
 inline IdleTargets idle_targets(const IdleConfig &cfg, uint32_t inactive_ms,
                                 int current_page, bool modal_open,
                                 bool present = false,
-                                bool woke_dimmed = false) {
+                                bool woke_dimmed = false,
+                                bool stays_open = false) {
   IdleTargets t;
   t.brightness_pct = cfg.brightness;
   // Never dim to 0 here: an awake screen at 0 takes no touch, so it could
@@ -71,8 +72,10 @@ inline IdleTargets idle_targets(const IdleConfig &cfg, uint32_t inactive_ms,
   }
 
   // Nothing to return to when already Home with nothing open, however idle.
+  // A view meant to be left up (the Media card's full view) holds the panel
+  // where it is: no return Home, though it still dims and sleeps.
   const bool somewhere_to_return_from = current_page != 0 || modal_open;
-  t.go_home = somewhere_to_return_from && idle_stage_reached(cfg.page_s, inactive_ms);
+  t.go_home = somewhere_to_return_from && !stays_open && idle_stage_reached(cfg.page_s, inactive_ms);
 
   // Sleep is applied after dim, so it wins when both are crossed — including the
   // misconfigured case where sleep_s < dim_s. The later stage should win on

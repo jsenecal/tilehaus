@@ -145,7 +145,8 @@ inline void tick_idle() noexcept {
                                      page_nav().current,
                                      active_overlay() != nullptr,
                                      presence_wake().present,
-                                     woke_dimmed());
+                                     woke_dimmed(),
+                                     active_overlay() != nullptr && active_overlay()->stays_open_);
   if (t.go_home) go_home();
   apply_brightness(t.brightness_pct);
   if (t.screensaver != screensaver_showing()) {

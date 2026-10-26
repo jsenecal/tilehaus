@@ -8,16 +8,20 @@
 #include "clock.h"
 #include "ha.h"
 #include "ha_hold.h"
+#include "media_art.h"
 #include "media_state.h"
+#include "media_view.h"
 #include "slider_hold.h"
 #include "theme.h"
 
 namespace tilehaus {
 
 // A media_player as now-playing (type 29): the track, the artist, how far in,
-// and the transport. Any player works, Music Assistant's included. Text only
-// for now; artwork is for later. The tile tints while playing, and a tap on it
-// plays or pauses.
+// and the transport. Any player works, Music Assistant's included. The tile
+// tints while playing, and a tap on it plays or pauses. Once the cover has
+// loaded it fills the tile instead, under a dark wash so the white text and
+// controls stay readable. The arrows in its top-right corner open the full
+// view (media_view.h): a large cover, the whole transport and the volume.
 //
 // Three layouts, by the tile's content size:
 //  - small (a 2x2): state caption, title, artist, and the name at the bottom;
@@ -48,11 +52,14 @@ struct MediaCard : Card {
   CardFonts fonts_{};
   Layout layout_ = Layout::Small;
   std::string entity_, name_;
-  std::string state_, title_text_, artist_text_, position_, updated_at_, duration_, app_;
+  MediaInfo info_;
+  MediaView view_;
+  int art_px_ = 0;              // the cover's square: the tile's longer side
+  std::string art_url_;
+  ArtRef art_ref_;
   uint32_t on_color_ = kTileOnBuiltin;
   uint32_t off_color_ = kTileBg;
   int32_t cfg_active_color_ = -1;
-  MediaPhase phase_ = MediaPhase::Unavailable;
 
   TileSpan default_size() const override { return {4, 2}; }
 
@@ -80,7 +87,10 @@ struct MediaCard : Card {
       return;
     }
 
-    caption_ = label(cell, fonts.caption, cw);
+    // The cover: the tile's background image, the longer side square.
+    art_px_ = std::max(cw, ch) + 2 * kTileInset;
+
+    caption_ = label(cell, fonts.caption, cw - kCorner);
     lv_obj_set_style_text_letter_space(caption_, 2, 0);
     lv_obj_set_style_text_opa(caption_, LV_OPA_70, 0);
     lv_obj_align(caption_, LV_ALIGN_TOP_LEFT, 0, 0);
@@ -90,9 +100,9 @@ struct MediaCard : Card {
     const lv_font_t *artist_font = large ? fonts.body : fonts.body_tight;
     const int cap_h = font_h(fonts.caption, 17);
     const int title_h = font_h(title_font, 28) * (large ? 2 : 1);
-    const int artist_y = cap_h + 4 + title_h;
 
-    title_ = label(cell, title_font, cw);
+    // The corner button sits over the first line's right end.
+    title_ = label(cell, title_font, cw - kCorner);
     lv_label_set_long_mode(title_, LV_LABEL_LONG_DOT);
     lv_obj_set_height(title_, title_h);
     lv_obj_align(title_, LV_ALIGN_TOP_LEFT, 0, cap_h + 4);
@@ -101,11 +111,12 @@ struct MediaCard : Card {
     lv_label_set_long_mode(artist_, LV_LABEL_LONG_DOT);
     lv_obj_set_height(artist_, font_h(artist_font, 22));
     lv_obj_set_style_text_opa(artist_, LV_OPA_70, 0);
-    lv_obj_align(artist_, LV_ALIGN_TOP_LEFT, 0, artist_y);
+    lv_obj_align(artist_, LV_ALIGN_TOP_LEFT, 0, cap_h + 4 + title_h);
 
     if (layout_ == Layout::Small) {
       icon_ = add_icon(cell, fonts.icon, glyph_speaker(), LV_ALIGN_LEFT_MID, 0, 0);
       add_name(cell, fonts, name_, name_.empty());
+      add_expand(cell);
       return;
     }
 
@@ -113,23 +124,24 @@ struct MediaCard : Card {
     // lv_obj_align_to(), which reads coordinates that are not laid out yet.
     if (layout_ == Layout::Wide) {
       // Bottom row: progress on the left, the transport on the right.
-      constexpr int kBtn = 48, kGap = 2;
-      button(cell, kBtn, glyph_next(), "media_player.media_next_track", LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-      play_lbl_ = button(cell, kBtn, glyph_play(), nullptr, LV_ALIGN_BOTTOM_RIGHT, -(kBtn + kGap), 0);
-      button(cell, kBtn, glyph_prev(), "media_player.media_previous_track",
-             LV_ALIGN_BOTTOM_RIGHT, -2 * (kBtn + kGap), 0);
-      const int left_w = cw - 3 * kBtn - 2 * kGap - 16;
-      const int bar_y = -(kBtn - 4) / 2;
+      constexpr int kWBtn = 48, kWGap = 2;
+      button(cell, kWBtn, glyph_next(), "media_player.media_next_track", LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+      play_lbl_ = button(cell, kWBtn, glyph_play(), nullptr, LV_ALIGN_BOTTOM_RIGHT, -(kWBtn + kWGap), 0);
+      button(cell, kWBtn, glyph_prev(), "media_player.media_previous_track",
+             LV_ALIGN_BOTTOM_RIGHT, -2 * (kWBtn + kWGap), 0);
+      const int left_w = cw - 3 * kWBtn - 2 * kWGap - 16;
+      const int bar_y = -(kWBtn - 4) / 2;
       bar_ = progress_bar(cell, left_w);
       lv_obj_align(bar_, LV_ALIGN_BOTTOM_LEFT, 0, bar_y);
       time_ = label(cell, fonts.caption, left_w);
       lv_obj_align(time_, LV_ALIGN_BOTTOM_LEFT, 0, bar_y - 4 - 4);
+      add_expand(cell);
       return;
     }
 
     // Large, from the bottom up: volume, the transport, then the progress bar
     // with the time under it.
-    constexpr int kBtn = 56, kVolH = 46, kGap = 8;
+    constexpr int kVolH = 46, kBtn = 56, kGap = 8;
     vol_icon_ = label(cell, fonts.icon, LV_SIZE_CONTENT);
     lv_label_set_text(vol_icon_, glyph_volume());
     lv_obj_align(vol_icon_, LV_ALIGN_BOTTOM_LEFT, 0, 0);
@@ -160,29 +172,39 @@ struct MediaCard : Card {
     lv_obj_align(time_, LV_ALIGN_BOTTOM_LEFT, 0, time_y);
     bar_ = progress_bar(cell, cw);
     lv_obj_align(bar_, LV_ALIGN_BOTTOM_LEFT, 0, time_y - cap_h - 6);
+    add_expand(cell);
   }
 
   void bind(const CardConfig &cfg) override {
     entity_ = cfg.entity;
+    view_.init(&info_, entity_, cfg.title, fonts_);
     auto sub = [this](const char *attr, std::string *into) {
       ha_subscribe(entity_, attr, [this, into](const std::string &s) { *into = s; render(); });
     };
-    sub(nullptr, &state_);
-    sub("media_title", &title_text_);
-    sub("media_artist", &artist_text_);
-    sub("media_position", &position_);
-    sub("media_position_updated_at", &updated_at_);
-    sub("media_duration", &duration_);
-    sub("app_name", &app_);
+    sub(nullptr, &info_.state);
+    sub("media_title", &info_.title);
+    sub("media_artist", &info_.artist);
+    sub("media_album_name", &info_.album);
+    sub("media_position", &info_.position);
+    sub("media_position_updated_at", &info_.updated_at);
+    sub("media_duration", &info_.duration);
+    sub("app_name", &info_.app);
+    sub("entity_picture", &info_.picture);
+    sub("shuffle", &info_.shuffle);
+    sub("repeat", &info_.repeat);
+    ha_subscribe(entity_, "volume_level", [this](const std::string &s) {
+      info_.volume = volume_pct(s);
+      if (volume_ && info_.volume >= 0) {
+        lv_subject_t *subj = &vol_value_;
+        const int v = info_.volume;
+        vol_hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
+      }
+      view_.render();
+    });
 
     if (volume_) {
       vol_hold_.attach(volume_);
       vol_press_.on_cancel = [this]() { vol_hold_.release(); };
-      lv_subject_t *subj = &vol_value_;
-      ha_subscribe(entity_, "volume_level", [this, subj](const std::string &s) {
-        const int v = volume_pct(s);
-        if (v >= 0) vol_hold_.gate([subj, v]() { lv_subject_set_int(subj, v); });
-      });
       lv_obj_add_event_cb(volume_, [](lv_event_t *e) {
         auto *self = static_cast<MediaCard *>(lv_event_get_user_data(e));
         ha_call_kv("media_player.volume_set", self->entity_, "volume_level",
@@ -196,7 +218,9 @@ struct MediaCard : Card {
 
     lv_timer_create([](lv_timer_t *t) {
       auto *self = static_cast<MediaCard *>(lv_timer_get_user_data(t));
-      if (self->phase_ == MediaPhase::Playing) self->render_progress();
+      if (self->info_.phase() != MediaPhase::Playing) return;
+      self->render_progress();
+      if (self->view_.visible()) self->view_.render_progress();
     }, 1000, this);
   }
 
@@ -206,12 +230,15 @@ struct MediaCard : Card {
   }
 
  private:
+  static constexpr int kCorner = 34;  // text kept clear of the corner button
+
   static const char *glyph_play() { return "\U000F040A"; }     // mdi-play
   static const char *glyph_pause() { return "\U000F03E4"; }    // mdi-pause
   static const char *glyph_prev() { return "\U000F04AE"; }     // mdi-skip-previous
   static const char *glyph_next() { return "\U000F04AD"; }     // mdi-skip-next
   static const char *glyph_speaker() { return "\U000F04C3"; }  // mdi-speaker
   static const char *glyph_volume() { return "\U000F057E"; }   // mdi-volume-high
+  static const char *glyph_expand() { return "\U000F0616"; }   // mdi-arrow-expand
 
   static int font_h(const lv_font_t *f, int fallback) {
     return f ? static_cast<int>(lv_font_get_line_height(f)) : fallback;
@@ -236,6 +263,44 @@ struct MediaCard : Card {
     lv_obj_set_style_bg_opa(b, LV_OPA_30, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, LV_PART_INDICATOR);
     return b;
+  }
+
+  // The cover as the tile's background image, centred, with a dark recolour
+  // over it so white text reads on any cover. Drawn as part of the tile itself,
+  // so it follows the tile through its press dip and never overhangs it.
+  void set_cover(const ArtImage *img) {
+    if (img) {
+      lv_obj_set_style_bg_image_src(cell_, &img->dsc, 0);
+      lv_obj_set_style_bg_image_recolor(cell_, lv_color_hex(kBlack), 0);
+      lv_obj_set_style_bg_image_recolor_opa(cell_, LV_OPA_50, 0);
+    } else {
+      lv_obj_set_style_bg_image_src(cell_, nullptr, 0);
+    }
+  }
+
+  // The full-view button in the tile's top-right corner: a press target over
+  // the corner padding, with the arrows shrunk to caption size.
+  void add_expand(lv_obj_t *cell) {
+    lv_obj_t *b = lv_obj_create(cell);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 64, 56);
+    lv_obj_align(b, LV_ALIGN_TOP_RIGHT, kTileInset, -kTileInset);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(b, LV_OBJ_FLAG_SCROLLABLE);
+    style_press_dip(b);
+    lv_obj_t *g = lv_label_create(b);
+    if (fonts_.icon) lv_obj_set_style_text_font(g, fonts_.icon, 0);
+    lv_obj_set_style_text_color(g, lv_color_hex(kTileInk), 0);
+    lv_obj_set_style_text_opa(g, LV_OPA_70, 0);
+    lv_label_set_text(g, glyph_expand());
+    lv_obj_set_style_transform_pivot_x(g, lv_pct(50), 0);
+    lv_obj_set_style_transform_pivot_y(g, lv_pct(50), 0);
+    lv_obj_set_style_transform_scale(g, 150, 0);  // ~27px arrows
+    lv_obj_align(g, LV_ALIGN_TOP_RIGHT, -2, 2);
+    lv_obj_add_event_cb(b, [](lv_event_t *e) {
+      auto *self = static_cast<MediaCard *>(lv_event_get_user_data(e));
+      self->view_.open();
+    }, LV_EVENT_CLICKED, this);
   }
 
   // A transport button: a bare glyph that darkens under the finger. A plain
@@ -274,8 +339,8 @@ struct MediaCard : Card {
 
   void play_pause() {
     if (entity_.empty()) return;
-    ha_call(phase_ == MediaPhase::Playing ? "media_player.media_pause"
-                                          : "media_player.media_play", entity_);
+    ha_call(info_.phase() == MediaPhase::Playing ? "media_player.media_pause"
+                                                 : "media_player.media_play", entity_);
   }
 
   static int64_t now_s() {
@@ -287,7 +352,7 @@ struct MediaCard : Card {
   // The caption: "PLAYING", or with the name on the layouts that have no name
   // line ("PLAYING · OFFICE").
   std::string caption_text() const {
-    std::string s = media_caption(phase_);
+    std::string s = media_caption(info_.phase());
     if (layout_ != Layout::Small && !name_.empty()) {
       std::string up = name_;
       std::transform(up.begin(), up.end(), up.begin(),
@@ -299,17 +364,40 @@ struct MediaCard : Card {
 
   void render_progress() {
     if (!bar_ && !time_) return;
-    const MediaProgress p = media_progress(phase_, position_, updated_at_, duration_, now_s());
+    const MediaProgress p =
+        media_progress(info_.phase(), info_.position, info_.updated_at, info_.duration, now_s());
     if (bar_) lv_bar_set_value(bar_, p.permille(), LV_ANIM_OFF);
     if (time_) lv_label_set_text(time_, format_media_progress(p).c_str());
   }
 
+  // Show the cover for the current track, fetching it if need be.
+  void render_art() {
+    if (art_px_ == 0) return;  // a 1x1 has no cover
+    const std::string url =
+        info_.track() ? media_art_url(info_.picture, media_art().ha_base(), art_px_) : std::string();
+    if (url == art_url_) return;
+    art_url_ = url;
+    if (art_ref_) {
+      set_cover(nullptr);
+      art_ref_.reset();
+    }
+    if (url.empty()) return;
+    media_art().request(url, art_px_, [this, url](ArtRef img) {
+      if (url != art_url_ || !img) return;  // the track moved on meanwhile
+      art_ref_ = img;
+      set_cover(img.get());
+      render();  // white text over the cover, not the playing tint's ink
+    });
+  }
+
   void render() {
     if (cell_ == nullptr) return;
-    phase_ = media_phase(state_);
-    const bool playing = phase_ == MediaPhase::Playing;
-    const bool track = media_has_track(phase_);
-    const uint32_t fill = playing ? on_color_ : off_color_;
+    view_.render();
+    const MediaPhase phase = info_.phase();
+    const bool playing = phase == MediaPhase::Playing;
+    const bool track = info_.track();
+    // Under a cover the tile is dark whatever the state, so its text is white.
+    const uint32_t fill = art_ref_ ? kTileBg : playing ? on_color_ : off_color_;
     paint_cell(cell_, fill);
     const uint32_t ink = needs_dark_ink(fill) ? kTileInkOnLight : kTileInk;
 
@@ -319,13 +407,9 @@ struct MediaCard : Card {
     }
 
     lv_label_set_text(caption_, caption_text().c_str());
-    // Nothing loaded: the tile rests on its state and name. HA keeps an idle
-    // player's app name, and never tells the panel when a track attribute is
-    // dropped, so nothing from the last session is shown.
-    const std::string title = track ? (title_text_.empty() ? app_ : title_text_)
-                                    : std::string();
+    const std::string title = info_.title_line();
     lv_label_set_text(title_, title.c_str());
-    lv_label_set_text(artist_, track ? artist_text_.c_str() : "");
+    lv_label_set_text(artist_, track ? info_.artist.c_str() : "");
     if (icon_) {  // small layout: the speaker stands in for an empty title
       if (title.empty()) lv_obj_remove_flag(icon_, LV_OBJ_FLAG_HIDDEN);
       else lv_obj_add_flag(icon_, LV_OBJ_FLAG_HIDDEN);
@@ -348,6 +432,7 @@ struct MediaCard : Card {
       else lv_obj_add_flag(bar_, LV_OBJ_FLAG_HIDDEN);
     }
     render_progress();
+    render_art();
   }
 };
 

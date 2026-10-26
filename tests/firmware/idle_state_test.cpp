@@ -141,5 +141,13 @@ int main() {
     cfg.dim_brightness = 95;
     assert(idle_targets(cfg, 0, 0, false, false, true).brightness_pct == 90);
   }
+  // A view left open on purpose (the Media full view) is not sent Home.
+  {
+    IdleConfig cfg;
+    cfg.page_s = 15;
+    assert(idle_targets(cfg, 15000, 0, true).go_home);
+    assert(!idle_targets(cfg, 15000, 0, true, false, false, true).go_home);
+    assert(!idle_targets(cfg, 15000, 2, true, false, false, true).go_home);
+  }
   return 0;
 }
