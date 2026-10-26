@@ -131,6 +131,18 @@ function svgIcon(path: string, size: number, color: string): SVGSVGElement {
   return svg;
 }
 
+export const PAGE_BACK_PX = 60;
+
+/** The page / modal Back button: an ink square with the arrow cut out of it. */
+export function backSquare(side: number, night: boolean): HTMLElement {
+  const b = document.createElement("div");
+  const ink = hex(night ? PANEL.nightInk : PANEL.pageInk);
+  b.style.cssText = `width:${side}px;height:${side}px;background:${ink};display:flex;align-items:center;justify-content:center;`;
+  const p = pathFor("arrow-left");
+  if (p) b.append(svgIcon(p, Math.round(side * 0.6), hex(night ? PANEL.nightPage : PANEL.page)));
+  return b;
+}
+
 let measureCtx: CanvasRenderingContext2D | null = null;
 function textWidth(text: string, font: string): number {
   if (measureCtx === null) measureCtx = document.createElement("canvas").getContext("2d");
@@ -142,6 +154,7 @@ function textWidth(text: string, font: string): number {
 interface FaceContext {
   w: number;           // tile size in panel px
   h: number;
+  back?: boolean;      // a page title that carries the page's Back button
   accent: number;
   night: boolean;      // the page behind transparent tiles
   now: Date;
@@ -258,13 +271,24 @@ export function renderTileFace(el: HTMLElement, card: DeckCard, ent: EntityView 
     case 0: {  // Blank: a heading on the page, or icon + title
       if (card.transparent && card.title !== "") {
         if (card.row === 0) {
+          // With the page's Back button, the pair sits where the full-screen
+          // views put theirs: the square in the tile's corner, the title 20px
+          // after it and 6px higher (firmware blank_card.h).
+          let x = TILE_INSET, y = Math.max(0, (ctx.h - 66) / 2);
+          if (ctx.back === true) {
+            const side = Math.min(PAGE_BACK_PX, ctx.h);
+            add(backSquare(side, ctx.night), 0, 0);
+            x = side + 20;
+            y = -6;
+            el.style.overflow = "visible";
+          }
           const t = div("pv-page-title", card.title);
           t.style.color = pageInk;
-          add(t, TILE_INSET, Math.max(0, (ctx.h - 66) / 2));
+          add(t, x, y);
           const bar = document.createElement("div");
           bar.className = "pv-bar";
           bar.style.background = pageInk;
-          add(bar, TILE_INSET, Math.max(0, (ctx.h - 66) / 2) + 54);
+          add(bar, x, y + 54);
         } else {
           const c = div("pv-caption", card.title.toUpperCase());
           c.style.color = pageMuted;

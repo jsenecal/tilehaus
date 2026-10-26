@@ -9,6 +9,7 @@ export interface EditorState {
   cards: DeckCard[];
   accent: number;        // deck accent colour (0xRRGGBB) or -1 for built-in
   pages: string[];
+  pageBack: boolean[];   // per page: the panel draws a Back button
   currentPage: number;
   gridCols: number;
   gridRows: number;
@@ -33,7 +34,7 @@ export function defaultCard(type: number): DeckCard {
 
 export function createEditorState(): EditorState {
   return {
-    cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"], currentPage: 0,
+    cards: [], accent: DECK_ACCENT_DEFAULT, pages: ["Home"], pageBack: [false], currentPage: 0,
     gridCols: DECK_GRID_COLS_DEFAULT, gridRows: DECK_GRID_ROWS_DEFAULT,
     displayW: DISPLAY_W_DEFAULT, displayH: DISPLAY_H_DEFAULT,
     etag: '"0"', selected: null, maxType: 22,
@@ -132,8 +133,16 @@ export function autoArrange(state: EditorState): void {
 
 export function addPage(state: EditorState, name: string): void {
   state.pages.push(name !== "" ? name : `Page ${state.pages.length}`);
+  state.pageBack[state.pages.length - 1] = true;  // a new page has a way back
   state.currentPage = state.pages.length - 1;
   state.selected = null;
+}
+
+// Whether page `index` shows the panel's Back button. Home never does.
+export function setPageBack(state: EditorState, index: number, on: boolean): void {
+  if (index <= 0 || index >= state.pages.length) return;
+  while (state.pageBack.length < state.pages.length) state.pageBack.push(false);
+  state.pageBack[index] = on;
 }
 
 export function renamePage(state: EditorState, index: number, name: string): void {
@@ -154,6 +163,7 @@ export function deletePage(state: EditorState, index: number): void {
       entity2: c.type === 21 && c.entity2 === name ? "" : c.entity2,
     }));
   state.pages.splice(index, 1);
+  state.pageBack.splice(index, 1);
   state.currentPage = 0;
   state.selected = null;
 }

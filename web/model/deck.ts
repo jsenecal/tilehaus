@@ -1,9 +1,11 @@
 /** Versioned binary document for on-device tile-deck configuration. */
-export const DECK_DOCUMENT_VERSION = 6;
+export const DECK_DOCUMENT_VERSION = 7;
 export const DECK_HEADER_SIZE = 16;         // v1/v2 header
 export const DECK_HEADER_SIZE_V3 = 20;      // v3+ appends a 4-byte deck accent
 export const DECK_HEADER_SIZE_V5 = 20;      // v5 header (accent + page table)
-export const DECK_HEADER_SIZE_V6 = 22;      // v6 appends gridCols/gridRows
+export const DECK_HEADER_SIZE_V6 = 22;      // v6 appends gridCols/gridRows; v7 keeps it
+// v7: each page name in the page table is followed by one byte of page options.
+export const DECK_PAGE_BACK = 1;            // the page shows a Back button
 export const DECK_ACCENT_DEFAULT = -1;      // -1 = use the built-in card colours
 export const DECK_ALIGN_DEFAULT = 5;        // v4 align byte: halign|(valign<<2); 5 = centre/centre
 export const DECK_GRID_COLS_DEFAULT = 10;
@@ -48,6 +50,7 @@ export interface DeckCard {
 export interface DeckDocument {
   accent: number;   // deck accent colour, 0xRRGGBB, or -1 for the built-in defaults
   pages: string[];        // page names, index 0 = Home
+  pageBack: boolean[];    // per page: the panel draws a Back button (v7)
   gridCols: number;
   gridRows: number;
   cards: DeckCard[];
@@ -141,6 +144,7 @@ function encodeCard(card: DeckCard): Uint8Array {
 export function encodeDeck(
   cards: DeckCard[], accent: number = DECK_ACCENT_DEFAULT, pages: string[] = ["Home"],
   gridCols: number = DECK_GRID_COLS_DEFAULT, gridRows: number = DECK_GRID_ROWS_DEFAULT,
+  pageBack: readonly boolean[] = [],
 ): Uint8Array {
   if (!Array.isArray(cards)) fail("deck must be an array");
   if (cards.length > DECK_MAX_CARD_COUNT) fail("deck contains too many cards");
@@ -148,7 +152,7 @@ export function encodeDeck(
   if (gridCols < 1 || gridCols > 40 || gridRows < 1 || gridRows > 40) fail("grid size out of range");
   const pageBodies = pages.map((p) => encodeString(p, "page name", DECK_MAX_STRING_BYTES));
   const bodies = cards.map(encodeCard);
-  const pageBytes = pageBodies.reduce((n, s) => n + 1 + s.length, 0);
+  const pageBytes = pageBodies.reduce((n, s) => n + 1 + s.length + 1, 0);  // name + options
   const payloadLength = pageBytes + bodies.reduce((n, b) => n + b.length, 0);
   const out = new Uint8Array(DECK_HEADER_SIZE_V6 + payloadLength);
   out.set(MAGIC, 0);
@@ -162,7 +166,10 @@ export function encodeDeck(
   out[20] = checkByte(gridCols, "gridCols");
   out[21] = checkByte(gridRows, "gridRows");
   let offset = DECK_HEADER_SIZE_V6;
-  for (const s of pageBodies) { out[offset++] = s.length; out.set(s, offset); offset += s.length; }
+  pageBodies.forEach((s, i) => {
+    out[offset++] = s.length; out.set(s, offset); offset += s.length;
+    out[offset++] = pageBack[i] === true ? DECK_PAGE_BACK : 0;
+  });
   for (const b of bodies) { out.set(b, offset); offset += b.length; }
   if (out.length > DECK_MAX_DOCUMENT_BYTES)
     fail(`deck is ${out.length} bytes, over the ${DECK_MAX_DOCUMENT_BYTES}-byte device limit`);
@@ -193,8 +200,8 @@ export function decodeDeckDocument(input: Uint8Array): DeckDocument {
     fail("invalid deck document header");
   }
   const version = readU16(input, 4);
-  if (version !== 5 && version !== 6) fail("invalid deck document header");
-  const headerSize = version === 6 ? DECK_HEADER_SIZE_V6 : DECK_HEADER_SIZE_V5;
+  if (version !== 5 && version !== 6 && version !== 7) fail("invalid deck document header");
+  const headerSize = version >= 6 ? DECK_HEADER_SIZE_V6 : DECK_HEADER_SIZE_V5;
   if (input.length < headerSize ||
       readU16(input, 6) !== headerSize ||
       input[15] !== 0 ||
@@ -204,14 +211,21 @@ export function decodeDeckDocument(input: Uint8Array): DeckDocument {
   const accent = readI32(input, 16);
   const pageCount = input[14]!;
   if (pageCount < 1) fail("invalid page count");
-  const gridCols = version === 6 ? input[20]! : DECK_GRID_COLS_DEFAULT;
-  const gridRows = version === 6 ? input[21]! : DECK_GRID_ROWS_DEFAULT;
+  const gridCols = version >= 6 ? input[20]! : DECK_GRID_COLS_DEFAULT;
+  const gridRows = version >= 6 ? input[21]! : DECK_GRID_ROWS_DEFAULT;
   const cardCount = readU16(input, 12);
   if (cardCount > DECK_MAX_CARD_COUNT) fail("deck contains too many cards");
   let offset = headerSize;
   const pages: string[] = [];
+  const pageBack: boolean[] = [];
   for (let i = 0; i < pageCount; i += 1) {
     const s = readString(input, offset, "page name"); offset = s.next; pages.push(s.value);
+    let options = 0;
+    if (version >= 7) {
+      if (offset >= input.length) fail("truncated page options");
+      options = input[offset++]!;
+    }
+    pageBack.push((options & DECK_PAGE_BACK) !== 0);
   }
   const cards: DeckCard[] = [];
   for (let index = 0; index < cardCount; index += 1) {
@@ -238,5 +252,5 @@ export function decodeDeckDocument(input: Uint8Array): DeckDocument {
     });
   }
   if (offset !== input.length) fail("trailing bytes after deck records");
-  return { accent, pages, gridCols, gridRows, cards };
+  return { accent, pages, pageBack, gridCols, gridRows, cards };
 }

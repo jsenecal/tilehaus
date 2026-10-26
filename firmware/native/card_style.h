@@ -34,6 +34,16 @@ inline TileMetrics &tile_metrics() {
   return m;
 }
 
+// Set by build_page while it builds a page that shows a Back button
+// (DeckDocument page options). A top-left page title takes it and draws the
+// button beside itself (BlankCard); if none does, build_page floats one in the
+// page's corner. Same build-window idiom as tile_compact().
+inline constexpr int kPageBackSide = 60;  // the page Back button, as in the modals
+inline bool &page_back_pending() {
+  static bool pending = false;
+  return pending;
+}
+
 // Inner content inset shared by every tile: the cell padding for normal cards,
 // and the manual label offset for cards that drop the padding (fill slider).
 // One place so all tiles line up.
@@ -385,6 +395,31 @@ inline void style_fill_slider(lv_obj_t *slider) {
 
   lv_obj_set_style_opa(slider, LV_OPA_TRANSP, LV_PART_KNOB);
   lv_obj_set_style_pad_all(slider, 0, LV_PART_KNOB);
+}
+
+// The square Back button the modals and pages share: solid page ink, the
+// arrow cut out of it in the page colour, so it follows the page through night
+// mode (retheme flips both). `side` is the square's edge.
+inline lv_obj_t *add_back_square(lv_obj_t *parent, const lv_font_t *icon_font, int side,
+                                 lv_event_cb_t cb, void *user_data) {
+  lv_obj_t *back = lv_button_create(parent);
+  lv_obj_remove_style_all(back);
+  lv_obj_set_size(back, side, side);
+  lv_obj_set_style_bg_color(back, lv_color_hex(kInk), 0);
+  lv_obj_set_style_bg_opa(back, LV_OPA_COVER, 0);
+  lv_obj_set_ext_click_area(back, 8);
+  style_press_dip(back);
+  lv_obj_t *bl = lv_label_create(back);
+  if (icon_font) lv_obj_set_style_text_font(bl, icon_font, 0);
+  lv_obj_set_style_text_color(bl, lv_color_hex(kPageBg), 0);
+  lv_label_set_text(bl, "\U000F004D");  // mdi-arrow-left
+  lv_obj_set_style_transform_pivot_x(bl, lv_pct(50), 0);
+  lv_obj_set_style_transform_pivot_y(bl, lv_pct(50), 0);
+  // The 46px glyph scaled with the square: ~36px in the modals' 60.
+  lv_obj_set_style_transform_scale(bl, side * 200 / 60, 0);
+  lv_obj_center(bl);
+  lv_obj_add_event_cb(back, cb, LV_EVENT_CLICKED, user_data);
+  return back;
 }
 
 }  // namespace tilehaus

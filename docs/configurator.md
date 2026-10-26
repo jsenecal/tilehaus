@@ -31,11 +31,18 @@ renamed away from being the first page or deleted. The page list on the left
 (with each page's tile count) lets you:
 
 - Switch pages by clicking one.
-- Add a page with **+ New page**. A new page starts with a single **Back** tile
-  (type 22) so it's never a dead end — tap it to pop back to the page you
-  came from.
+- Add a page with **+ New page**. A new page starts with its **Back button**
+  on, so it's never a dead end.
 - Rename the current page (any page except Home) with the text field under
   the list.
+- Turn the current page's **Back button** on or off (any page except Home).
+  The panel draws it in the page's top-left corner: a black square with an
+  arrow, like the one on the full-screen views. If the page has a title in its
+  top-left tile (a transparent Blank in row 0), the button sits beside the
+  title; otherwise it floats in the corner, over the grid, and stays put while
+  the page scrolls. Tapping it goes back to the page you came from, or Home.
+  Turn it off to place a **Back** tile (type 22) of your own instead, or to
+  have no way back on that page.
 - Delete the current page (any page except Home) with **Delete page**. Tiles
   on a deleted page are removed, and later pages shift down to fill the gap.
 

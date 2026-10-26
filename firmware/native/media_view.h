@@ -195,7 +195,7 @@ struct MediaView {
     overlay_.stays_open_ = true;  // a now-playing screen is meant to be left up
     lv_obj_t *c = overlay_.content();
     const int cw = overlay_.content_w(), ch = overlay_.content_h();
-    constexpr int kTop = 20;  // air under the header rule
+    constexpr int kTop = 20;  // air under the header
 
     // The cover: a square as tall as the body allows, over a well with the
     // album glyph that shows while it loads or when there is none.

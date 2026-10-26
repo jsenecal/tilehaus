@@ -44,6 +44,12 @@ struct PageNav {
     stack.pop_back();
     show(i);
   }
+  // A page's own Back button: the page it came from, or Home when it was
+  // reached some other way (the panel woke on it, HA asked for it).
+  void back_or_home() {
+    if (!stack.empty()) back();
+    else if (current != 0) show(0);
+  }
 };
 
 inline PageNav &page_nav() { static PageNav n; return n; }

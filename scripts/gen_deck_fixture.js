@@ -29,11 +29,13 @@ console.log(`wrote ${out} (${fs.statSync(out).size} bytes)`);
 // document still decodes (with the 10x6 default grid). encodeDeck now emits v6,
 // so regenerating it would change its version.
 
-// A v6 document with a non-default grid (8x4), to exercise the two grid header
-// bytes on both the TS and C++ decoders.
-const GRID = [
-  { type: 2, entity: "switch.fan", title: "Fan", w: 2, h: 2, entity2: "", icon: "", iconAlt: "", activeColor: -1, inactiveColor: -1, hideLabel: false, detail: false, followColor: false, showHilo: false, transparent: false, showWeather: true, showClock: true, tightMargins: false, align: 5, page: 0, col: 0, row: 0 },
-];
-const gridOut = path.resolve(__dirname, "../tests/firmware/fixtures/deck_v6_grid.bin");
-fs.writeFileSync(gridOut, Buffer.from(encodeDeck(GRID, -1, ["Home"], 8, 4)));
-console.log(`wrote ${gridOut} (${fs.statSync(gridOut).size} bytes)`);
+// deck_v6_grid.bin (a v6 document with an 8x4 grid) is frozen the same way:
+// encodeDeck now emits v7, which adds a page-options byte after each page name.
+
+// A v7 document whose second page shows the Back button, to pin the page
+// options byte on both the TS and C++ decoders.
+const FAN = { type: 2, entity: "switch.fan", title: "Fan", w: 2, h: 2, entity2: "", icon: "", iconAlt: "", activeColor: -1, inactiveColor: -1, hideLabel: false, detail: false, followColor: false, showHilo: false, transparent: false, showWeather: true, showClock: true, tightMargins: false, align: 5, page: 0, col: 0, row: 0 };
+const PAGES = [FAN, { ...FAN, page: 1 }];
+const pagesOut = path.resolve(__dirname, "../tests/firmware/fixtures/deck_v7_pages.bin");
+fs.writeFileSync(pagesOut, Buffer.from(encodeDeck(PAGES, -1, ["Home", "Lights"], 12, 7, [false, true])));
+console.log(`wrote ${pagesOut} (${fs.statSync(pagesOut).size} bytes)`);

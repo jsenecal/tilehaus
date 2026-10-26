@@ -17,6 +17,9 @@
 #ifndef DECK_V6_FIXTURE
 #error "DECK_V6_FIXTURE path must be defined by the build"
 #endif
+#ifndef DECK_V7_FIXTURE
+#error "DECK_V7_FIXTURE path must be defined by the build"
+#endif
 
 static std::vector<uint8_t> read_fixture() {
   std::ifstream file(DECK_FIXTURE, std::ios::binary);
@@ -85,8 +88,9 @@ int main() {
 
     // A tile newer than this firmware: the reason names the tile and the type.
     const uint16_t version = static_cast<uint16_t>(bytes[4] | (bytes[5] << 8));
-    size_t first = version == 6 ? tilehaus::kDeckHeaderSizeV6 : tilehaus::kDeckHeaderSizeV3;
-    for (size_t pg = 0; pg < bytes[14]; ++pg) first += 1 + bytes[first];  // skip page names
+    size_t first = version >= 6 ? tilehaus::kDeckHeaderSizeV6 : tilehaus::kDeckHeaderSizeV3;
+    for (size_t pg = 0; pg < bytes[14]; ++pg)  // skip page names (and, from v7, their options)
+      first += 1 + bytes[first] + (version >= 7 ? 1 : 0);
     std::vector<uint8_t> newer = bytes;
     newer[first] = tilehaus::kDeckMaxType + 1;
     const std::string r = reason(newer);
@@ -123,6 +127,28 @@ int main() {
     std::vector<CardConfig> c; int gc = 0, gr = 0;
     assert(tilehaus::decode_deck(b.data(), b.size(), c, nullptr, nullptr, &gc, &gr));
     assert(gc == 8 && gr == 4);
+  }
+
+  { // v7 fixture: the second page shows the Back button
+    std::ifstream f(DECK_V7_FIXTURE, std::ios::binary);
+    assert(f && "v7 fixture opens");
+    std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::vector<CardConfig> c;
+    std::vector<std::string> pages;
+    std::vector<bool> back;
+    int gc = 0, gr = 0;
+    assert(tilehaus::decode_deck(b.data(), b.size(), c, nullptr, &pages, &gc, &gr, nullptr, &back));
+    assert(pages.size() == 2 && pages[1] == "Lights");
+    assert(back.size() == 2 && !back[0] && back[1]);
+    assert(gc == 12 && gr == 7 && c.size() == 2 && c[1].page == 1);
+  }
+  { // older documents have no page options: no Back buttons
+    std::ifstream f(DECK_V6_FIXTURE, std::ios::binary);
+    std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::vector<CardConfig> c;
+    std::vector<bool> back{true};
+    assert(tilehaus::decode_deck(b.data(), b.size(), c, nullptr, nullptr, nullptr, nullptr, nullptr, &back));
+    assert(back.size() == 1 && !back[0]);
   }
 
   { // a full kDeckMaxCardCount deck parses; one card over the cap is rejected.

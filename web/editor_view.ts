@@ -1,6 +1,6 @@
 import { type DeckCard } from "./model/deck";
 import { CARD_TYPES } from "./card_types";
-import { addCard, addPage, autoArrange, deletePage, removeCard, renamePage, updateCard, type EditorState } from "./editor_state";
+import { addCard, addPage, autoArrange, deletePage, removeCard, renamePage, setPageBack, updateCard, type EditorState } from "./editor_state";
 import { createDeckClient, type DeckClient, type SaveResult, type SessionInfo } from "./deck_client";
 import { createGridPane } from "./grid_view";
 import { createHaClient, type HaClient } from "./ha_client";
@@ -58,7 +58,7 @@ export function createEditorView(
   // ---- Undo, and what's unsaved ----
   const history = createHistory();
   const snapshot = (): DeckSnapshot => ({
-    cards: state.cards, pages: state.pages, accent: state.accent,
+    cards: state.cards, pages: state.pages, pageBack: state.pageBack, accent: state.accent,
     gridCols: state.gridCols, gridRows: state.gridRows,
   });
   const serialized = (): string => JSON.stringify(snapshot());
@@ -75,6 +75,7 @@ export function createEditorView(
   function restore(deck: DeckSnapshot): void {
     state.cards = deck.cards;
     state.pages = deck.pages;
+    state.pageBack = deck.pageBack;
     state.accent = deck.accent;
     state.gridCols = deck.gridCols;
     state.gridRows = deck.gridRows;
@@ -196,6 +197,7 @@ export function createEditorView(
       state.cards = result.cards;
       state.accent = result.accent;
       state.pages = result.pages;
+      state.pageBack = result.pageBack;
       state.gridCols = result.gridCols;
       state.gridRows = result.gridRows;
       state.etag = result.etag;
@@ -221,7 +223,7 @@ export function createEditorView(
 
   function onSave(): void {
     void runMutation(
-      () => client.save(state.cards, state.etag, state.accent, state.pages, state.gridCols, state.gridRows),
+      () => client.save(state.cards, state.etag, state.accent, state.pages, state.gridCols, state.gridRows, state.pageBack),
       "Saving",
     );
   }
@@ -522,8 +524,7 @@ export function createEditorView(
     });
     const add = el("button", "page-item add", "+ New page");
     add.onclick = () => {
-      addPage(state, `Page ${state.pages.length}`);
-      addCard(state, 22);  // new pages start with a Back tile so they aren't dead ends
+      addPage(state, `Page ${state.pages.length}`);  // with its Back button on: no dead ends
       render();
     };
     list.append(add);
@@ -536,8 +537,17 @@ export function createEditorView(
       rename.onchange = () => { renamePage(state, state.currentPage, rename.value.trim()); render(); };
       const del = el("button", "ghost danger", "Delete page");
       del.onclick = () => { deletePage(state, state.currentPage); render(); };
+      const back = el("label", "flag");
+      const backBox = el("input");
+      backBox.type = "checkbox";
+      backBox.checked = state.pageBack[state.currentPage] === true;
+      backBox.onchange = () => { setPageBack(state, state.currentPage, backBox.checked); render(); };
+      const backText = el("span", "flag-text");
+      backText.append(el("span", "flag-name", "Back button"),
+        el("span", "fhint", "A back arrow in the page's top-left corner, beside its title. Off: place a Back tile, or none."));
+      back.append(backBox, backText);
       const row = el("div", "page-edit");
-      row.append(rename, del);
+      row.append(rename, back, del);
       sec.append(row);
     }
     return sec;

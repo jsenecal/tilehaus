@@ -9,7 +9,8 @@ add_executable(deck_document_test deck_document_test.cpp)
 target_compile_definitions(deck_document_test PRIVATE
   DECK_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_basic.bin"
   DECK_V5_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_v5_pages.bin"
-  DECK_V6_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_v6_grid.bin")
+  DECK_V6_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_v6_grid.bin"
+  DECK_V7_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/deck_v7_pages.bin")
 add_test(NAME deck_document_test COMMAND deck_document_test)
 
 foreach(t grid_layout sensor_format slider_map toggle_state tile_scale forecast_helpers idle_state config_lock action_target timer_state garage_state gauge_state fit_text wifi_qr media_state media_art_scale)
