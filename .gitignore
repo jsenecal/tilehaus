@@ -12,3 +12,4 @@ site/
 # Personal panel configuration — deck generators and the specs they emit.
 # Tilehaus is public; household entity ids and layouts stay on the machine.
 local/
+__pycache__/

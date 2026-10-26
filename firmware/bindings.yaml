@@ -80,6 +80,6 @@ interval:
   - interval: 200ms
     then:
       - lambda: |-
-          tilehaus::start_deck_server();
+          tilehaus::start_deck_server(USE_WEBSERVER_PORT);  // tilehaus_web's port
           tilehaus::apply_pending_reboot();
           tilehaus::config_session_tick();
