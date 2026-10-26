@@ -1,6 +1,6 @@
 import {
-  addCard, addPage, autoArrange, canPlace, createEditorState, defaultCard, deletePage, moveCard, removeCard,
-  renamePage, updateCard,
+  addCard, addPage, autoArrange, canPlace, canSwap, cardAt, createEditorState, defaultCard, deletePage, moveCard,
+  removeCard, renamePage, swapCards, updateCard,
 } from "../../web/editor_state";
 import { DECK_MAX_CARD_COUNT } from "../../web/model/deck";
 
@@ -112,5 +112,39 @@ export function runEditorStateTests(): void {
     addCard(s, 4); // 2x2 at 0,0
     assert(!canPlace(s.cards, -1, 7, 0, 2, 2, 0, 8), "cannot exceed 8 columns");
     assert(canPlace(s.cards, -1, 6, 0, 2, 2, 0, 8), "fits at col 6 of 8");
+  }
+  // swap: the tiles trade slots, each taking the other's cell and size
+  {
+    const s = createEditorState();
+    const put = (col: number, row: number, w: number, h: number, title: string, page = 0): void => {
+      s.cards.push({ ...defaultCard(4), col, row, w, h, title, page });
+    };
+    put(0, 0, 2, 2, "A");     // 0
+    put(4, 0, 2, 1, "B");     // 1
+    put(4, 1, 2, 1, "C");     // 2
+    put(0, 0, 2, 2, "P", 1);  // 3: same cell, other page
+
+    assert(cardAt(s.cards, 0, 5, 0) === 1, "cardAt finds B by any covered cell");
+    assert(cardAt(s.cards, 0, 1, 1) === 0, "cardAt finds A's lower-right cell");
+    assert(cardAt(s.cards, 0, 9, 5) === -1, "cardAt: empty cell");
+    assert(cardAt(s.cards, 1, 1, 1) === 3, "cardAt is per page");
+
+    // Different sizes: A (2x2) and B (2x1) trade cells and sizes
+    assert(swapCards(s, 0, 1), "A and B swap");
+    const slot = (i: number): number[] => [s.cards[i]!.col, s.cards[i]!.row, s.cards[i]!.w, s.cards[i]!.h];
+    deepEqual(slot(0), [4, 0, 2, 1], "A takes B's slot and size");
+    deepEqual(slot(1), [0, 0, 2, 2], "B takes A's slot and size");
+    assert(s.cards[0]!.title === "A" && s.cards[1]!.title === "B", "only the slots moved");
+    deepEqual(slot(2), [4, 1, 2, 1], "other tiles untouched");
+    assert(s.selected === 0, "the dragged tile stays selected");
+
+    // Swapping back restores the layout
+    assert(swapCards(s, 0, 1), "swap back");
+    deepEqual([slot(0), slot(1)], [[0, 0, 2, 2], [4, 0, 2, 1]], "swap back restores");
+
+    // Across pages and with itself: refused
+    assert(!canSwap(s.cards, 0, 3), "no swap across pages");
+    assert(!canSwap(s.cards, 0, 0), "no swap with itself");
+    assert(!swapCards(s, 0, 3), "cross-page swap reports false");
   }
 }

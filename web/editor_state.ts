@@ -91,6 +91,30 @@ export function moveCard(state: EditorState, index: number, col: number, row: nu
   state.selected = index;
 }
 
+// The card on `page` covering cell (col, row), or -1.
+export function cardAt(cards: readonly DeckCard[], page: number, col: number, row: number): number {
+  return cards.findIndex((c) => c.page === page
+    && col >= c.col && col < c.col + c.w && row >= c.row && row < c.row + c.h);
+}
+
+// Swapping trades the two tiles' slots: each takes the other's cell and size,
+// so the layout is unchanged and the swap always fits. Only tiles on the same
+// page swap.
+export function canSwap(cards: readonly DeckCard[], a: number, b: number): boolean {
+  const ca = cards[a], cb = cards[b];
+  return ca !== undefined && cb !== undefined && a !== b && ca.page === cb.page;
+}
+
+// Swaps tiles a and b (see canSwap); a stays selected. False if they can't.
+export function swapCards(state: EditorState, a: number, b: number): boolean {
+  if (!canSwap(state.cards, a, b)) return false;
+  const ca = state.cards[a]!, cb = state.cards[b]!;
+  state.cards[a] = { ...ca, col: cb.col, row: cb.row, w: cb.w, h: cb.h };
+  state.cards[b] = { ...cb, col: ca.col, row: ca.row, w: ca.w, h: ca.h };
+  state.selected = a;
+  return true;
+}
+
 export function updateCard(state: EditorState, index: number, patch: Partial<DeckCard>): void {
   const current = state.cards[index];
   if (current === undefined) return;

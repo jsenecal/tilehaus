@@ -1,5 +1,5 @@
 import { cardTypeLabel } from "./card_types";
-import { canPlace, moveCard, removeCard, updateCard, type EditorState } from "./editor_state";
+import { canPlace, cardAt, moveCard, removeCard, swapCards, updateCard, type EditorState } from "./editor_state";
 import { type HaClient } from "./ha_client";
 import { PANEL, hex, renderTileFace } from "./tile_preview";
 
@@ -87,6 +87,9 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
   const haUp = opts.ha.status().state === "connected";
   const now = new Date();
 
+  // Each tile's element and mover, so a drag can preview a swap on its target.
+  const tiles = new Map<number, { el: HTMLElement; place: (col: number, row: number, w: number, h: number) => void }>();
+
   for (const [card, index] of onPage) {
     const tile = document.createElement("div");
     const unknown = haUp && card.entity !== "" && card.entity.includes(".") && opts.ha.meta(card.entity) === undefined;
@@ -100,6 +103,7 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
       tile.style.height = `${span(h, g.cellH)}px`;
     };
     place(card.col, card.row, card.w, card.h);
+    tiles.set(index, { el: tile, place });
     const meta = opts.ha.meta(card.entity);
     renderTileFace(tile, card, meta, {
       w: span(card.w, g.cellW), h: span(card.h, g.cellH), accent: state.accent, night: opts.night, now,
@@ -126,8 +130,34 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
       const grabCol = colAt(px) - card.col;
       const grabRow = rowAt(py) - card.row;
       let lastCol = card.col, lastRow = card.row;
+      // Released over another tile, the two swap slots, each taking the
+      // other's cell and size: the target previews in this tile's old slot.
+      let target = -1;
+      const setTarget = (next: number): void => {
+        if (next === target) return;
+        const old = tiles.get(target), oc = state.cards[target];
+        if (old !== undefined && oc !== undefined) {
+          old.el.classList.remove("swap-target");
+          old.place(oc.col, oc.row, oc.w, oc.h);
+        }
+        target = next;
+        const t = tiles.get(target), tc = state.cards[target];
+        if (t !== undefined && tc !== undefined) {
+          t.el.classList.add("swap-target");
+          t.place(card.col, card.row, card.w, card.h);
+        }
+      };
       const onMove = (move: PointerEvent): void => {
         const [mx, my] = toPanel(move.clientX, move.clientY);
+        const over = cardAt(state.cards, card.page, colAt(mx), rowAt(my));
+        setTarget(over !== index ? over : -1);
+        if (target >= 0) {
+          const tc = state.cards[target]!;
+          tile.classList.remove("invalid");
+          place(tc.col, tc.row, tc.w, tc.h);
+          lastCol = -1; lastRow = -1;  // a later plain move re-places the tile
+          return;
+        }
         const col = Math.max(0, Math.min(state.gridCols - card.w, colAt(mx) - grabCol));
         const row = Math.max(0, rowAt(my) - grabRow);
         if (col === lastCol && row === lastRow) return;
@@ -140,7 +170,9 @@ export function createGridPane(state: EditorState, rerender: () => void, opts: P
         tile.removeEventListener("pointermove", onMove);
         tile.removeEventListener("pointerup", onUp);
         tile.classList.remove("dragging", "invalid");
-        moveCard(state, index, lastCol, lastRow);  // refuses an overlap: the rerender puts it back
+        // A move that doesn't fit is refused: the rerender puts the tile back.
+        if (target >= 0) swapCards(state, index, target);
+        else if (lastCol >= 0) moveCard(state, index, lastCol, lastRow);
         rerender();
       };
       tile.addEventListener("pointermove", onMove);
