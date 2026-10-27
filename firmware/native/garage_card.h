@@ -84,10 +84,10 @@ struct GarageCard : Card {
     }, LV_EVENT_CLICKED, this);
 
     // The minutes in the caption, and the overdue tint, advance on their own.
-    lv_timer_create([](lv_timer_t *t) {
+    own_timer(lv_timer_create([](lv_timer_t *t) {
       auto *self = static_cast<GarageCard *>(lv_timer_get_user_data(t));
       if (self->door_.phase == DoorPhase::Open) self->render();
-    }, 30000, this);
+    }, 30000, this));
   }
 
   void restyle() override {

@@ -181,6 +181,12 @@ async function main() {
       body: Buffer.from(bin),
     });
     if (res.status === 204) {
+      // A deck that only changes how tiles look is applied in place.
+      if (res.headers.get("x-deck-applied") === "live") {
+        const now = await getState(args.device);
+        console.log(`applied live (no reboot). now serving ETag ${now.etag}`);
+        return;
+      }
       console.log("pushed; panel rebooting to apply…");
       const back = await waitForReboot(args.device);
       console.log(`applied. now serving ETag ${back.etag}`);

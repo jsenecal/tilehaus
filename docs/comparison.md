@@ -62,7 +62,7 @@ Grouped by capability:
 | Browser web installer (first flash) | ✓ | ✗ | Tilehaus flashes via the ESPHome CLI (USB then OTA) |
 | Browser configurator (drag/drop, pages, tile sizes) | ✓ | ✓ | Tilehaus's configurator is served by the panel and works without internet access |
 | Configurable grid size (columns × visible rows) | ✗ | ✓ | Tilehaus lets you set the deck grid; EspControl uses fixed per-device card slots |
-| Apply changes | ✓ (without reflashing) | ◑ (reboot-to-apply) | Tilehaus reboots to apply a new config; there is no live in-place rebuild |
+| Apply changes | ✓ (without reflashing) | ◑ | Tilehaus applies changes to tile looks (names, icons, colours) in place; layout changes reboot the panel |
 | Backup & restore / copy to another panel | ✓ | ✓ | Tilehaus: **Export**/**Import** a JSON backup in the configurator (the same spec `deck_cli.js` pushes), plus undo/redo while editing |
 | Saved-config migration & compatibility contract | ✓ | ◑ | Tilehaus versions the DECK format (v5 to v7) but has a leaner migration story |
 | Display scheduling (idle / night / presence) | ✓ | ✓ | Tilehaus: return-home, dim and sleep timeouts and presence wake built in; night schedules are Home Assistant automations on the **Night mode** switch (see [Panel settings](panel-settings.md)) |

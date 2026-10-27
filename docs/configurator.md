@@ -172,13 +172,17 @@ turns itself off after 30 minutes without use; editing in an open configurator
 counts as use once you have saved. See
 [Config API](config-api.md#unlocking-the-panel-for-writes) for the details.
 
-## Save = reboot-to-apply
+## Save
 
-**Save** validates the current deck, writes it to the device (`PUT
-/api/v1/config`), and the panel reboots to apply it — cleanly rebuilding the
-whole card tree and its Home Assistant subscriptions rather than patching
-live state. The configurator polls the device until it's back and reloads
-the applied deck.
+**Save** validates the current deck and writes it to the device (`PUT
+/api/v1/config`). How the panel applies it depends on what changed:
+
+- **Only looks** (a tile's title, icon, colours, label, alignment and background, and the deck's accent): the panel rebuilds those tiles in place, with
+  no reboot. The status reads "no reboot needed".
+- **Anything else** (adding, moving or resizing a tile, changing its type or
+  entity, pages, the grid): the panel reboots to apply it, cleanly rebuilding
+  the whole card tree and its Home Assistant subscriptions. The configurator
+  polls the device until it's back and reloads the applied deck.
 
 **Reset** clears the stored deck entirely (`DELETE /api/v1/config`) and
 reboots the panel back to the "Awaiting Configuration" screen.

@@ -169,7 +169,7 @@ struct CoverCard : Card {
     if (fonts.value) lv_obj_set_style_text_font(pct_lbl_, fonts.value, 0);
     lv_obj_center(pct_lbl_);
     lv_obj_set_style_opa(pct_lbl_, LV_OPA_TRANSP, 0);
-    hide_timer_ = lv_timer_create(hide_cb, 1500, this);
+    hide_timer_ = own_timer(lv_timer_create(hide_cb, 1500, this));
     lv_timer_pause(hide_timer_);
 
     tbuf_[0] = tprev_[0] = '\0';

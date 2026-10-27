@@ -65,7 +65,8 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
   absent = 22); or `204` when unconfigured. A new card type means both panels
   need the firmware before a deck using it can be pushed.
 - `PUT` (`Content-Type: application/vnd.tilehaus.deck` + `If-Match: "<gen>"`) →
-  `204`, then the panel **reboots to apply**.
+  `204`, then the panel **reboots to apply**, unless the response carries
+  `X-Deck-Applied: live` (only looks changed: applied in place, no reboot).
 - `DELETE` (`If-Match`) → `204`, reboots to the awaiting-config screen.
 - Writes need the panel's **Configurator** switch on in HA. The first client to
   `POST /api/v1/session` gets a random key; PUT/DELETE then need
@@ -73,8 +74,13 @@ The device serves the configurator at `/` (`/app.js`) and a config API at
   key persist across reboots and the switch turns itself off after 30 min idle.
   `deck_cli.js` claims and caches the key itself (`~/.config/tilehaus/`).
 
-Config is applied by **reboot** — there is no live in-place rebuild (HA state
-subscriptions can't be torn down at runtime).
+Structural config changes apply by **reboot**: ESPHome sends HA its subscription
+list only at connect. A change to looks only (title, icon, colours, label,
+alignment, background, accent: `deck_live.h`) rebuilds those tiles in place
+(`apply_live_deck` in `card_host.h`). HA updates fan out through `ha.h`'s
+listener table, tagged per card, so a card can be destroyed: anything a card
+leaves behind (timers, top-layer modals, async callbacks) must go in its
+destructor — use `own_timer()`.
 
 **Two panels, one shared config.** `firmware/tilehaus.yaml` holds everything and
 is directly flashable for a single-panel install. Where more than one panel

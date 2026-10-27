@@ -25,6 +25,9 @@ struct CoverModal {
   lv_obj_t *fill_ = nullptr;    // top-anchored shade panel (height = closed %)
   lv_obj_t *val_ = nullptr;
   lv_timer_t *hide_ = nullptr;
+  ~CoverModal() {
+    if (hide_) lv_timer_delete(hide_);
+  }
   lv_subject_t pos_subj_{};     // open % (0..100)
   int touch_ = 0;
   HaHold hold_;  // no HA pushes onto the slider mid-drag or while it settles

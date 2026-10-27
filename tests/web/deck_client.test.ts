@@ -126,6 +126,39 @@ export async function runDeckClientTests(): Promise<void> {
     assert(headers["Authorization"] === `Bearer ${KEY}`, "session key sent");
   }
 
+  // save: the reboot path says so before waiting, and reports live: false
+  {
+    const s = stub([
+      new Response(null, { status: 204, headers: { ETag: '"8"' } }),
+      new Response(encodeDeck([CARD]) as BodyInit, { status: 200, headers: { ETag: '"8"' } }),
+    ]);
+    const client = createDeckClient({ fetch: s.fetch, sleep: noSleep, pollIntervalMs: 1, rebootTimeoutMs: 1000, storage: memStorage(KEY) });
+    let rebooting = 0;
+    client.onRebooting = () => { rebooting++; };
+    const result = await client.save([CARD], '"7"');
+    assert(result.status === "applied" && !result.live, "reboot apply not live");
+    assert(rebooting === 1, "onRebooting called once");
+  }
+
+  // save: X-Deck-Applied: live -> reloads at once, no reboot wait
+  {
+    const s = stub([
+      new Response(null, { status: 204, headers: { ETag: '"8"', "X-Deck-Applied": "live" } }),
+      new Response(encodeDeck([{ ...CARD, title: "Ceiling fan" }]) as BodyInit, { status: 200, headers: { ETag: '"8"' } }),
+    ]);
+    let slept = 0;
+    const client = createDeckClient({
+      fetch: s.fetch, sleep: async () => { slept++; }, pollIntervalMs: 1, rebootTimeoutMs: 1000, storage: memStorage(KEY),
+    });
+    let rebooting = 0;
+    client.onRebooting = () => { rebooting++; };
+    const result = await client.save([{ ...CARD, title: "Ceiling fan" }], '"7"');
+    assert(result.status === "applied" && result.live, "live apply reported");
+    if (result.status === "applied") assert(result.cards[0]!.title === "Ceiling fan" && result.etag === '"8"', "live apply reloaded");
+    assert(rebooting === 0 && slept === 0, "no reboot wait on a live apply");
+    assert(s.calls.length === 2, "PUT then one GET");
+  }
+
   // save: 409 -> conflict with device etag
   {
     const res = new Response("conflict", { status: 409, headers: { ETag: '"9"' } });

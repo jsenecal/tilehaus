@@ -2,6 +2,7 @@
 #include "lvgl.h"
 #include <algorithm>
 #include <cctype>
+#include <memory>
 #include <string>
 #include "card.h"
 #include "card_style.h"
@@ -35,6 +36,10 @@ namespace tilehaus {
 // LVGL timer recounts it from media_position_updated_at (media_state.h).
 struct MediaCard : Card {
   enum class Layout : uint8_t { Small, Wide, Large };
+
+  // Cleared when the card goes (see MediaView::alive_).
+  std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
+  ~MediaCard() override { *alive_ = false; }
 
   lv_obj_t *cell_ = nullptr;
   lv_obj_t *caption_ = nullptr;
@@ -216,12 +221,12 @@ struct MediaCard : Card {
       static_cast<MediaCard *>(lv_event_get_user_data(e))->play_pause();
     }, LV_EVENT_CLICKED, this);
 
-    lv_timer_create([](lv_timer_t *t) {
+    own_timer(lv_timer_create([](lv_timer_t *t) {
       auto *self = static_cast<MediaCard *>(lv_timer_get_user_data(t));
       if (self->info_.phase() != MediaPhase::Playing) return;
       self->render_progress();
       if (self->view_.visible()) self->view_.render_progress();
-    }, 1000, this);
+    }, 1000, this));
   }
 
   void restyle() override {
@@ -382,7 +387,8 @@ struct MediaCard : Card {
       art_ref_.reset();
     }
     if (url.empty()) return;
-    media_art().request(url, art_px_, [this, url](ArtRef img) {
+    media_art().request(url, art_px_, [this, alive = alive_, url](ArtRef img) {
+      if (!*alive) return;
       if (url != art_url_ || !img) return;  // the track moved on meanwhile
       art_ref_ = img;
       set_cover(img.get());

@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include <algorithm>
+#include <memory>
 #include <string>
 #include "card.h"
 #include "card_style.h"
@@ -40,6 +41,12 @@ struct MediaInfo {
 // subscriptions of its own, the card hands it every update.
 struct MediaView {
   Overlay overlay_;
+  // Cleared when the view goes: a cover download finishing later must not
+  // call back into it (a live rebuild destroys the card, card_host.h).
+  std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
+  MediaView() = default;
+  MediaView(const MediaView &) = delete;
+  ~MediaView() { *alive_ = false; }
   const MediaInfo *info_ = nullptr;
   std::string entity_, name_;
   CardFonts fonts_{};
@@ -330,7 +337,8 @@ struct MediaView {
     lv_obj_add_flag(art_, LV_OBJ_FLAG_HIDDEN);
     lv_image_set_src(art_, nullptr);
     if (url.empty()) return;
-    media_art().request(url, art_px_, [this, url](ArtRef img) {
+    media_art().request(url, art_px_, [this, alive = alive_, url](ArtRef img) {
+      if (!*alive) return;
       if (url != art_url_ || !img) return;  // the track moved on meanwhile
       art_ref_ = img;
       lv_image_set_src(art_, &img->dsc);

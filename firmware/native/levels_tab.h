@@ -25,6 +25,11 @@ struct LevelsTab {
     SliderGlide glide;            // tap glides, drag tracks the finger 1:1
     std::function<void(int)> send;
     HaHold hold;  // no HA pushes onto the slider mid-drag or while it settles
+    Row() = default;
+    Row(const Row &) = delete;
+    ~Row() {
+      if (hide) lv_timer_delete(hide);
+    }
   };
   static constexpr int kMax = 3;
   Row rows_[kMax];

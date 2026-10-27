@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <functional>
+#include <mutex>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -12,8 +13,10 @@
 #include "lvgl.h"
 #include "esphome/core/application.h"
 #include "card_config.h"
+#include "card_host.h"
 #include "config_session.h"
 #include "deck_document.h"
+#include "deck_live.h"
 #include "deck_store.h"
 #include "deck_ui_endpoint.h"
 #include "splash.h"
@@ -36,6 +39,29 @@ inline std::function<void()> &pre_reboot_hook() {
 inline std::atomic<bool> &deck_reboot_pending() {
   static std::atomic<bool> pending{false};
   return pending;
+}
+
+// A saved deck that only changes how tiles look is applied in place instead:
+// the PUT handler (httpd task) decides against the last deck it accepted, and
+// hands the deck to the main loop, which rebuilds those tiles (apply_live_deck).
+struct LiveQueue {
+  std::mutex m;
+  bool have_base = false;  // `base` is the deck on screen, or about to be
+  DeckParts base;
+  bool pending = false;
+  DeckParts next;
+};
+inline LiveQueue &live_queue() {
+  static LiveQueue q;
+  return q;
+}
+
+// Called once the boot build is done, with the deck it built.
+inline void live_queue_seed() {
+  LiveQueue &q = live_queue();
+  std::lock_guard<std::mutex> lock(q.m);
+  q.have_base = build_context().built;
+  q.base = build_context().deck;
 }
 
 inline httpd_handle_t &deck_httpd() {
@@ -265,9 +291,10 @@ inline esp_err_t deck_put_handler(httpd_req_t *req) {
   }
 
   // Validate before persisting, so the store never holds an undecodable doc.
-  std::vector<CardConfig> dry;
+  DeckParts next;
   std::string why;
-  if (!decode_deck(body.data(), body.size(), dry, nullptr, nullptr, nullptr, nullptr, &why)) {
+  if (!decode_deck(body.data(), body.size(), next.cards, &next.accent, &next.pages,
+                   &next.grid_cols, &next.grid_rows, &why, &next.page_back)) {
     const std::string msg = "Deck not saved: " + why;  // outlives the send below
     httpd_resp_set_status(req, "400 Bad Request");
     httpd_resp_sendstr(req, msg.c_str());
@@ -280,8 +307,24 @@ inline esp_err_t deck_put_handler(httpd_req_t *req) {
     httpd_resp_sendstr(req, "Deck could not be saved");
     return ESP_OK;
   }
-  deck_reboot_pending().store(true);
+  bool live = false;
+  {
+    LiveQueue &q = live_queue();
+    std::lock_guard<std::mutex> lock(q.m);
+    if (q.have_base && !deck_reboot_pending().load() &&
+        deck_live_change(q.base, next).live) {
+      live = true;
+      q.base = next;
+      q.next = std::move(next);
+      q.pending = true;
+    } else {
+      q.have_base = false;  // a reboot is coming: nothing more applies live
+    }
+  }
+  if (!live) deck_reboot_pending().store(true);
   set_etag(req, generation, etag);
+  // Tells the configurator not to wait for a reboot.
+  if (live) httpd_resp_set_hdr(req, "X-Deck-Applied", "live");
   httpd_resp_set_status(req, "204 No Content");
   httpd_resp_send(req, nullptr, 0);
   return ESP_OK;
@@ -318,6 +361,10 @@ inline esp_err_t deck_delete_handler(httpd_req_t *req) {
     httpd_resp_set_status(req, "500 Internal Server Error");
     httpd_resp_sendstr(req, "Deck could not be cleared");
     return ESP_OK;
+  }
+  {
+    std::lock_guard<std::mutex> lock(live_queue().m);
+    live_queue().have_base = false;
   }
   deck_reboot_pending().store(true);
   set_etag(req, generation, etag);
@@ -384,6 +431,23 @@ inline void apply_pending_reboot() {
   static constexpr int kGraceTicks = 8;      // 1.6s total
   static constexpr int kDarkAtTick = 5;      // 600ms in: splash seen, then dark
   static int reboot_countdown = -1;          // -1 = idle; else ticks until reboot
+  // A deck the PUT handler accepted as a live change: rebuild those tiles.
+  if (reboot_countdown < 0 && !deck_reboot_pending().load()) {
+    DeckParts next;
+    bool take = false;
+    {
+      LiveQueue &q = live_queue();
+      std::lock_guard<std::mutex> lock(q.m);
+      if (q.pending) {
+        next = std::move(q.next);
+        q.pending = false;
+        take = true;
+      }
+    }
+    // Should not fail (same comparison), but if the screen and the queue
+    // disagree, the stored deck still wins: apply it by reboot.
+    if (take && !apply_live_deck(next)) deck_reboot_pending().store(true);
+  }
   if (deck_reboot_pending().exchange(false)) {
     reboot_countdown = kGraceTicks;
     splash_set("\U000F06B0", "Rebooting", "Applying the new configuration");
