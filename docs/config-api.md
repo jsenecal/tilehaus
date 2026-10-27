@@ -90,8 +90,10 @@ Writes a new document.
   [Unlocking the panel](#unlocking-the-panel-for-writes)),
   `Content-Type: application/vnd.tilehaus.deck`, `If-Match:
   "<generation>"` (required — the generation you last read via `GET`).
-- **204 No Content** on success, with a new `ETag`. The panel then reboots to
-  apply the new deck.
+- **204 No Content** on success, with a new `ETag`. With `X-Deck-Applied:
+  live`, the panel has applied the deck in place (only how tiles look
+  changed); otherwise it reboots to apply it. See
+  [Applying a new deck](#applying-a-new-deck).
 - **409 Conflict** if `If-Match` doesn't match the device's current
   generation (someone else changed it first) — re-`GET` and retry.
 - **400/415/428** on a malformed body, wrong content type, or a missing/bad
@@ -109,13 +111,19 @@ Clears the stored deck (needs the session key and `If-Match`, same rules as `PUT
   Configuration" screen.
 - **409 Conflict** on a stale `If-Match`.
 
-## Reboot-to-apply
+## Applying a new deck
 
-Both `PUT` and `DELETE` apply by rebooting the panel — there's no live,
-in-place rebuild of the running deck. This is deliberate: ESPHome's Home
-Assistant API client can't cleanly unsubscribe from entities, so a clean
-reboot is what re-establishes correct HA bindings for the new deck. Expect
-the panel to briefly go offline and come back up after a successful write.
+A `PUT` that only changes how tiles look (their title, icon, colours, label, alignment and background, and the deck's accent) applies **in place**:
+the panel rebuilds just those tiles, keeps running, and answers with
+`X-Deck-Applied: live`. Every tile keeps its Home Assistant state, so the
+rebuilt ones show it at once.
+
+Anything else (a tile added, removed, moved, resized, retyped or pointed at
+another entity, a page or grid change, the Details / follow-colour / header
+options) applies by **rebooting**, as does `DELETE`. ESPHome tells Home
+Assistant which entities the panel follows only when HA connects, so a deck
+that follows different ones needs a fresh start. Expect the panel to briefly
+go offline and come back up after such a write.
 
 ## Safety: wait after an OTA flash
 
@@ -205,4 +213,5 @@ node scripts/deck_cli.js push my-deck.json --device tilehaus-office.local
 
 This reads `my-deck.json`, encodes it to a DECK document, fetches the
 panel's current `ETag`, `PUT`s the new document with that `If-Match`, and
-polls the panel until it comes back up after the apply reboot.
+(unless it applied live) polls the panel until it comes back up after the
+apply reboot.

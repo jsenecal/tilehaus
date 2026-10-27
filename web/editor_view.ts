@@ -191,8 +191,10 @@ export function createEditorView(
 
   async function runMutation(action: () => Promise<SaveResult>, verb: string): Promise<void> {
     busy = true;
-    setStatus(`${verb}… panel rebooting to apply`, "busy");
+    setStatus(`${verb}…`, "busy");
+    client.onRebooting = () => setStatus(`${verb}… panel rebooting to apply`, "busy");
     const result = await action();
+    client.onRebooting = undefined;
     if (result.status === "applied") {
       state.cards = result.cards;
       state.accent = result.accent;
@@ -205,7 +207,7 @@ export function createEditorView(
         state.selected = state.cards.length > 0 ? state.cards.length - 1 : null;
       }
       savedDeck = serialized();
-      setStatus("Applied — panel updated", "ok");
+      setStatus(result.live ? "Applied — panel updated, no reboot needed" : "Applied — panel updated", "ok");
     } else if (result.status === "conflict") {
       state.etag = result.etag;
       setStatus("Changed on the device — your edits are kept, press Save again", "warn");

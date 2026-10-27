@@ -2,6 +2,7 @@
 #include "lvgl.h"
 #include "card_config.h"
 #include <memory>
+#include <vector>
 #include "grid_layout.h"   // TileSpan
 
 namespace tilehaus {
@@ -37,7 +38,21 @@ struct Card {
   // runtime, so a rebuild would duplicate every subscription. Re-theming an
   // existing widget has no such problem.
   virtual void restyle() {}
-  virtual ~Card() = default;
+  // A card can be destroyed while the panel runs (rebuilt for a cosmetic deck
+  // change, card_host.h), so a timer whose user data is the card, or anything
+  // in it, must go with it: create it through own_timer().
+  virtual ~Card() {
+    for (lv_timer_t *t : timers_) lv_timer_delete(t);
+  }
+
+ protected:
+  lv_timer_t *own_timer(lv_timer_t *t) {
+    timers_.push_back(t);
+    return t;
+  }
+
+ private:
+  std::vector<lv_timer_t *> timers_;
 };
 
 std::unique_ptr<Card> make_card(CardType type);

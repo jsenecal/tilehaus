@@ -57,6 +57,8 @@ esphome:
             tilehaus::poc_build_cards(id(grid_root),
                 ${grid_unit}, ${grid_pad}, ${grid_gap}, ${grid_subdivisions},
                 ${grid_cols}, ${grid_rows}, poc_fonts);
+            // From here a deck that only changes looks applies without a reboot.
+            tilehaus::live_queue_seed();
             // Night mode may have been restored before there was a deck to
             // recolour; bring the freshly built grid into the current mode.
             tilehaus::apply_theme();

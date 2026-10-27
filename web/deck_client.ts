@@ -36,7 +36,8 @@ export interface LoadResult {
 }
 
 export type SaveResult =
-  | { status: "applied"; etag: string; cards: DeckCard[]; accent: number; pages: string[]; pageBack: boolean[]; gridCols: number; gridRows: number }
+  // live: the panel applied it in place (only looks changed), no reboot.
+  | { status: "applied"; live: boolean; etag: string; cards: DeckCard[]; accent: number; pages: string[]; pageBack: boolean[]; gridCols: number; gridRows: number }
   | { status: "conflict"; etag: string }
   | { status: "locked" }   // the HA Configurator switch is off
   | { status: "taken" }    // another client holds the session
@@ -55,6 +56,8 @@ export interface DeckClient {
   save(cards: DeckCard[], etag: string, accent?: number, pages?: string[], gridCols?: number, gridRows?: number, pageBack?: readonly boolean[]): Promise<SaveResult>;
   reset(etag: string): Promise<SaveResult>;
   session(): Promise<SessionInfo>;
+  // Called when a write turns out to need a reboot, before the wait for it.
+  onRebooting?: (() => void) | undefined;
 }
 
 export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
@@ -180,10 +183,13 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
       return { status: "taken" };
     }
     if (response.status === 204) {
+      // A deck that only changes how tiles look is applied in place.
+      const live = response.headers.get("X-Deck-Applied") === "live";
+      if (!live) client.onRebooting?.();
       try {
-        const reloaded = await waitForReboot();
+        const reloaded = live ? await load() : await waitForReboot();
         return {
-          status: "applied", etag: reloaded.etag, cards: reloaded.cards, accent: reloaded.accent,
+          status: "applied", live, etag: reloaded.etag, cards: reloaded.cards, accent: reloaded.accent,
           pages: reloaded.pages, pageBack: reloaded.pageBack,
           gridCols: reloaded.gridCols, gridRows: reloaded.gridRows,
         };
@@ -226,5 +232,6 @@ export function createDeckClient(options: DeckClientOptions = {}): DeckClient {
     return mutate("DELETE", null, etag);
   }
 
-  return { load, save, reset, session };
+  const client: DeckClient = { load, save, reset, session };
+  return client;
 }

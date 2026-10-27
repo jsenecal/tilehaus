@@ -16,8 +16,9 @@ control surface. You arrange a deck of tiles (lights, covers, climate,
 sensors, scenes, and more) across one or more pages, using a browser-based
 configurator that the device itself serves. The UI is native LVGL running
 directly on the ESP32-P4 — there's no cloud dependency and no companion app.
-Changes made in the configurator are saved to the device and applied by
-rebooting into the new layout.
+Changes made in the configurator are saved to the device: new names, icons
+and colours show at once, and layout changes apply by rebooting into the new
+layout.
 
 ## Hardware
 
@@ -30,8 +31,8 @@ firmware is built with [ESPHome](https://esphome.io/).
 2. Open the device's IP address in a browser — it serves the tile
    configurator at `/`.
 3. Arrange tiles, assign Home Assistant entities to them, and organize pages.
-4. Click **Save**. The device writes the new configuration and reboots to
-   apply it.
+4. Click **Save**. The device writes the new configuration and applies it,
+   rebooting when the layout changed.
 
 ## Development
 
@@ -77,7 +78,7 @@ esphome compile firmware/tilehaus.yaml
 
 The device serves the configurator (`/`, `/app.js`) and a config API at
 `/api/v1/config` (media type `application/vnd.tilehaus.deck`); posting a new
-config there is applied by reboot.
+config there is applied in place when only looks change, otherwise by reboot.
 
 ## Repo layout
 

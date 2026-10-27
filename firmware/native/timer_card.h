@@ -110,10 +110,10 @@ struct TimerCard : Card {
       ha_call("timer.cancel", self->entity_);
     }, LV_EVENT_LONG_PRESSED, this);
 
-    lv_timer_create([](lv_timer_t *t) {
+    own_timer(lv_timer_create([](lv_timer_t *t) {
       auto *self = static_cast<TimerCard *>(lv_timer_get_user_data(t));
       if (self->active_) self->render();
-    }, 1000, this);
+    }, 1000, this));
   }
 
   void restyle() override {

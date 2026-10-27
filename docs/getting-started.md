@@ -42,8 +42,10 @@ editing workflow and [Card reference](cards.md) for what each card type does.
 
 ## 6. Save
 
-Click **Save**. The device validates and writes the new configuration, then
-reboots to apply it — the panel comes back up showing your updated deck.
+Click **Save**. The device validates and writes the new configuration. A
+change to how tiles look (a name, icon or colour) shows at once; anything
+else, such as adding or moving a tile, reboots the panel, which comes back up
+showing your updated deck.
 
-That's the core loop: edit in the browser, Save, the panel reboots into the
-new layout. Repeat as your dashboard evolves.
+That's the core loop: edit in the browser, Save, see it on the panel. Repeat
+as your dashboard evolves.

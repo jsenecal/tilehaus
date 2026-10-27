@@ -78,13 +78,20 @@ struct ActionCard : Card {
 
   void flash() {
     lv_obj_add_state(cell_, LV_STATE_USER_1);
-    // One-shot: the timer deletes itself on its first (and only) fire.
-    lv_timer_create([](lv_timer_t *tm) {
-      auto *c = static_cast<lv_obj_t *>(lv_timer_get_user_data(tm));
-      lv_obj_remove_state(c, LV_STATE_USER_1);  // eases back to rest color
-      lv_timer_delete(tm);
-    }, 180, cell_);
+    // One timer per tile, kept paused between taps (owned, so a live rebuild
+    // cannot leave it pointing at a deleted cell).
+    if (flash_timer_ == nullptr) {
+      flash_timer_ = own_timer(lv_timer_create([](lv_timer_t *tm) {
+        auto *self = static_cast<ActionCard *>(lv_timer_get_user_data(tm));
+        lv_obj_remove_state(self->cell_, LV_STATE_USER_1);  // eases back to rest color
+        lv_timer_pause(tm);
+      }, 180, this));
+    }
+    lv_timer_reset(flash_timer_);
+    lv_timer_resume(flash_timer_);
   }
+
+  lv_timer_t *flash_timer_ = nullptr;
 };
 
 }  // namespace tilehaus

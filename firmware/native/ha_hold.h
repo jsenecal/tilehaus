@@ -30,6 +30,14 @@ struct HaHold {
   std::function<void()> pending;
   lv_timer_t *timer = nullptr;
 
+  HaHold() = default;
+  HaHold(const HaHold &) = delete;  // the timer points back at this one
+  HaHold &operator=(const HaHold &) = delete;
+  // A card rebuilt live (card_host.h) takes its controls with it.
+  ~HaHold() {
+    if (timer) lv_timer_delete(timer);
+  }
+
   // Track presses on the control. Call once, after the control exists.
   void attach(lv_obj_t *obj) {
     lv_obj_add_event_cb(obj, [](lv_event_t *e) {

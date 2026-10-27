@@ -133,7 +133,7 @@ struct HeaderCard : Card {
       lv_obj_set_style_text_color(date_, lv_color_hex(kInkMuted), 0);
       lv_obj_set_style_text_letter_space(date_, 1, 0);
       update_clock();
-      lv_timer_create(tick_cb, 1000, this);
+      own_timer(lv_timer_create(tick_cb, 1000, this));
     }
   }
 

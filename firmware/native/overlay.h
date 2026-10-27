@@ -22,11 +22,9 @@ inline Overlay *&active_overlay() {
 // above the grid and swallows touches, a back arrow (top-left) + title, and an
 // empty content() region the owner fills. Built once, reused via show()/hide().
 //
-// Lifecycle: built once and retained for the program's lifetime (the POC
-// calls poc_build_cards() a single time at boot and never destroys cards
-// at runtime). root_ lives on lv_layer_top(); there is intentionally no
-// teardown path — do not destroy an Overlay/LightModal while the app runs,
-// or its lv_objs would outlive their C++ owner.
+// Lifecycle: built once (hidden) and kept with its card. A card rebuilt while
+// the panel runs (a cosmetic deck change, card_host.h) destroys its modals:
+// the destructor deletes root_ and everything on it.
 struct Overlay {
   lv_obj_t *root_ = nullptr;
   lv_obj_t *content_ = nullptr;
@@ -82,6 +80,15 @@ struct Overlay {
     lv_obj_clear_flag(content_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_size(content_, content_w_, content_h_);
     lv_obj_align(content_, LV_ALIGN_TOP_LEFT, kTileInset, top);
+  }
+
+  Overlay() = default;
+  Overlay(const Overlay &) = delete;  // callbacks hold `this`
+  Overlay &operator=(const Overlay &) = delete;
+  ~Overlay() {
+    if (!root_) return;
+    hide();
+    lv_obj_delete(root_);
   }
 
   lv_obj_t *content() { return content_; }

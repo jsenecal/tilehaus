@@ -75,9 +75,9 @@ struct ClockCard : Card {
   }
 
   void bind(const CardConfig &) override {
-    lv_timer_create([](lv_timer_t *t) {
+    own_timer(lv_timer_create([](lv_timer_t *t) {
       static_cast<ClockCard *>(lv_timer_get_user_data(t))->render();
-    }, 1000, this);
+    }, 1000, this));
   }
 
  private:

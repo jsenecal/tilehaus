@@ -1,5 +1,9 @@
 #pragma once
+#include <algorithm>
 #include <cmath>
+#include <map>
+#include <memory>
+#include <vector>
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>
@@ -34,25 +38,102 @@ inline bool &ha_first_state_seen() {
 }
 inline void ha_arm_first_state() { ha_first_state_seen() = false; }
 
+// Home Assistant state, fanned out to the panel's listeners.
+//
+// ESPHome sends HA its list of subscriptions once, when HA connects, and has
+// no way to drop one. So each entity/attribute pair is subscribed with ESPHome
+// once, and its updates go to a list of listeners kept here, along with the
+// last value. A listener is tagged with the card that registered it (see
+// ha_owner), so a card can be torn down and rebuilt while the panel runs
+// (a cosmetic deck change, card_host.h): its listeners are dropped, and the new
+// card's get the current value at once instead of waiting for the next change.
+//
+// A pair first subscribed after HA has connected gets no updates until the
+// next connect. Rebuilt cards only ever ask for pairs already subscribed.
+struct HaListener {
+  const void *owner;
+  std::function<void(const std::string &)> cb;
+};
+struct HaFeed {
+  std::string value;
+  bool has_value = false;
+  std::vector<HaListener> listeners;
+};
+
+inline std::map<std::string, std::unique_ptr<HaFeed>> &ha_feeds() {
+  static std::map<std::string, std::unique_ptr<HaFeed>> feeds;
+  return feeds;
+}
+
+// The card registering listeners right now; nullptr = permanent (the panel's
+// own subscriptions). Set by card_host.h around a card's build and bind.
+inline const void *&ha_owner() {
+  static const void *owner = nullptr;
+  return owner;
+}
+
+// Current values for listeners registered while ha_owner() is set: held until
+// ha_flush_replays(), so no callback runs on a card that is half built.
+inline std::vector<std::function<void()>> &ha_pending_replays() {
+  static std::vector<std::function<void()>> v;
+  return v;
+}
+
+inline void ha_flush_replays() {
+  std::vector<std::function<void()>> run = std::move(ha_pending_replays());
+  ha_pending_replays().clear();
+  for (auto &f : run) f();
+}
+
+// Drop every listener `owner` registered.
+inline void ha_release(const void *owner) {
+  if (owner == nullptr) return;
+  for (auto &kv : ha_feeds()) {
+    auto &ls = kv.second->listeners;
+    ls.erase(std::remove_if(ls.begin(), ls.end(),
+                            [owner](const HaListener &l) { return l.owner == owner; }),
+             ls.end());
+  }
+}
+
 // Subscribe to a HA entity's state (attr = nullptr for the state itself).
 inline void ha_subscribe(const std::string &entity, const char *attr,
                          std::function<void(const std::string &)> cb) {
-  // Explicitly typed so it matches the const std::string& overload of
-  // subscribe_home_assistant_state (a raw lambda is ambiguous with the StringRef
-  // overload).
-  std::function<void(const std::string &)> wrapped =
-      [cb = std::move(cb)](const std::string &s) {
-        if (!ha_first_state_seen()) {
-          ha_first_state_seen() = true;
-          if (ha_first_state_hook()) ha_first_state_hook()();
-        }
-        cb(s);
-      };
-  esphome::api::global_api_server->subscribe_home_assistant_state(
-      entity,
-      attr ? esphome::optional<std::string>(std::string(attr))
-           : esphome::optional<std::string>(),
-      std::move(wrapped));
+  std::string key = entity;
+  key += '\x1f';
+  if (attr) key += attr;
+  std::unique_ptr<HaFeed> &slot = ha_feeds()[key];
+  if (!slot) {
+    slot.reset(new HaFeed());
+    HaFeed *feed = slot.get();  // owned by the map for the program's lifetime
+    // Explicitly typed so it matches the const std::string& overload of
+    // subscribe_home_assistant_state (a raw lambda is ambiguous with the
+    // StringRef overload).
+    std::function<void(const std::string &)> fan_out = [feed](const std::string &s) {
+      if (!ha_first_state_seen()) {
+        ha_first_state_seen() = true;
+        if (ha_first_state_hook()) ha_first_state_hook()();
+      }
+      feed->value = s;
+      feed->has_value = true;
+      // By index, on a copy: a callback may add a listener to this same feed.
+      for (size_t i = 0; i < feed->listeners.size(); ++i) {
+        auto f = feed->listeners[i].cb;
+        f(s);
+      }
+    };
+    esphome::api::global_api_server->subscribe_home_assistant_state(
+        entity,
+        attr ? esphome::optional<std::string>(std::string(attr))
+             : esphome::optional<std::string>(),
+        std::move(fan_out));
+  }
+  HaFeed *feed = slot.get();
+  feed->listeners.push_back(HaListener{ha_owner(), cb});
+  if (feed->has_value) {
+    if (ha_owner()) ha_pending_replays().push_back([cb, v = feed->value]() { cb(v); });
+    else cb(feed->value);
+  }
 }
 
 // Call a HA service on an entity (no extra data).
