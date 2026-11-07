@@ -1,0 +1,17 @@
+# Ethernet only: drop Wi-Fi and the hosted ESP32-C6 co-processor.
+#
+# For a wired panel. If the C6 stops answering, every Wi-Fi call waits 5-10 s
+# for it and the screen freezes meanwhile, even with the cable carrying all
+# the traffic; without Wi-Fi there is nothing to wait on. The cost: no
+# fallback, so pull the cable and the panel is offline. Make sure Home
+# Assistant reaches the panel on its wired address before flashing this.
+#
+# Turn it on in a panel's own file, after the base include:
+#   packages:
+#     base: !include tilehaus.yaml
+#     ethernet_only: !include ethernet_only.yaml
+wifi: !remove
+network: !remove
+esp32_hosted: !remove
+sensor:
+  - id: !remove wifi_rssi

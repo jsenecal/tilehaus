@@ -92,6 +92,7 @@ wifi:
 sensor:
   # Measure link quality so we can tell power-save lag apart from weak coverage.
   - platform: wifi_signal
+    id: wifi_rssi
     name: "Tilehaus Wi-Fi RSSI"
     update_interval: 15s
 

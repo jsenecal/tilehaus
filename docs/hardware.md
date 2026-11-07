@@ -41,6 +41,28 @@ of it (`firmware/ethernet.yaml`, `network: priority:` with Ethernet first):
 To leave Ethernet out, delete the `ethernet:` line under `packages:` in
 `firmware/tilehaus.yaml`.
 
+### Ethernet only
+
+A wired panel can drop Wi-Fi altogether. If the C6 co-processor stops
+answering, every Wi-Fi call waits 5–10 seconds for it and the screen freezes
+meanwhile, even with the cable carrying all the traffic. Removing Wi-Fi leaves
+nothing to wait on.
+
+It is one line in the panel's own file, after the base include (as
+`firmware/tilehaus-office.yaml` does):
+
+```yaml
+packages:
+  base: !include tilehaus.yaml
+  ethernet_only: !include ethernet_only.yaml
+```
+
+`firmware/ethernet_only.yaml` removes `wifi`, `network`, `esp32_hosted` and the
+Wi-Fi signal sensor. Comment the line out and reflash to bring Wi-Fi back.
+
+The panel then has no fallback: pull the cable and it is offline. Make sure
+Home Assistant reaches it on the wired address first.
+
 ## Power and USB
 
 The panel is powered over USB-C. The same USB-C port is used for the initial

@@ -1,4 +1,4 @@
-# Office panel — 192.168.252.102.
+# Office panel — wired, 192.168.254.127.
 #
 # Everything real lives in tilehaus.yaml; this file exists only to give the
 # device its own identity. Both panels were previously flashed with the same
@@ -14,3 +14,6 @@ substitutions:
 
 packages:
   base: !include tilehaus.yaml
+  # Wired only: the office's C6 began failing every Wi-Fi RPC on 2026-11-06,
+  # freezing touch. Comment this line out to bring Wi-Fi back.
+  ethernet_only: !include ethernet_only.yaml
