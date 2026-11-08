@@ -15,6 +15,9 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  # Cap parallel compile jobs. Without this ninja runs one per visible core,
+  # and in the code-pod that is the whole node (49 jobs on vrtx-charlie).
+  compile_process_limit: 8
   platformio_options:
     build_flags:
       - "-DLV_USE_OBSERVER=1"
